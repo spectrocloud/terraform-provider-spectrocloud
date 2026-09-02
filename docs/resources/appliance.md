@@ -13,7 +13,8 @@ description: |-
 
 ```terraform
 resource "spectrocloud_appliance" "appliance" {
-  uid = "test-dec9"
+  uid       = "test-dec9"
+  arch_type = "amd64"
   tags = {
     "name" = "appliance_name"
   }
@@ -41,12 +42,13 @@ The import will automatically populate all configuration fields from the Spectro
 
 ### Required
 
-- `uid` (String) The unique identifier (UID) for the appliance.
+- `uid` (String) The unique identifier (UID) for the appliance. Note: This field is required and must be unique across all appliances in the tenant.
 
 ### Optional
 
+- `arch_type` (String) Architecture type of the machine pool. Allowed values are `amd64` and `arm64`. Default is `amd64`.
 - `pairing_key` (String) The pairing key used for appliance pairing.
-- `remote_shell` (String) Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured username and password credentials. https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/
+- `remote_shell` (String) Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured credentials. See https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/.
 - `tags` (Map of String) A set of key-value pairs that can be used to organize and categorize the appliance.
 - `temporary_shell_credentials` (String) Enable the creation of a temporary user on the edge host with sudo privileges for SSH access from Palette. These credentials will be embedded in the SSH connection string for auto login, and the temporary user is deleted upon deactivation.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))

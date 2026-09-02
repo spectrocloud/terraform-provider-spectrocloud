@@ -289,6 +289,38 @@ func TestFlattenMachinePoolConfigsEks(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "worker pool with override_cluster_api_config",
+			input: []*models.V1EksMachinePoolConfig{
+				{
+					Name:                     "worker-override",
+					Size:                     2,
+					MinSize:                  2,
+					MaxSize:                  4,
+					InstanceType:             "t3.medium",
+					RootDeviceSize:           50,
+					AmiType:                  "AL2023_x86_64_STANDARD",
+					OverrideClusterAPIConfig: "kind: MachinePool",
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":                        "worker-override",
+					"additional_labels":           map[string]any{},
+					"additional_annotations":      map[string]interface{}{},
+					"ami_type":                    "AL2023_x86_64_STANDARD",
+					"eks_launch_template":         []any{},
+					"count":                       2,
+					"min":                         2,
+					"max":                         4,
+					"instance_type":               "t3.medium",
+					"disk_size_gb":                50,
+					"azs":                         []string(nil),
+					"update_strategy":             "RollingUpdateScaleOut",
+					"override_cluster_api_config": "kind: MachinePool",
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -327,8 +359,9 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 							IsEnabled: true,
 							Provider:  "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
 						},
-						VpcID:      "vpc-0abcd1234ef56789",
-						SSHKeyName: "my-key-pair",
+						VpcID:                    "vpc-0abcd1234ef56789",
+						SSHKeyName:               "my-key-pair",
+						OverrideClusterAPIConfig: "kind: Cluster",
 					},
 					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
 						{
@@ -340,14 +373,15 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 			},
 			expected: []interface{}{
 				map[string]interface{}{
-					"region":                "us-west-2",
-					"private_access_cidrs":  []string{},
-					"public_access_cidrs":   []string{"0.0.0.0/0"},
-					"az_subnets":            map[string]string{"subnet-12345678": "subnet-87654321"},
-					"encryption_config_arn": "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
-					"endpoint_access":       "private_and_public",
-					"vpc_id":                "vpc-0abcd1234ef56789",
-					"ssh_key_name":          "my-key-pair",
+					"region":                      "us-west-2",
+					"private_access_cidrs":        []string{},
+					"public_access_cidrs":         []string{"0.0.0.0/0"},
+					"az_subnets":                  map[string]string{"subnet-12345678": "subnet-87654321"},
+					"encryption_config_arn":       "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+					"endpoint_access":             "private_and_public",
+					"vpc_id":                      "vpc-0abcd1234ef56789",
+					"ssh_key_name":                "my-key-pair",
+					"override_cluster_api_config": "kind: Cluster",
 				},
 			},
 		},
@@ -356,6 +390,127 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := flattenClusterConfigsEKS(tc.input)
+			if !cmp.Equal(result, tc.expected) {
+				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
+			}
+		})
+	}
+}
+
+func TestFlattenFargateProfilesEks(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []*models.V1FargateProfile
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "empty input",
+			input:    []*models.V1FargateProfile{},
+			expected: []interface{}{},
+		},
+		{
+			name: "single profile with one selector",
+			input: []*models.V1FargateProfile{
+				{
+					Name:      types.Ptr("fargate-1"),
+					SubnetIds: []string{"subnet-1", "subnet-2"},
+					AdditionalTags: map[string]string{
+						"env": "prod",
+					},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("default"),
+							Labels:    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":    types.Ptr("fargate-1"),
+					"subnets": []string{"subnet-1", "subnet-2"},
+					"additional_tags": map[string]string{
+						"env": "prod",
+					},
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("default"),
+							"labels":    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "profile with zero selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-empty-selector"),
+					SubnetIds:      []string{},
+					AdditionalTags: map[string]string{},
+					Selectors:      []*models.V1FargateSelector{},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-empty-selector"),
+					"subnets":         []string{},
+					"additional_tags": map[string]string{},
+					"selector":        []interface{}{},
+				},
+			},
+		},
+		{
+			name: "multiple profiles with multiple selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-1"),
+					SubnetIds:      []string{"subnet-1"},
+					AdditionalTags: map[string]string{"a": "1"},
+					Selectors: []*models.V1FargateSelector{
+						{Namespace: types.Ptr("ns1"), Labels: map[string]string{"l1": "v1"}},
+						{Namespace: types.Ptr("ns2"), Labels: map[string]string{"l2": "v2"}},
+					},
+				},
+				{
+					Name:           types.Ptr("fargate-2"),
+					SubnetIds:      []string{"subnet-2"},
+					AdditionalTags: map[string]string{"b": "2"},
+					Selectors: []*models.V1FargateSelector{
+						{Namespace: types.Ptr("ns3"), Labels: map[string]string{"l3": "v3"}},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-1"),
+					"subnets":         []string{"subnet-1"},
+					"additional_tags": map[string]string{"a": "1"},
+					"selector": []interface{}{
+						map[string]interface{}{"namespace": types.Ptr("ns1"), "labels": map[string]string{"l1": "v1"}},
+						map[string]interface{}{"namespace": types.Ptr("ns2"), "labels": map[string]string{"l2": "v2"}},
+					},
+				},
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-2"),
+					"subnets":         []string{"subnet-2"},
+					"additional_tags": map[string]string{"b": "2"},
+					"selector": []interface{}{
+						map[string]interface{}{"namespace": types.Ptr("ns3"), "labels": map[string]string{"l3": "v3"}},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenFargateProfilesEks(tc.input)
 			if !cmp.Equal(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}

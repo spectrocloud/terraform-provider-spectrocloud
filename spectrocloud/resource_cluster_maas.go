@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -140,6 +141,7 @@ func resourceClusterMaas() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"hyper_shift_config": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -169,18 +171,20 @@ func resourceClusterMaas() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -192,6 +196,15 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "Domain name in which the cluster to be provisioned.",
+						},
+						"ssh_keys": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user.",
 						},
 						"enable_lxd_vm": {
 							Type:        schema.TypeBool,
@@ -208,6 +221,7 @@ func resourceClusterMaas() *schema.Resource {
 							},
 							Description: "A list of NTP servers to use instead of the machine image's default NTP server list.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -266,6 +280,14 @@ func resourceClusterMaas() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -310,6 +332,7 @@ func resourceClusterMaas() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"azs": {
 							Type:     schema.TypeSet,
 							Required: true,
@@ -317,7 +340,7 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Availability zones in which the machine pool nodes to be provisioned.",
+							Description: "Set of availability zone name strings where machine pool nodes are provisioned.",
 						},
 						"node_tags": {
 							Type:     schema.TypeSet,
@@ -440,6 +463,7 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -528,7 +552,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 				return diag.FromErr(err)
 			}
 		}
-		if err := d.Set("cloud_config", flattenClusterConfigsMaas(config)); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsMaas(d, config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig, config.Spec.ClusterConfig)
@@ -545,7 +569,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diags
 }
 
-func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
+func flattenClusterConfigsMaas(d *schema.ResourceData, config *models.V1MaasCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
@@ -560,6 +584,14 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
+
+	if len(config.Spec.ClusterConfig.SSHKeys) > 0 {
+		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
+	}
+
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
 	}
 
 	return []interface{}{m}
@@ -591,6 +623,17 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
+
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
@@ -748,19 +791,38 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasCloudClusterConfigEntity {
 	DomainVal := cloudConfig["domain"].(string)
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 	return &models.V1MaasCloudClusterConfigEntity{
 		ClusterConfig: &models.V1MaasClusterConfig{
-			Domain:      &DomainVal,
-			EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
-			NtpServers:  toNtpServers(cloudConfig),
+			Domain:                   &DomainVal,
+			EnableLxdVM:              cloudConfig["enable_lxd_vm"].(bool),
+			NtpServers:               toNtpServers(cloudConfig),
+			SSHKeys:                  getMaasSSHKeys(cloudConfig),
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
 		},
 	}
+}
+
+func getMaasSSHKeys(cloudConfig map[string]interface{}) []string {
+	if cloudConfig["ssh_keys"] == nil {
+		return nil
+	}
+	set, ok := cloudConfig["ssh_keys"].(*schema.Set)
+	if !ok || set.Len() == 0 {
+		return nil
+	}
+	keys := make([]string, 0, set.Len())
+	for _, k := range set.List() {
+		keys = append(keys, strings.TrimSpace(k.(string)))
+	}
+	return keys
 }
 
 func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
@@ -776,9 +838,11 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			ClusterType:     toClusterType(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
-				Domain:      &DomainVal,
-				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
-				NtpServers:  toNtpServers(cloudConfig),
+				Domain:                   &DomainVal,
+				EnableLxdVM:              cloudConfig["enable_lxd_vm"].(bool),
+				NtpServers:               toNtpServers(cloudConfig),
+				SSHKeys:                  getMaasSSHKeys(cloudConfig),
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}
@@ -920,7 +984,16 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if len(m["network"].([]interface{})) > 0 {
 		network := m["network"].([]interface{})[0].(map[string]interface{})

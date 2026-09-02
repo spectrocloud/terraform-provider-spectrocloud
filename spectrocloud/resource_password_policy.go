@@ -17,6 +17,7 @@ func resourcePasswordPolicy() *schema.Resource {
 		ReadContext:   resourcePasswordPolicyRead,
 		UpdateContext: resourcePasswordPolicyUpdate,
 		DeleteContext: resourcePasswordPolicyDelete,
+		Description:   "Resource for managing tenant password policy settings in Spectro Cloud.",
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcePasswordPolicyImport,
 		},

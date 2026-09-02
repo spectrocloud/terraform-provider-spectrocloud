@@ -81,7 +81,7 @@ data "spectrocloud_pack" "cni" {
 ### Optional
 
 - `advance_filters` (Block List, Max: 1) A set of advanced filters to refine the selection of packs. These filters allow users to specify criteria such as pack type, add-on type, pack layer, and environment. (see [below for nested schema](#nestedblock--advance_filters))
-- `cloud` (Set of String) Filter results by cloud type. If not provided, all cloud types are returned.
+- `cloud` (Set of String) Set of cloud type strings used to filter results. If not provided, all cloud types are returned.
 - `filters` (String) Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples. The filter attribute will be deprecated soon; use `advance_filter` instead.
 - `id` (String) The UID of the pack returned.
 - `name` (String) The name of the pack to search for.
@@ -98,7 +98,7 @@ data "spectrocloud_pack" "cni" {
 
 Optional:
 
-- `addon_type` (Set of String) Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry` and `integration`. If not specified, all options will be set by default. For `storage` and `network` addon_type set `csi` or `cni` respectively in pack_layer
+- `addon_type` (Set of String) Set of add-on type strings to filter by. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry`, and `integration`. If not specified, all options are included. For `storage` and `network`, set `pack_layer` to `csi` or `cni` respectively.
 - `environment` (Set of String) Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas` and `edge-native`. If not specified, all options will be set by default.
 - `is_fips` (Boolean) Indicates whether the pack is FIPS-compliant. If `true`, only FIPS-compliant components will be used.
 - `pack_layer` (Set of String) Indicates the pack layer, such as `kernel`, `os`, `k8s`, `cni`, `csi`, or `addon`. If not specified, all options will be set by default.

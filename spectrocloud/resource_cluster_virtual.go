@@ -42,9 +42,10 @@ func resourceClusterVirtual() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the virtual cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -74,11 +75,13 @@ func resourceClusterVirtual() *schema.Resource {
 				Optional: true,
 				// ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+				Description:  "UID of the host cluster where this virtual cluster is created.",
 			},
 			"cluster_group_uid": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+				Description:  "UID of the cluster group used to select the host cluster.",
 			},
 			"pause_cluster": {
 				Type:        schema.TypeBool,
@@ -93,28 +96,34 @@ func resourceClusterVirtual() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"max_cpu": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum vCPU allocation for the virtual cluster.",
 						},
 						"max_mem_in_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum memory allocation in MB for the virtual cluster.",
 						},
 						"max_storage_in_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum storage allocation in GB for the virtual cluster.",
 						},
 						"min_cpu": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum vCPU allocation for the virtual cluster.",
 						},
 						"min_mem_in_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum memory allocation in MB for the virtual cluster.",
 						},
 						"min_storage_in_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum storage allocation in GB for the virtual cluster.",
 						},
 					},
 				},
@@ -139,8 +148,8 @@ func resourceClusterVirtual() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"cluster_timezone": {
 				Type:         schema.TypeString,
@@ -149,6 +158,7 @@ func resourceClusterVirtual() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -176,12 +186,14 @@ func resourceClusterVirtual() *schema.Resource {
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -191,24 +203,29 @@ func resourceClusterVirtual() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"chart_name": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm chart name used to install the virtual cluster control plane.",
 						},
 						"chart_repo": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm repository URL for the virtual cluster chart.",
 						},
 						"chart_version": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm chart version for the virtual cluster deployment.",
 						},
 						"chart_values": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML values override passed to the virtual cluster Helm chart.",
 						},
 						"k8s_version": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Kubernetes version for the virtual cluster control plane.",
 						},
 					},
 				},
@@ -326,8 +343,9 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	// Populate cluster_profile (profile IDs + variables) for read/import — same pattern as resources
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	// Populate cluster_profile (profile IDs + variables) for read/import.
+	// When disable_addon_deployment_resource is true, readCommonFields already synced profile IDs.
+	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
 	if err != nil {
 		log.Printf("[WARN] failed to flatten cluster profiles: %v", err)
 		clusterProfiles = make([]interface{}, 0)
@@ -343,33 +361,15 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 	if len(clusterProfiles) > 0 {
-		clusterVars, err := c.GetClusterVariables(d.Id())
+		clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
 		if err != nil {
-			log.Printf("[WARN] failed to get cluster variables: %v", err)
-		} else {
-			profileVariablesMap := make(map[string]map[string]interface{})
-			for _, cv := range clusterVars {
-				if cv.ProfileUID != nil && cv.Variables != nil {
-					vars := make(map[string]interface{})
-					for _, v := range cv.Variables {
-						if v.Name != nil && v.Value != "" {
-							vars[*v.Name] = v.Value
-						}
-					}
-					if len(vars) > 0 {
-						profileVariablesMap[*cv.ProfileUID] = vars
-					}
-				}
-			}
-			for i := range clusterProfiles {
-				p := clusterProfiles[i].(map[string]interface{})
-				if uid, ok := p["id"].(string); ok && uid != "" {
-					if vars, has := profileVariablesMap[uid]; has {
-						p["variables"] = vars
-					}
-				}
-			}
+			log.Printf("[WARN] failed to enrich cluster profile variables: %v", err)
 		}
+		clusterProfiles, err = enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
+		if err != nil {
+			log.Printf("[WARN] failed to enrich cluster profile packs: %v", err)
+		}
+		alignClusterProfilesStateWithConfig(d, clusterProfiles)
 	}
 	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
 		log.Printf("[WARN] failed to set cluster_profile: %v", err)

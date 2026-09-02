@@ -349,9 +349,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
 
 ```
 
-```
-
-## import existing application profile## Import
+## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
 to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
@@ -367,9 +365,6 @@ Using `terraform import`, import the application profile using the `profile_uid_
 
 ```console
 terraform import {{ .Name }}.example profile_uid_here/profile_name_here
-```
-
-
 ```
 
 {{ .SchemaMarkdown | trimspace }}

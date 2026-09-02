@@ -12,6 +12,7 @@ import (
 func dataSourcePermission() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcePermissionRead,
+		Description: "Data source for looking up permissions by name and scope.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

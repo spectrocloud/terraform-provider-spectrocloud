@@ -26,7 +26,7 @@ func resourceResourceLimit() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description:   "",
+		Description:   "Resource for managing tenant-wide Palette object quota limits in Spectro Cloud.",
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"alert": {

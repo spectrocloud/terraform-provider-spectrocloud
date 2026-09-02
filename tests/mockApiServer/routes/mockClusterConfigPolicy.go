@@ -66,8 +66,10 @@ func ClusterConfigPolicyRoutes() []Route {
 			},
 		},
 		{
+			// ListClusterConfigPolicies (used by GetClusterConfigPolicyByName)
+			// hits POST /v1/dashboard/spcPolicies, not .../maintenance.
 			Method: "POST",
-			Path:   "/v1/dashboard/spcPolicies/maintenance",
+			Path:   "/v1/dashboard/spcPolicies",
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getClusterConfigPoliciesSummaryResponse(),

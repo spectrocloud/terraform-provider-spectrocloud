@@ -2,12 +2,12 @@
 page_title: "spectrocloud_registry_oci Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing OCI registries in Spectro Cloud.
 ---
 
 # spectrocloud_registry_oci (Resource)
 
-  
+  Resource for managing OCI registries in Spectro Cloud.
 
 ## Example Usage
 
@@ -62,7 +62,7 @@ The import will automatically detect whether the registry is an ECR or basic typ
 
 ### Optional
 
-- `base_content_path` (String) The relative path to the endpoint specified.
+- `base_content_path` (String) The relative path to the endpoint specified. Required when `is_synchronization` is set to `true`.
 - `endpoint_suffix` (String) Specifies a suffix to append to the endpoint. This field is optional, but some registries (e.g., JFrog) may require it. The final registry URL is constructed by appending this suffix to the endpoint.
 - `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
 - `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`
@@ -83,7 +83,7 @@ Required:
 
 Optional:
 
-- `access_key` (String) The access key for accessing the registry. Required if 'credential_type' is set to 'secret'.
+- `access_key` (String, Sensitive) The access key for accessing the registry (credential). Required if 'credential_type' is set to 'secret'.
 - `arn` (String) The Amazon Resource Name (ARN) used for AWS-based authentication. Required if 'credential_type' is 'sts'.
 - `external_id` (String) The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'.
 - `password` (String, Sensitive) The password for basic authentication. Required if 'credential_type' is 'basic'.

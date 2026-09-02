@@ -24,6 +24,7 @@ func resourceSSO() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceSSOImport,
 		},
+		Description: "Resource for managing tenant-level single sign-on configuration in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -147,7 +148,7 @@ func resourceSSO() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Scopes requested during OIDC authentication.",
+							Description: "Set of OIDC scope strings requested during authentication.",
 						},
 						"first_name": {
 							Type:        schema.TypeString,
@@ -649,20 +650,73 @@ func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 	oidcSpec.ScopesDelimiter = ""
 	oidcSpec.SyncSsoTeams = true
 
+	useUserInfo := false
 	if uie, ok := oidc["user_info_endpoint"]; ok {
-		if len(uie.([]interface{})) > 0 {
+		if uieList, ok2 := uie.([]interface{}); ok2 && len(uieList) > 0 {
+			useUserInfo = true
+			u := uieList[0].(map[string]interface{})
+			email := ""
+			if v, ok := u["email"]; ok && v != nil {
+				email = v.(string)
+			}
 			oidcSpec.UserInfo = &models.V1OidcUserInfo{
 				Claims: &models.V1TenantOidcClaims{
-					Email:       uie.([]interface{})[0].(map[string]interface{})["email"].(string),
-					FirstName:   uie.([]interface{})[0].(map[string]interface{})["first_name"].(string),
-					LastName:    uie.([]interface{})[0].(map[string]interface{})["last_name"].(string),
-					SpectroTeam: uie.([]interface{})[0].(map[string]interface{})["spectro_team"].(string),
+					Email:       email,
+					FirstName:   u["first_name"].(string),
+					LastName:    u["last_name"].(string),
+					SpectroTeam: u["spectro_team"].(string),
 				},
 				UseUserInfo: BoolPtr(true),
 			}
 		}
 	}
+	if !useUserInfo {
+		// Explicitly disable userinfo when the block is absent or empty so read/apply stay aligned with the API.
+		oidcSpec.UserInfo = &models.V1OidcUserInfo{
+			UseUserInfo: BoolPtr(false),
+		}
+	}
 	return oidcSpec
+}
+
+// priorOidcString returns a string field from the first element of the configured oidc block (state/config).
+func priorOidcString(d *schema.ResourceData, field string) string {
+	raw, ok := d.GetOk("oidc")
+	if !ok || raw == nil {
+		return ""
+	}
+	list, ok := raw.([]interface{})
+	if !ok || len(list) == 0 {
+		return ""
+	}
+	m, ok := list[0].(map[string]interface{})
+	if !ok || m == nil {
+		return ""
+	}
+	v, ok := m[field]
+	if !ok || v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
+// resolveOIDCClientSecret picks the value to store in state after a read. The API often returns a masked
+// client secret; in that case we keep the last known value from state so Terraform does not plan a change every refresh.
+func resolveOIDCClientSecret(priorFromState, apiSecret string) string {
+	if priorFromState != "" {
+		if apiSecret == "" || strings.Contains(apiSecret, "*") {
+			return priorFromState
+		}
+		return apiSecret
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
 }
 
 func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData) error {
@@ -672,7 +726,7 @@ func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData
 
 	spec["callback_url"] = oidcSpec.CallbackURL
 	spec["client_id"] = oidcSpec.ClientID
-	spec["client_secret"] = oidcSpec.ClientSecret
+	spec["client_secret"] = resolveOIDCClientSecret(priorOidcString(d, "client_secret"), oidcSpec.ClientSecret)
 
 	spec["default_team_ids"] = oidcSpec.DefaultTeams
 	decodeCA, _ := base64.StdEncoding.DecodeString(oidcSpec.IssuerTLS.CaCertificateBase64)
@@ -687,13 +741,24 @@ func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData
 	spec["spectro_team"] = oidcSpec.RequiredClaims.SpectroTeam
 	spec["scopes"] = oidcSpec.Scopes
 
+	// Only populate user_info_endpoint when the tenant has OIDC userinfo lookup enabled.
+	// Otherwise Terraform would constantly propose removing a block that read() always re-filled.
 	var userEndpoint []interface{}
-	userEndpoint = append(userEndpoint, map[string]interface{}{
-		"email":        oidcSpec.UserInfo.Claims.Email,
-		"first_name":   oidcSpec.UserInfo.Claims.FirstName,
-		"last_name":    oidcSpec.UserInfo.Claims.LastName,
-		"spectro_team": oidcSpec.UserInfo.Claims.SpectroTeam,
-	})
+	if oidcSpec.UserInfo != nil && oidcSpec.UserInfo.UseUserInfo != nil && *oidcSpec.UserInfo.UseUserInfo {
+		email, firstName, lastName, spectroTeam := "", "", "", ""
+		if oidcSpec.UserInfo.Claims != nil {
+			email = oidcSpec.UserInfo.Claims.Email
+			firstName = oidcSpec.UserInfo.Claims.FirstName
+			lastName = oidcSpec.UserInfo.Claims.LastName
+			spectroTeam = oidcSpec.UserInfo.Claims.SpectroTeam
+		}
+		userEndpoint = append(userEndpoint, map[string]interface{}{
+			"email":        email,
+			"first_name":   firstName,
+			"last_name":    lastName,
+			"spectro_team": spectroTeam,
+		})
+	}
 	spec["user_info_endpoint"] = userEndpoint
 
 	oidc = append(oidc, spec)

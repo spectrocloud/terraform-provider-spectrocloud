@@ -29,7 +29,8 @@ func resourceKubevirtDataVolume() *schema.Resource {
 			Create: schema.DefaultTimeout(40 * time.Minute),
 			Delete: schema.DefaultTimeout(5 * time.Minute),
 		},
-		Schema: datavolume.DataVolumeFields(),
+		Description: "Resource for managing KubeVirt data volumes attached to virtual machines.",
+		Schema:      datavolume.DataVolumeFields(),
 	}
 }
 

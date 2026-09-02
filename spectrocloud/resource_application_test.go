@@ -1,10 +1,9 @@
 package spectrocloud
 
 import (
-	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func prepareBaseResourceApplicationData() *schema.ResourceData {
@@ -32,30 +31,7 @@ func prepareBaseResourceApplicationData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceApplicationCreate(t *testing.T) {
-	d := prepareBaseResourceApplicationData()
-
-	diags := resourceApplicationCreate(context.Background(), d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceApplicationRead(t *testing.T) {
-	d := prepareBaseResourceApplicationData()
-
-	diags := resourceApplicationRead(context.Background(), d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceApplicationUpdate(t *testing.T) {
-	d := prepareBaseResourceApplicationData()
-
-	diags := resourceApplicationUpdate(context.Background(), d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceApplicationDelete(t *testing.T) {
-	d := prepareBaseResourceApplicationData()
-
-	diags := resourceApplicationDelete(context.Background(), d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceApplicationCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseResourceApplicationData, unitTestMockAPIClient,
+		resourceApplicationCreate, resourceApplicationRead, resourceApplicationUpdate, resourceApplicationDelete)
 }

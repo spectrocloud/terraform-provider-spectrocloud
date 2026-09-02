@@ -42,6 +42,7 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "Dependency marker used internally by Terraform graph evaluation.",
 			},
 		},
 	}

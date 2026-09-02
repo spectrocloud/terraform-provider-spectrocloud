@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func prepareProfileImportTestdata() *schema.ResourceData {
@@ -14,34 +15,14 @@ func prepareProfileImportTestdata() *schema.ResourceData {
 	return d
 }
 
-func TestResourceClusterProfileImportFeatureCreate(t *testing.T) {
-	d := prepareProfileImportTestdata()
-	var ctx context.Context
-	diags := resourceClusterProfileImportFeatureCreate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "cluster-profile-import-1", d.Id())
+func TestResourceClusterProfileImportFeatureCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareProfileImportTestdata, unitTestMockAPIClient,
+		resourceClusterProfileImportFeatureCreate, resourceClusterProfileImportFeatureRead, resourceClusterProfileImportFeatureUpdate, resourceClusterProfileImportFeatureDelete)
 }
 
-func TestResourceClusterProfileImportFeatureRead(t *testing.T) {
+func TestResourceClusterProfileImportFeatureReadNegative(t *testing.T) {
 	d := prepareProfileImportTestdata()
-	var ctx context.Context
 	d.SetId("cluster-profile-import-1")
-	diags := resourceClusterProfileImportFeatureRead(ctx, d, unitTestMockAPINegativeClient)
+	diags := resourceClusterProfileImportFeatureRead(context.Background(), d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
-}
-
-func TestResourceClusterProfileImportFeatureUpdate(t *testing.T) {
-	d := prepareProfileImportTestdata()
-	var ctx context.Context
-	d.SetId("cluster-profile-import-1")
-	diags := resourceClusterProfileImportFeatureUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceClusterProfileImportFeatureDelete(t *testing.T) {
-	d := prepareProfileImportTestdata()
-	var ctx context.Context
-	d.SetId("cluster-profile-import-1")
-	diags := resourceClusterProfileImportFeatureDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
 }

@@ -15,6 +15,7 @@ import (
 func dataSourceClusterProfile() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceClusterProfileRead,
+		Description: "Data source for looking up a cluster profile by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

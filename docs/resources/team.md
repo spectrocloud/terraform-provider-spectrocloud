@@ -2,12 +2,12 @@
 page_title: "spectrocloud_team Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing teams and role mappings in Spectro Cloud.
 ---
 
 # spectrocloud_team (Resource)
 
-  
+  Resource for managing teams and role mappings in Spectro Cloud.
 
 ## Example Usage
 

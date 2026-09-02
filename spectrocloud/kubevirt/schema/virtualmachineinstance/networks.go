@@ -11,7 +11,7 @@ func networkFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
-			Description: "Network name.",
+			Description: "Logical network name used to reference this network from VM interfaces.",
 			Required:    true,
 		},
 		"network_source": {

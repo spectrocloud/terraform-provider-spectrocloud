@@ -1,11 +1,12 @@
 package spectrocloud
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -123,7 +124,7 @@ func TestToVirtualCluster(t *testing.T) {
 								UID: "host-cluster-uid-123",
 							},
 						},
-						UpdateWorkerPoolsInParallel: true, // schema default
+						UpdateWorkerPoolsInParallel: false, // schema default
 						Timezone:                    "",
 					},
 					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles
@@ -169,7 +170,7 @@ func TestToVirtualCluster(t *testing.T) {
 								UID: "host-cluster-uid-123",
 							},
 						},
-						UpdateWorkerPoolsInParallel: true, // schema default
+						UpdateWorkerPoolsInParallel: false, // schema default
 						Timezone:                    "",
 					},
 					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles

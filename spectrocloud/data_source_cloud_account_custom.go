@@ -13,6 +13,7 @@ import (
 func dataSourceCloudAccountCustom() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceCloudAccountCustomRead,
+		Description: "Data source for looking up a custom cloud account by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

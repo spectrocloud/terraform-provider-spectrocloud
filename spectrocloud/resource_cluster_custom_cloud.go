@@ -105,9 +105,10 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Description: "The cloud account id to use for this cluster.",
 			},
 			"cloud_config_id": {
-				Type:       schema.TypeString,
-				Computed:   true,
-				Deprecated: "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Identifier of the generated cloud configuration associated with this custom cloud cluster.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"cluster_timezone": {
 				Type:         schema.TypeString,
@@ -116,11 +117,12 @@ func resourceClusterCustomCloud() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"cloud_config": {
 				Type:        schema.TypeList,
@@ -248,12 +250,14 @@ func resourceClusterCustomCloud() *schema.Resource {
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),
@@ -337,6 +341,21 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	if isError && diagnostics != nil {
 		return diagnostics
 	}
+
+	// Apply backup policy after cluster creation if specified
+	if _, found := d.GetOk("backup_policy"); found {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Apply scan policy after cluster creation if specified
+	if _, found := d.GetOk("scan_policy"); found {
+		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	resourceClusterCustomCloudRead(ctx, d, m)
 
 	return diags

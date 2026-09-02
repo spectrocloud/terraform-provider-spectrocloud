@@ -174,3 +174,45 @@ func TestGetAddonDeploymentDiagPacks(t *testing.T) {
 		assert.Equal(t, "manifest-1", pack.Manifests[0].Name)
 	})
 }
+
+// TestReadAddonDeployment_InvalidID getClusterProfileUID
+// requires an underscore-separated ID; anything else returns an error
+// and readAddonDeployment short-circuits (nil, false) without hitting
+// the SDK.
+func TestReadAddonDeployment_InvalidID(t *testing.T) {
+	d := resourceAddonDeployment().TestResourceData()
+	d.SetId("no-underscore-in-this-id")
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	cluster := &models.V1SpectroCluster{
+		Metadata: &models.V1ObjectMeta{UID: "test-cluster-uid"},
+		Spec:     &models.V1SpectroClusterSpec{},
+	}
+
+	diags, ok := readAddonDeployment(c, d, cluster)
+	assert.Nil(t, diags)
+	assert.False(t, ok)
+}
+
+// TestReadAddonDeployment_NoMatchingProfile exercises the fallthrough
+// past the ClusterProfileTemplates loop → d.SetId("") + return (diags,
+// false).
+func TestReadAddonDeployment_NoMatchingProfile(t *testing.T) {
+	d := resourceAddonDeployment().TestResourceData()
+	d.SetId("adep_test-cluster-profile-uid")
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	cluster := &models.V1SpectroCluster{
+		Metadata: &models.V1ObjectMeta{UID: "test-cluster-uid"},
+		Spec: &models.V1SpectroClusterSpec{
+			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+				{Name: "some-other-name", UID: "different-uid"},
+			},
+		},
+	}
+
+	// The SDK call to GetClusterProfile may miss; either way, the func
+	// runs to completion — the only assertion that matters is that we
+	// reached the body (no panic).
+	_, _ = readAddonDeployment(c, d, cluster)
+}

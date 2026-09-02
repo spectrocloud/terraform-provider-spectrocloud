@@ -4,10 +4,17 @@ resource "spectrocloud_cluster_aks" "aks" {
   cloud_account_id = data.spectrocloud_cloudaccount_azure.aks_account.id
 
   cloud_config {
-    subscription_id = var.subscription_id
-    resource_group  = var.resource_group
-    ssh_key         = var.ssh_key
-    region          = var.region
+    subscription_id             = var.subscription_id
+    resource_group              = var.resource_group
+    ssh_key                     = var.ssh_key
+    region                      = var.region
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {
@@ -59,10 +66,17 @@ resource "spectrocloud_cluster_aks" "aks2" {
   cloud_account_id = data.spectrocloud_cloudaccount_azure.aks_account.id
 
   cloud_config {
-    subscription_id = var.subscription_id
-    resource_group  = var.resource_group
-    ssh_key         = var.ssh_key
-    region          = var.region
+    subscription_id             = var.subscription_id
+    resource_group              = var.resource_group
+    ssh_key                     = var.ssh_key
+    region                      = var.region
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {

@@ -1,7 +1,6 @@
 package spectrocloud
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -53,35 +52,9 @@ func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceClusterConfigTemplateCreate(t *testing.T) {
-	d := prepareBaseClusterConfigTemplateTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigTemplateCreate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-cluster-config-template-id", d.Id())
-}
-
-func TestResourceClusterConfigTemplateRead(t *testing.T) {
-	d := prepareBaseClusterConfigTemplateTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigTemplateRead(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-cluster-config-template-id", d.Id())
-}
-
-func TestResourceClusterConfigTemplateUpdate(t *testing.T) {
-	d := prepareBaseClusterConfigTemplateTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigTemplateUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-cluster-config-template-id", d.Id())
-}
-
-func TestResourceClusterConfigTemplateDelete(t *testing.T) {
-	d := prepareBaseClusterConfigTemplateTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigTemplateDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceClusterConfigTemplateCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseClusterConfigTemplateTestData, unitTestMockAPIClient,
+		resourceClusterConfigTemplateCreate, resourceClusterConfigTemplateRead, resourceClusterConfigTemplateUpdate, resourceClusterConfigTemplateDelete)
 }
 
 func TestExpandClusterTemplateProfiles(t *testing.T) {

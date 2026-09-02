@@ -18,9 +18,16 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = "spectro2022"
-    region       = "eu-west-1"
-    vpc_id       = "vpc-0a38a86f3bf3c6cf5"
+    ssh_key_name                = "spectro2022"
+    region                      = "eu-west-1"
+    vpc_id                      = "vpc-0a38a86f3bf3c6cf5"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {
@@ -105,6 +112,19 @@ resource "spectrocloud_cluster_aws" "cluster" {
       "eu-west-1c" = "subnet-039c3beb3da69172f"
       "eu-west-1a" = "subnet-04dbeac9aba098d0e"
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }

@@ -14,14 +14,14 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		// Flatten metadata data attributes
 		"name": {
 			Type:         schema.TypeString,
-			Description:  "Name of the virtual machine, must be unique. Cannot be updated.",
+			Description:  "Unique virtual machine name within the namespace. This value is immutable after creation.",
 			Required:     true,
 			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
 		},
 		"generate_name": {
 			Type:         schema.TypeString,
-			Description:  "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Description:  "Prefix used by the server to generate a unique name only if `name` is not provided. This value is combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency.",
 			Optional:     true,
 			ValidateFunc: utils.ValidateGenerateName,
 		},
@@ -121,7 +121,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"name": {
 						Type:        schema.TypeString,
-						Description: "Name is the device name",
+						Description: "Device name for this disk.",
 						Required:    true,
 					},
 					"disk_device": {
@@ -148,7 +148,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 											},
 											"pci_address": {
 												Type:        schema.TypeString,
-												Description: "If specified, the virtual disk will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10",
+												Description: "If specified, the virtual disk is placed on the guest PCI address. For example: `0000:81:01.10`.",
 												Optional:    true,
 											},
 										},
@@ -223,7 +223,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 					"limits": {
 						Type:        schema.TypeMap,
-						Description: "Requests is the maximum amount of compute resources allowed. Valid resource keys are \"memory\" and \"cpu\"",
+						Description: "Map of maximum compute resources allowed. Valid keys include `memory` and `cpu`.",
 						Optional:    true,
 					},
 					"over_commit_guest_overhead": {
@@ -243,7 +243,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"cores": {
 						Type:        schema.TypeInt,
-						Description: "Cores is the number of cores inside the vmi. Must be a value greater or equal 1",
+						Description: "Number of CPU cores inside the VMI. Must be greater than or equal to `1`.",
 						Optional:    true,
 					},
 					"sockets": {
@@ -413,7 +413,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		},
 		"node_selector": {
 			Type:        schema.TypeMap,
-			Description: "NodeSelector is a selector which must be true for the vmi to fit on a node. Selector which must match a node's labels for the vmi to be scheduled on that node.",
+			Description: "Map of node label key to value strings that must match for the VMI to be scheduled on a node.",
 			Optional:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},

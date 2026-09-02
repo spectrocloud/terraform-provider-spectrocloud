@@ -3,12 +3,12 @@
 page_title: "spectrocloud_user Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a user by ID or email address.
 ---
 
 # spectrocloud_user (Data Source)
 
-
+Data source for looking up a user by ID or email address.
 
 ## Example Usage
 

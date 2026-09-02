@@ -17,3 +17,9 @@ variable "cluster_cluster_profile_name" {}
 variable "backup_storage_location_name" {}
 
 variable "cluster_name" {}
+
+variable "cluster_ssh_public_keys" {
+  description = "A list of SSH public keys to inject into MAAS nodes as authorized keys for the 'spectro' user."
+  type        = list(string)
+  default     = []
+}

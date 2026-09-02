@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -17,6 +18,63 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
+// ociBasicTLSConfigForRead builds the tls_config list to store in state for a
+// basic OCI registry. It returns an empty list when the block should be
+// omitted so that HCL configs which don't set tls_config produce a clean
+// plan even though the Palette API always returns a default TLS block
+// (see PLT-2300).
+//
+// The block is preserved when either:
+//   - the user's current state already contains a tls_config entry (round
+//     trip an explicit block, even if its values match the API defaults), or
+//   - the API returned meaningful TLS: a non-empty certificate, or
+//     insecure_skip_verify=true.
+func ociBasicTLSConfigForRead(d *schema.ResourceData, apiTLS *models.V1TLSConfiguration) []interface{} {
+	tlsConfig := make([]interface{}, 0, 1)
+	if apiTLS == nil {
+		return tlsConfig
+	}
+	hasStateTLS := false
+	if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+		if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+			if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+				if tlsRaw, exists := currentCredMap["tls_config"]; exists && tlsRaw != nil {
+					if tlsList, ok := tlsRaw.([]interface{}); ok && len(tlsList) > 0 {
+						hasStateTLS = true
+					}
+				}
+			}
+		}
+	}
+	hasMeaningfulTLS := apiTLS.Certificate != "" || apiTLS.InsecureSkipVerify
+	if hasStateTLS || hasMeaningfulTLS {
+		tlsConfig = append(tlsConfig, map[string]interface{}{
+			"certificate":          apiTLS.Certificate,
+			"insecure_skip_verify": apiTLS.InsecureSkipVerify,
+		})
+	}
+	return tlsConfig
+}
+
+// ociEcrSecretKeyForRead prefers secret_key from state and ignores masked values returned by the API.
+func ociEcrSecretKeyForRead(d *schema.ResourceData, apiSecret string) string {
+	if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+		if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+			if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+				if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
+					if s, ok := secretKey.(string); ok && s != "" {
+						return s
+					}
+				}
+			}
+		}
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
+}
+
 func resourceRegistryOciEcr() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceRegistryEcrCreate,
@@ -26,6 +84,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistryOciImport,
 		},
+		Description: "Resource for managing OCI registries in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -74,7 +133,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "The relative path to the endpoint specified.",
+				Description: "The relative path to the endpoint specified. Required when `is_synchronization` is set to `true`.",
 			},
 			"provider_type": {
 				Type:         schema.TypeString,
@@ -111,7 +170,8 @@ func resourceRegistryOciEcr() *schema.Resource {
 						"access_key": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The access key for accessing the registry. Required if 'credential_type' is set to 'secret'.",
+							Sensitive:   true,
+							Description: "The access key for accessing the registry (credential). Required if 'credential_type' is set to 'secret'.",
 						},
 						"secret_key": {
 							Type:        schema.TypeString,
@@ -170,6 +230,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			providerType := d.Get("provider_type").(string)
 			registryType := d.Get("type").(string)
 			isSync := d.Get("is_synchronization").(bool)
+			baseContentPath := d.Get("base_content_path").(string)
 			// Validate that `provider_type` is "zarf" only if `type` is "basic"
 			if providerType == "zarf" && registryType != "basic" {
 				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
@@ -177,6 +238,12 @@ func resourceRegistryOciEcr() *schema.Resource {
 
 			if providerType == "pack" && !isSync {
 				return fmt.Errorf("`provider_type` set to `pack` is only allowed when `is_synchronization` is set to `true`")
+			}
+
+			// The Palette API requires `base_content_path` when synchronization is enabled;
+			// surface this at plan time rather than as a raw API error at apply.
+			if isSync && baseContentPath == "" {
+				return fmt.Errorf("`base_content_path` is required when `is_synchronization` is set to `true`")
 			}
 			return nil
 		},
@@ -336,15 +403,8 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		case models.V1AwsCloudAccountCredentialTypeSecret:
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
-			// Preserve secret_key from state to avoid drift when API does not return it
-			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
-				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
-					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
-						if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
-							acc["secret_key"] = secretKey
-						}
-					}
-				}
+			if sk := ociEcrSecretKeyForRead(d, registry.Spec.Credentials.SecretKey); sk != "" {
+				acc["secret_key"] = sk
 			}
 		default:
 			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)
@@ -441,12 +501,11 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 				acc["password"] = registry.Spec.Auth.Password.String()
 			}
 		}
-		tlsConfig := make([]interface{}, 0, 1)
-		tls := make(map[string]interface{})
-		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-		tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-		tlsConfig = append(tlsConfig, tls)
-		acc["tls_config"] = tlsConfig
+		// Materialize tls_config only when it's meaningful, otherwise Read
+		// will inject the API's default TLS block into state and produce
+		// perpetual plan drift for configs that omit tls_config entirely
+		// (see PLT-2300).
+		acc["tls_config"] = ociBasicTLSConfigForRead(d, registry.Spec.Auth.TLS)
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -697,7 +756,7 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 		Refresh:    resourceOciRegistrySyncRefreshFunc(c, uid, registryType),
 		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

@@ -11,6 +11,7 @@ import (
 func dataSourceRole() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRoleRead,
+		Description: "Data source for looking up a Spectro Cloud role by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -20,9 +21,10 @@ func dataSourceRole() *schema.Resource {
 				ConflictsWith: []string{"name"},
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "Name of the role to look up.",
 			},
 			"permissions": {
 				Type:     schema.TypeSet,

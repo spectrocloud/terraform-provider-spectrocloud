@@ -9,7 +9,7 @@ func localObjectReferenceFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
-			Description: "Name of the referent.",
+			Description: "Name of the referenced object (for example, a Secret or ConfigMap name).",
 			Required:    true,
 		},
 	}

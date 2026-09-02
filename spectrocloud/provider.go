@@ -19,6 +19,13 @@ const (
 )
 
 var ProviderInitProjectUid = ""
+var ProviderFeaturePreview = map[string]bool{}
+
+// isFeaturePreviewEnabled returns true if the given feature flag name is
+// explicitly set to true in the provider's feature_preview map.
+func isFeaturePreviewEnabled(name string) bool {
+	return ProviderFeaturePreview[name]
+}
 
 func New(_ string) func() *schema.Provider {
 	return func() *schema.Provider {
@@ -61,6 +68,40 @@ func New(_ string) func() *schema.Provider {
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.",
+				},
+				"feature_flag": {
+					Type:     schema.TypeMap,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeBool,
+					},
+					Description: "Optional provider feature flags (map of booleans). Unknown keys are ignored. " +
+						"Set `disable_addon_deployment_resource` to `true` to block the `spectrocloud_addon_deployment` resource during plan and apply.",
+				},
+				"feature_preview": {
+					Type:     schema.TypeMap,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeBool,
+					},
+					Description: "A map of feature preview flags. " +
+						"Supported flags: `immutable-clusterprofiles`. " +
+						"\n\n" +
+						"The `immutable-clusterprofiles` flag enables the standard Terraform " +
+						"Plugin SDK v2 immutable-versioned-resource pattern for " +
+						"`spectrocloud_cluster_profile`. When set, the resource's `version` " +
+						"field becomes `ForceNew` (changes trigger a Terraform replacement " +
+						"instead of an in-place update), the new `skip_destroy` schema field " +
+						"is honored, and the Create function clones from any existing version " +
+						"of the lineage to produce the new immutable version. The Terraform " +
+						"resource id is set once at Create time and never mutates mid-update, " +
+						"so it respects the SDK v2 contract that a resource's primary id is " +
+						"stable across in-place updates. " +
+						"\n\n" +
+						"Without the flag, `spectrocloud_cluster_profile` uses its legacy " +
+						"in-place mutation behavior (PUT-based updates that overwrite the " +
+						"previous version). The flag is purely opt-in; existing user " +
+						"configurations are unaffected.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
@@ -145,6 +186,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_developer_setting":  resourceDeveloperSetting(),
 				"spectrocloud_platform_setting":   resourcePlatformSetting(),
 				"spectrocloud_registration_token": resourceRegistrationToken(),
+				"spectrocloud_audit_trail":        resourceAuditTrail(),
 				"spectrocloud_sso":                resourceSSO(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
@@ -206,6 +248,8 @@ func New(_ string) func() *schema.Provider {
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
+	configureFeatureFlags(d)
+
 	host := d.Get("host").(string)
 	projectName := d.Get("project_name").(string)
 
@@ -256,6 +300,18 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if uid != "" {
 		ProviderInitProjectUid = uid
 		client.WithScopeProject(uid)(c)
+	}
+
+	if v, ok := d.GetOk("feature_preview"); ok {
+		fp := v.(map[string]interface{})
+		for key, val := range fp {
+			switch b := val.(type) {
+			case bool:
+				ProviderFeaturePreview[key] = b
+			case string:
+				ProviderFeaturePreview[key] = b == "true"
+			}
+		}
 	}
 
 	return c, diags

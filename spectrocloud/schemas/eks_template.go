@@ -36,7 +36,7 @@ func AwsLaunchTemplate() *schema.Schema {
 						Type: schema.TypeString,
 					},
 					Optional:    true,
-					Description: "Additional security groups to attach to the instance.",
+					Description: "Set of additional AWS security group IDs to attach to the instance.",
 				},
 			},
 		},

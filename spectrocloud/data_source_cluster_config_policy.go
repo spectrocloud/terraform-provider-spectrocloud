@@ -34,7 +34,7 @@ func dataSourceClusterConfigPolicy() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Tags assigned to the cluster config policy.",
+				Description: "Set of tag strings assigned to the cluster config policy.",
 			},
 			"schedules": {
 				Type:        schema.TypeList,

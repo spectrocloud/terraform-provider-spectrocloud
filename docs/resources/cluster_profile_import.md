@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_profile_import Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for importing a cluster profile definition from a local file into Spectro Cloud.
 ---
 
 # spectrocloud_cluster_profile_import (Resource)
 
-  
+  Resource for importing a cluster profile definition from a local file into Spectro Cloud.
 
 ## Example Usage
 
@@ -32,7 +32,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `import_file` (String)
+- `import_file` (String) Absolute path to the cluster profile import file on the local filesystem.
 
 ### Optional
 

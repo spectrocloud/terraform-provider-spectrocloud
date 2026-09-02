@@ -21,6 +21,7 @@ func resourceCloudAccountApacheCloudStack() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountApacheCloudStackImport,
 		},
+		Description: "Resource for managing Apache CloudStack cloud accounts in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -43,7 +44,7 @@ func resourceCloudAccountApacheCloudStack() *schema.Resource {
 			"api_url": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The API URL of the Apache CloudStack management server. For example: https://cloudstack.example.com:8080/client/api",
+				Description: "The API URL of the Apache CloudStack management server. For example: https://cloudstack.example.com:8080/client/api.",
 			},
 			"api_key": {
 				Type:        schema.TypeString,

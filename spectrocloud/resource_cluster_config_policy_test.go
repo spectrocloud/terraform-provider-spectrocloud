@@ -40,27 +40,9 @@ func TestResourceClusterConfigPolicyCreate(t *testing.T) {
 	assert.Equal(t, "test-cluster-config-policy-id", d.Id())
 }
 
-func TestResourceClusterConfigPolicyRead(t *testing.T) {
-	d := prepareBaseClusterConfigPolicyTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigPolicyRead(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-cluster-config-policy-id", d.Id())
-}
-
-func TestResourceClusterConfigPolicyUpdate(t *testing.T) {
-	d := prepareBaseClusterConfigPolicyTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigPolicyUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-cluster-config-policy-id", d.Id())
-}
-
-func TestResourceClusterConfigPolicyDelete(t *testing.T) {
-	d := prepareBaseClusterConfigPolicyTestData()
-	var ctx context.Context
-	diags := resourceClusterConfigPolicyDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceClusterConfigPolicyCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseClusterConfigPolicyTestData, unitTestMockAPIClient,
+		resourceClusterConfigPolicyCreate, resourceClusterConfigPolicyRead, resourceClusterConfigPolicyUpdate, resourceClusterConfigPolicyDelete)
 }
 
 func TestExpandClusterConfigPolicySchedules(t *testing.T) {

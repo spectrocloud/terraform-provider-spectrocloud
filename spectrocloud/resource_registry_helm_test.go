@@ -11,7 +11,7 @@ import (
 
 func prepareResourceRegistryHelm() *schema.ResourceData {
 	d := resourceRegistryHelm().TestResourceData()
-	d.SetId("test-reg-id")
+	// d.SetId("test-reg-id")
 	_ = d.Set("name", "test-reg-name")
 	_ = d.Set("is_private", true)
 	_ = d.Set("endpoint", "test.com")
@@ -27,13 +27,18 @@ func prepareResourceRegistryHelm() *schema.ResourceData {
 	return d
 }
 
-func TestResourceRegistryHelmCreate(t *testing.T) {
-	d := prepareResourceRegistryHelm()
-	var diags diag.Diagnostics
-	var ctx context.Context
-	diags = resourceRegistryHelmCreate(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
+func TestResourceRegistryHelmCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareResourceRegistryHelm, unitTestMockAPIClient,
+		resourceRegistryHelmCreate, resourceRegistryHelmRead, resourceRegistryHelmUpdate, resourceRegistryHelmDelete)
 }
+
+// func TestResourceRegistryHelmCreate(t *testing.T) {
+// 	d := prepareResourceRegistryHelm()
+// 	var diags diag.Diagnostics
+// 	var ctx context.Context
+// 	diags = resourceRegistryHelmCreate(ctx, d, unitTestMockAPIClient)
+// 	assert.Equal(t, 0, len(diags))
+// }
 
 func TestResourceRegistryHelmCreateNoAuth(t *testing.T) {
 	d := prepareResourceRegistryHelm()
@@ -67,30 +72,6 @@ func TestResourceRegistryHelmCreateBasic(t *testing.T) {
 	assert.Equal(t, 0, len(diags))
 }
 
-func TestResourceRegistryHelmRead(t *testing.T) {
-	d := prepareResourceRegistryHelm()
-	var diags diag.Diagnostics
-	var ctx context.Context
-	diags = resourceRegistryHelmRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceRegistryHelmUpdate(t *testing.T) {
-	d := prepareResourceRegistryHelm()
-	var diags diag.Diagnostics
-	var ctx context.Context
-	diags = resourceRegistryHelmUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceRegistryHelmDelete(t *testing.T) {
-	d := prepareResourceRegistryHelm()
-	var diags diag.Diagnostics
-	var ctx context.Context
-	diags = resourceRegistryHelmDelete(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-
 func TestResourceRegistryHelmCreateWithWaitForSync(t *testing.T) {
 	d := prepareResourceRegistryHelm()
 	_ = d.Set("wait_for_sync", true)
@@ -103,6 +84,7 @@ func TestResourceRegistryHelmCreateWithWaitForSync(t *testing.T) {
 
 func TestResourceRegistryHelmUpdateWithWaitForSync(t *testing.T) {
 	d := prepareResourceRegistryHelm()
+	d.SetId("test-registry-uid") // Update and wait_for_sync require an existing resource ID (mock uses this UID)
 	_ = d.Set("wait_for_sync", true)
 	var diags diag.Diagnostics
 	ctx := context.Background()

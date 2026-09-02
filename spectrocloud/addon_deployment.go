@@ -97,12 +97,7 @@ func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile 
 			// Find variables for this specific profile
 			for _, clusterVar := range clusterVars {
 				if clusterVar.ProfileUID != nil && *clusterVar.ProfileUID == profile.UID && clusterVar.Variables != nil {
-					vars := make(map[string]interface{})
-					for _, v := range clusterVar.Variables {
-						if v.Name != nil && v.Value != "" {
-							vars[*v.Name] = v.Value
-						}
-					}
+					vars := profileVariablesMapFromAPI(d, profile.UID, clusterVar.Variables)
 					if len(vars) > 0 {
 						cluster_profile["variables"] = vars
 					}

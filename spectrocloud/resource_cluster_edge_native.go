@@ -50,9 +50,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the Edge Native cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -94,9 +95,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "UID of the cloud account associated with this Edge Native cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -136,21 +138,24 @@ func resourceClusterEdgeNative() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -172,7 +177,8 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"vip": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.",
+							Computed:    true,
+							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`. When not specified, Palette assigns the VIP and the assigned value is populated on read.",
 						},
 						"overlay_cidr_range": {
 							Type:        schema.TypeString,
@@ -208,7 +214,9 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the machine pool.",
 						},
+						"arch_type": schemas.MachinePoolArchTypeSchema(),
 						"additional_labels": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -247,6 +255,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -260,6 +275,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"edge_host": {
 							Type:     schema.TypeSet,
 							Required: true,
@@ -270,16 +286,16 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Type:        schema.TypeString,
 										Optional:    true,
 										Default:     "",
-										Description: "Edge host name",
+										Description: "Name of the edge host.",
 									},
 									"host_uid": {
 										Type:        schema.TypeString,
-										Description: "Edge host id",
+										Description: "UID of the edge host.",
 										Required:    true,
 									},
 									"static_ip": {
 										Type:        schema.TypeString,
-										Description: "Edge host static IP address",
+										Description: "Static IP address assigned to the edge host.",
 										Optional:    true,
 									},
 									"nic_name": {
@@ -289,19 +305,19 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 									"default_gateway": {
 										Type:        schema.TypeString,
-										Description: "Edge host default gateway",
+										Description: "Default gateway IP address for the edge host network interface.",
 										Optional:    true,
 									},
 									"subnet_mask": {
 										Type:        schema.TypeString,
-										Description: "Edge host subnet mask",
+										Description: "Subnet mask for the edge host network interface.",
 										Optional:    true,
 									},
 									"dns_servers": {
 										Type:        schema.TypeSet,
 										Optional:    true,
 										Set:         schema.HashString,
-										Description: "Edge host DNS servers",
+										Description: "Set of DNS server IP address strings for the edge host network interface.",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -383,6 +399,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -461,12 +478,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig := map[string]interface{}{}
-		if _, ok := d.GetOk("cloud_config"); ok {
-			cloudConfig = d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-		}
-
-		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
@@ -482,7 +494,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	return diag.Diagnostics{}
 }
 
-func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config *models.V1EdgeNativeCloudConfig) []interface{} {
+func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
@@ -491,15 +503,13 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	if config.Spec.ClusterConfig.SSHKeys != nil {
 		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
 	}
-	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
-		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
-			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
-		}
+	if config.Spec.ClusterConfig.ControlPlaneEndpoint != nil && config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
+		m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
 	}
-	if config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
+	if config.Spec.ClusterConfig.OverlayNetworkConfiguration != nil && config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
 		m["overlay_cidr_range"] = config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr
 	}
 	if config.Spec.ClusterConfig != nil {
@@ -507,6 +517,46 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	}
 
 	return []interface{}{m}
+}
+
+// flattenEdgeNativePoolHost maps an API edge host to Terraform edge_host state.
+// Static IP and NIC details may be in host.nic or the deprecated top-level fields.
+func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interface{} {
+	if host == nil || host.HostUID == nil {
+		return nil
+	}
+
+	staticIP := host.StaticIP
+	nicName := host.NicName
+	defaultGateway := ""
+	subnetMask := ""
+	var dnsServers []string
+
+	if host.Nic != nil {
+		if host.Nic.IP != "" {
+			staticIP = host.Nic.IP
+		}
+		if host.Nic.NicName != "" {
+			nicName = host.Nic.NicName
+		}
+		defaultGateway = host.Nic.Gateway
+		subnetMask = host.Nic.Subnet
+		dnsServers = host.Nic.DNS
+	}
+
+	rawHost := map[string]interface{}{
+		"host_name":       host.HostName,
+		"host_uid":        *host.HostUID,
+		"static_ip":       staticIP,
+		"nic_name":        nicName,
+		"default_gateway": defaultGateway,
+		"subnet_mask":     subnetMask,
+		"dns_servers":     dnsServers,
+	}
+	if host.TwoNodeCandidatePriority != "" {
+		rawHost["two_node_role"] = host.TwoNodeCandidatePriority
+	}
+	return rawHost
 }
 
 func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMachinePoolConfig) []interface{} {
@@ -524,6 +574,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+		oi["arch_type"] = flattenMachinePoolArchType(machinePool.MachinePoolProperties)
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -534,22 +585,20 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
+
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
-			rawHost := map[string]interface{}{
-				"host_name":       host.HostName,
-				"host_uid":        *host.HostUID,
-				"static_ip":       host.Nic.IP,
-				"nic_name":        host.Nic.NicName,
-				"default_gateway": host.Nic.Gateway,
-				"subnet_mask":     host.Nic.Subnet,
-				"dns_servers":     host.Nic.DNS,
+			if rawHost := flattenEdgeNativePoolHost(host); rawHost != nil {
+				hosts = append(hosts, rawHost)
 			}
-			if host.TwoNodeCandidatePriority != "" {
-				rawHost["two_node_role"] = host.TwoNodeCandidatePriority
-			}
-			hosts = append(hosts, rawHost)
 		}
 		oi["edge_host"] = schema.NewSet(resourceEdgeHostHash, hosts)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
@@ -567,6 +616,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -821,7 +871,13 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	nodeRepaveInterval := 0
 	if m["node_repave_interval"] != nil {
@@ -835,6 +891,8 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 			return mp, err
 		}
 	}
+
+	mp.PoolConfig.MachinePoolProperties = toMachinePoolProperties(m)
 
 	return mp, nil
 }

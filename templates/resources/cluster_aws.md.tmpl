@@ -116,6 +116,19 @@ resource "spectrocloud_cluster_aws" "cluster" {
       "eu-west-1c" = "subnet-039c3beb3da69172f"
       "eu-west-1a" = "subnet-04dbeac9aba098d0e"
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }

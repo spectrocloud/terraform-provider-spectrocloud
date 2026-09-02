@@ -80,12 +80,12 @@ func dataVolumeSourcePVCFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"namespace": {
 			Type:        schema.TypeString,
-			Description: "The namespace which the PVC located in.",
+			Description: "Namespace where the source PVC is located.",
 			Optional:    true,
 		},
 		"name": {
 			Type:        schema.TypeString,
-			Description: "The name of the PVC.",
+			Description: "Name of the source PVC to clone from.",
 			Optional:    true,
 		},
 	}

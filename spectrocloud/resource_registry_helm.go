@@ -27,6 +27,7 @@ func resourceRegistryHelm() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistryHelmImport,
 		},
+		Description: "Resource for managing Helm registries in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -40,7 +41,7 @@ func resourceRegistryHelm() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The name of the Helm registry. This must be unique",
+				Description: "The name of the Helm registry. This must be unique.",
 			},
 			"is_private": {
 				Type:        schema.TypeBool,
@@ -73,12 +74,14 @@ func resourceRegistryHelm() *schema.Resource {
 						"password": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The password for basic authentication. Required if 'credential_type' is set to 'basic'.",
+							Sensitive:   true,
+							Description: "Password for basic auth (credential). Required when credential_type is `basic`.",
 						},
 						"token": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The authentication token. Required if 'credential_type' is set to 'token'.",
+							Sensitive:   true,
+							Description: "Auth token (credential). Required when credential_type is `token`.",
 						},
 					},
 				},
@@ -285,7 +288,7 @@ func waitForRegistrySync(ctx context.Context, d *schema.ResourceData, uid string
 		Refresh:    resourceRegistrySyncRefreshFunc(c, uid),
 		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

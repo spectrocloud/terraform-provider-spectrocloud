@@ -19,6 +19,7 @@ func resourceCloudAccountCustom() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountCustomImport,
 		},
+		Description: "Resource for managing custom cloud accounts in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -50,7 +51,7 @@ func resourceCloudAccountCustom() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "The credentials required for accessing the cloud.",
+				Description: "Map of credential key to credential value strings required for accessing the cloud.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},

@@ -19,11 +19,13 @@ func resourceClusterProfileImportFeature() *schema.Resource {
 		ReadContext:   resourceClusterProfileImportFeatureRead,
 		UpdateContext: resourceClusterProfileImportFeatureUpdate,
 		DeleteContext: resourceClusterProfileImportFeatureDelete,
+		Description:   "Resource for importing a cluster profile definition from a local file into Spectro Cloud.",
 
 		Schema: map[string]*schema.Schema{
 			"import_file": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Absolute path to the cluster profile import file on the local filesystem.",
 			},
 			"context": {
 				Type:         schema.TypeString,

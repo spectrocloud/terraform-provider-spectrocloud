@@ -11,6 +11,7 @@ import (
 func dataSourceTeam() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceTeamRead,
+		Description: "Data source for looking up a team by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

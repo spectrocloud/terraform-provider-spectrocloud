@@ -3,12 +3,12 @@
 page_title: "spectrocloud_role Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a Spectro Cloud role by ID or name.
 ---
 
 # spectrocloud_role (Data Source)
 
-
+Data source for looking up a Spectro Cloud role by ID or name.
 
 ## Example Usage
 
@@ -34,7 +34,7 @@ output "role_permissions" {
 
 ### Optional
 
-- `name` (String)
+- `name` (String) Name of the role to look up.
 
 ### Read-Only
 

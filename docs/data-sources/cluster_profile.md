@@ -3,12 +3,12 @@
 page_title: "spectrocloud_cluster_profile Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a cluster profile by ID or name.
 ---
 
 # spectrocloud_cluster_profile (Data Source)
 
-
+Data source for looking up a cluster profile by ID or name.
 
 ## Example Usage
 

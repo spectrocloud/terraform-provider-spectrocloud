@@ -2,8 +2,10 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -11,70 +13,97 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func TestToVsphereAccount(t *testing.T) {
-	rd := resourceCloudAccountVsphere().TestResourceData()
-	rd.Set("name", "vsphere_unit_test_acc")
-	rd.Set("vsphere_vcenter", "vcenter.example.com")
-	rd.Set("vsphere_username", "testuser")
-	rd.Set("vsphere_password", "testpass")
-	rd.Set("vsphere_ignore_insecure_error", false)
-	rd.Set("private_cloud_gateway_id", "12345")
-	acc := toVsphereAccount(rd)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("vsphere_vcenter"), *acc.Spec.VcenterServer)
-	assert.Equal(t, rd.Get("vsphere_username"), *acc.Spec.Username)
-	assert.Equal(t, rd.Get("vsphere_password"), *acc.Spec.Password)
-	assert.Equal(t, rd.Get("vsphere_ignore_insecure_error"), acc.Spec.Insecure)
-	assert.Equal(t, rd.Get("private_cloud_gateway_id"), acc.Metadata.Annotations[OverlordUID])
-	assert.Equal(t, rd.Id(), acc.Metadata.UID)
-}
-
-func TestToVsphereAccountIgnoreInsecureError(t *testing.T) {
-	rd := resourceCloudAccountVsphere().TestResourceData()
-	rd.Set("name", "vsphere_unit_test_acc")
-	rd.Set("context", "tenant")
-	rd.Set("vsphere_vcenter", "vcenter.example.com")
-	rd.Set("vsphere_username", "testuser")
-	rd.Set("vsphere_password", "testpass")
-	rd.Set("vsphere_ignore_insecure_error", true)
-	rd.Set("private_cloud_gateway_id", "67890")
-	acc := toVsphereAccount(rd)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("vsphere_vcenter"), *acc.Spec.VcenterServer)
-	assert.Equal(t, rd.Get("vsphere_username"), *acc.Spec.Username)
-	assert.Equal(t, rd.Get("vsphere_password"), *acc.Spec.Password)
-	assert.Equal(t, rd.Get("vsphere_ignore_insecure_error"), acc.Spec.Insecure)
-	assert.Equal(t, rd.Get("private_cloud_gateway_id"), acc.Metadata.Annotations[OverlordUID])
-	assert.Equal(t, rd.Id(), acc.Metadata.UID)
-}
-
-func TestFlattenVsphereCloudAccount(t *testing.T) {
-	rd := resourceCloudAccountVsphere().TestResourceData()
-	account := &models.V1VsphereAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name:        "test_account",
-			Annotations: map[string]string{OverlordUID: "12345"},
-			UID:         "abcdef",
+func TestToVsphereAccount_TableDriven(t *testing.T) {
+	tests := []struct {
+		name   string
+		rdSet  map[string]interface{}
+		verify func(t *testing.T, rd *schema.ResourceData, acc *models.V1VsphereAccount)
+	}{
+		{
+			name: "base account",
+			rdSet: map[string]interface{}{
+				"name": "vsphere_unit_test_acc", "vsphere_vcenter": "vcenter.example.com",
+				"vsphere_username": "testuser", "vsphere_password": "testpass",
+				"vsphere_ignore_insecure_error": false, "private_cloud_gateway_id": "12345",
+			},
+			verify: func(t *testing.T, rd *schema.ResourceData, acc *models.V1VsphereAccount) {
+				assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+				assert.Equal(t, rd.Get("vsphere_vcenter"), *acc.Spec.VcenterServer)
+				assert.Equal(t, rd.Get("vsphere_username"), *acc.Spec.Username)
+				assert.Equal(t, rd.Get("vsphere_password"), *acc.Spec.Password)
+				assert.Equal(t, rd.Get("vsphere_ignore_insecure_error"), acc.Spec.Insecure)
+				assert.Equal(t, rd.Get("private_cloud_gateway_id"), acc.Metadata.Annotations[OverlordUID])
+				assert.Equal(t, rd.Id(), acc.Metadata.UID)
+			},
 		},
-		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: types.Ptr("vcenter.example.com"),
-			Username:      types.Ptr("testuser"),
-			Insecure:      true,
+		{
+			name: "ignore insecure error with tenant context",
+			rdSet: map[string]interface{}{
+				"name": "vsphere_unit_test_acc", "context": "tenant",
+				"vsphere_vcenter": "vcenter.example.com", "vsphere_username": "testuser",
+				"vsphere_password": "testpass", "vsphere_ignore_insecure_error": true,
+				"private_cloud_gateway_id": "67890",
+			},
+			verify: func(t *testing.T, rd *schema.ResourceData, acc *models.V1VsphereAccount) {
+				assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+				assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, rd.Get("vsphere_vcenter"), *acc.Spec.VcenterServer)
+				assert.Equal(t, rd.Get("vsphere_ignore_insecure_error"), acc.Spec.Insecure)
+				assert.Equal(t, rd.Get("private_cloud_gateway_id"), acc.Metadata.Annotations[OverlordUID])
+				assert.Equal(t, rd.Id(), acc.Metadata.UID)
+			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rd := resourceCloudAccountVsphere().TestResourceData()
+			for k, v := range tt.rdSet {
+				rd.Set(k, v)
+			}
+			acc := toVsphereAccount(rd)
+			tt.verify(t, rd, acc)
+		})
+	}
+}
 
-	diags, hasError := flattenVsphereCloudAccount(rd, account)
-
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "test_account", rd.Get("name"))
-	assert.Equal(t, "12345", rd.Get("private_cloud_gateway_id"))
-	assert.Equal(t, "vcenter.example.com", rd.Get("vsphere_vcenter"))
-	assert.Equal(t, "testuser", rd.Get("vsphere_username"))
-	assert.Equal(t, true, rd.Get("vsphere_ignore_insecure_error"))
+func TestFlattenVsphereCloudAccount_TableDriven(t *testing.T) {
+	tests := []struct {
+		name    string
+		account *models.V1VsphereAccount
+		expect  map[string]interface{}
+	}{
+		{
+			name: "base account",
+			account: &models.V1VsphereAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name:        "test_account",
+					Annotations: map[string]string{OverlordUID: "12345"},
+					UID:         "abcdef",
+				},
+				Spec: &models.V1VsphereCloudAccount{
+					VcenterServer: types.Ptr("vcenter.example.com"),
+					Username:      types.Ptr("testuser"),
+					Insecure:      true,
+				},
+			},
+			expect: map[string]interface{}{
+				"name": "test_account", "private_cloud_gateway_id": "12345",
+				"vsphere_vcenter": "vcenter.example.com", "vsphere_username": "testuser",
+				"vsphere_ignore_insecure_error": true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rd := resourceCloudAccountVsphere().TestResourceData()
+			diags, hasError := flattenVsphereCloudAccount(rd, tt.account)
+			assert.Nil(t, diags)
+			assert.False(t, hasError)
+			for k, want := range tt.expect {
+				assert.Equal(t, want, rd.Get(k), "field %s", k)
+			}
+		})
+	}
 }
 
 func prepareResourceCloudAccountVsphere() *schema.ResourceData {
@@ -90,33 +119,25 @@ func prepareResourceCloudAccountVsphere() *schema.ResourceData {
 	return d
 }
 
-func TestResourceCloudAccountVsphereCreate(t *testing.T) {
-	d := prepareResourceCloudAccountVsphere()
+func TestResourceCloudAccountVsphereCRUD_TableDriven(t *testing.T) {
 	ctx := context.Background()
-	diags := resourceCloudAccountVsphereCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-vsphere-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountVsphereRead(t *testing.T) {
-	d := prepareResourceCloudAccountVsphere()
-	ctx := context.Background()
-	diags := resourceCloudAccountVsphereRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-vsphere-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountVsphereUpdate(t *testing.T) {
-	d := prepareResourceCloudAccountVsphere()
-	ctx := context.Background()
-	diags := resourceCloudAccountVsphereUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-vsphere-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountVsphereDelete(t *testing.T) {
-	d := prepareResourceCloudAccountVsphere()
-	ctx := context.Background()
-	diags := resourceCloudAccountVsphereDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
+	tests := []struct {
+		name string
+		op   func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics
+	}{
+		{name: "Create", op: resourceCloudAccountVsphereCreate},
+		{name: "Read", op: resourceCloudAccountVsphereRead},
+		{name: "Update", op: resourceCloudAccountVsphereUpdate},
+		{name: "Delete", op: resourceCloudAccountVsphereDelete},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := prepareResourceCloudAccountVsphere()
+			diags := tt.op(ctx, d, unitTestMockAPIClient)
+			assert.Len(t, diags, 0)
+			if tt.name != "Delete" {
+				assert.Equal(t, "test-vsphere-account-id-1", d.Id())
+			}
+		})
+	}
 }

@@ -32,170 +32,145 @@ func commonNodePool() map[string]interface{} {
 }
 
 func TestCommonHash(t *testing.T) {
-	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-RollingUpdate-10-"
-	hash := CommonHash(commonNodePool()).String()
-
-	assert.Equal(t, expectedHash, hash)
-}
-
-func TestCommonHashWithRollingUpdateStrategy(t *testing.T) {
-	nodePool := map[string]interface{}{
-		"additional_labels": map[string]interface{}{
-			"label1": "value1",
+	// Equality: input -> expected hash string
+	equalityCases := []struct {
+		name     string
+		input    map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "base node pool with RollingUpdate",
+			input:    commonNodePool(),
+			expected: "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-RollingUpdate-10-",
 		},
-		"taints": []interface{}{
-			map[string]interface{}{
-				"key":    "taint1",
-				"value":  "true",
-				"effect": "NoSchedule",
+		{
+			name: "node pool with OverrideScaling",
+			input: map[string]interface{}{
+				"additional_labels": map[string]interface{}{"label1": "value1"},
+				"taints": []interface{}{
+					map[string]interface{}{"key": "taint1", "value": "true", "effect": "NoSchedule"},
+				},
+				"control_plane": true, "control_plane_as_worker": false,
+				"name": "test-pool", "count": 3,
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{"max_surge": "1", "max_unavailable": "0"},
+				},
+				"node_repave_interval": 10,
 			},
+			expected: "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-OverrideScaling-max_surge:1-max_unavailable:0-10-",
 		},
-		"control_plane":           true,
-		"control_plane_as_worker": false,
-		"name":                    "test-pool",
-		"count":                   3,
-		"update_strategy":         "OverrideScaling",
-		"override_scaling": []interface{}{
-			map[string]interface{}{
-				"max_surge":       "1",
-				"max_unavailable": "0",
-			},
-		},
-		"node_repave_interval": 10,
+	}
+	for _, tc := range equalityCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hash := CommonHash(tc.input).String()
+			assert.Equal(t, tc.expected, hash)
+		})
 	}
 
-	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-OverrideScaling-max_surge:1-max_unavailable:0-10-"
-	hash := CommonHash(nodePool).String()
-
-	assert.Equal(t, expectedHash, hash)
-}
-
-func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
-	// Base node pool with legacy update_strategy
+	// Change detection: two inputs must produce different hashes
 	baseLegacy := map[string]interface{}{
-		"name":            "test-pool",
-		"count":           3,
-		"update_strategy": "RollingUpdateScaleOut",
+		"name": "test-pool", "count": 3, "update_strategy": "RollingUpdateScaleOut",
 	}
-
-	// Node pool with override_scaling
 	withOverrideScaling := map[string]interface{}{
-		"name":            "test-pool",
-		"count":           3,
-		"update_strategy": "OverrideScaling",
-		"override_scaling": []interface{}{
-			map[string]interface{}{
-				"max_surge":       "1",
-				"max_unavailable": "0",
-			},
-		},
+		"name": "test-pool", "count": 3, "update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{map[string]interface{}{"max_surge": "1", "max_unavailable": "0"}},
 	}
-
-	// Node pool with different maxSurge
 	differentMaxSurge := map[string]interface{}{
-		"name":            "test-pool",
-		"count":           3,
-		"update_strategy": "OverrideScaling",
-		"override_scaling": []interface{}{
-			map[string]interface{}{
-				"max_surge":       "2",
-				"max_unavailable": "0",
-			},
-		},
+		"name": "test-pool", "count": 3, "update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{map[string]interface{}{"max_surge": "2", "max_unavailable": "0"}},
 	}
-
-	// Node pool with different maxUnavailable
 	differentMaxUnavailable := map[string]interface{}{
-		"name":            "test-pool",
-		"count":           3,
-		"update_strategy": "OverrideScaling",
-		"override_scaling": []interface{}{
-			map[string]interface{}{
-				"max_surge":       "1",
-				"max_unavailable": "1",
-			},
-		},
+		"name": "test-pool", "count": 3, "update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{map[string]interface{}{"max_surge": "1", "max_unavailable": "1"}},
 	}
-
-	baseLegacyHash := CommonHash(baseLegacy).String()
-	withOverrideScalingHash := CommonHash(withOverrideScaling).String()
-	differentMaxSurgeHash := CommonHash(differentMaxSurge).String()
-	differentMaxUnavailableHash := CommonHash(differentMaxUnavailable).String()
-
-	// Hash should be different when switching to override_scaling
-	assert.NotEqual(t, baseLegacyHash, withOverrideScalingHash, "Adding override_scaling should change hash")
-
-	// Hash should be different when maxSurge changes
-	assert.NotEqual(t, withOverrideScalingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
-
-	// Hash should be different when maxUnavailable changes
-	assert.NotEqual(t, withOverrideScalingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
-
-	// Hash should be different between different maxSurge and maxUnavailable
-	assert.NotEqual(t, differentMaxSurgeHash, differentMaxUnavailableHash, "Different max values should produce different hashes")
+	changeCases := []struct {
+		name   string
+		inputA map[string]interface{}
+		inputB map[string]interface{}
+		msg    string
+	}{
+		{"adding override_scaling changes hash", baseLegacy, withOverrideScaling, "Adding override_scaling should change hash"},
+		{"changing max_surge changes hash", withOverrideScaling, differentMaxSurge, "Changing max_surge should change hash"},
+		{"changing max_unavailable changes hash", withOverrideScaling, differentMaxUnavailable, "Changing max_unavailable should change hash"},
+		{"different max values produce different hashes", differentMaxSurge, differentMaxUnavailable, "Different max values should produce different hashes"},
+	}
+	for _, tc := range changeCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hashA := CommonHash(tc.inputA).String()
+			hashB := CommonHash(tc.inputB).String()
+			assert.NotEqual(t, hashA, hashB, tc.msg)
+		})
+	}
 }
 
 func TestResourceMachinePoolAzureHash(t *testing.T) {
-	nodePool := map[string]interface{}{
-		"additional_labels": map[string]interface{}{
-			"label1": "value1",
-		},
-		"taints": []interface{}{
-			map[string]interface{}{
-				"key":    "taint1",
-				"value":  "true",
-				"effect": "NoSchedule",
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected int
+	}{
+		{
+			name: "full Azure node pool",
+			input: map[string]interface{}{
+				"additional_labels": map[string]interface{}{"label1": "value1"},
+				"taints": []interface{}{
+					map[string]interface{}{"key": "taint1", "value": "true", "effect": "NoSchedule"},
+				},
+				"control_plane": true, "control_plane_as_worker": false,
+				"name": "test-pool", "count": 3, "update_strategy": "RollingUpdate",
+				"node_repave_interval": 10, "instance_type": "Standard_D2_v3",
+				"is_system_node_pool": true, "os_type": "Linux",
 			},
+			expected: 3495386805,
 		},
-		"control_plane":           true,
-		"control_plane_as_worker": false,
-		"name":                    "test-pool",
-		"count":                   3,
-		"update_strategy":         "RollingUpdate",
-		"node_repave_interval":    10,
-		"instance_type":           "Standard_D2_v3",
-		"is_system_node_pool":     true,
-		"os_type":                 "Linux",
 	}
-
-	expectedHash := 3495386805
-
-	hash := resourceMachinePoolAzureHash(nodePool)
-
-	assert.Equal(t, expectedHash, hash)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			hash := resourceMachinePoolAzureHash(tc.input)
+			assert.Equal(t, tc.expected, hash)
+		})
+	}
 }
 
 func TestResourceClusterHash(t *testing.T) {
-	clusterData := map[string]interface{}{
-		"uid": "abc123",
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected int
+	}{
+		{"cluster with uid", map[string]interface{}{"uid": "abc123"}, 1764273400},
 	}
-
-	expectedHash := 1764273400
-
-	hash := resourceClusterHash(clusterData)
-
-	assert.Equal(t, expectedHash, hash)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			hash := resourceClusterHash(tc.input)
+			assert.Equal(t, tc.expected, hash)
+		})
+	}
 }
 
 func TestHashStringMapList(t *testing.T) {
-	stringMapList := []interface{}{
-		map[string]interface{}{"key1": "value1", "key2": "value2"},
-		map[string]interface{}{"key3": "value3"},
+	tests := []struct {
+		name     string
+		input    []interface{}
+		expected string
+	}{
+		{
+			name: "non_empty",
+			input: []interface{}{
+				map[string]interface{}{"key1": "value1", "key2": "value2"},
+				map[string]interface{}{"key3": "value3"},
+			},
+			expected: "key1-value1key2-value2key3-value3",
+		},
+		{name: "empty", input: []interface{}{}, expected: ""},
 	}
-
-	expectedHash := "key1-value1key2-value2key3-value3"
-	hash := HashStringMapList(stringMapList)
-
-	assert.Equal(t, expectedHash, hash)
-}
-
-func TestHashStringMapListlength(t *testing.T) {
-	stringMapList := []interface{}{}
-
-	expectedHash := ""
-	hash := HashStringMapList(stringMapList)
-
-	assert.Equal(t, expectedHash, hash)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			hash := HashStringMapList(tc.input)
+			assert.Equal(t, tc.expected, hash)
+		})
+	}
 }
 
 func TestResourceMachinePoolAksHash(t *testing.T) {
@@ -385,6 +360,38 @@ func TestResourceMachinePoolAksHashAllFields(t *testing.T) {
 			description: "Changing storage_account_type should change hash",
 		},
 		{
+			name: "OS SKU change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_sku":               "Ubuntu",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_sku"] = "AzureLinux"
+			},
+			description: "Changing os_sku should change hash",
+		},
+		{
+			name: "OS type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_type":              "Linux",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_type"] = "Windows"
+			},
+			description: "Changing os_type should change hash",
+		},
+		{
 			name: "Additional labels change affects hash",
 			baseInput: map[string]interface{}{
 				"name":                 "pool-1",
@@ -529,10 +536,12 @@ func TestResourceMachinePoolAksHashAllFields(t *testing.T) {
 
 func TestResourceMachinePoolGcpHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "GCP pool with azs and az_subnets",
 			input: map[string]interface{}{
 				"instance_type": "n1-standard-4",
 				"min":           1,
@@ -549,19 +558,21 @@ func TestResourceMachinePoolGcpHash(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		actual := resourceMachinePoolGcpHash(tc.input)
-		if actual != tc.expected {
-			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolGcpHash(tc.input)
+			assert.Equal(t, tc.expected, actual)
+		})
 	}
 }
 
 func TestResourceMachinePoolAwsHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "AWS pool with azs and az_subnets",
 			input: map[string]interface{}{
 				"min":           1,
 				"max":           5,
@@ -572,7 +583,6 @@ func TestResourceMachinePoolAwsHash(t *testing.T) {
 					"us-east-1a",
 					"us-east-1b",
 				}),
-
 				"az_subnets": map[string]interface{}{
 					"us-east-1a": "subnet-1",
 					"us-east-1b": "subnet-2",
@@ -581,21 +591,22 @@ func TestResourceMachinePoolAwsHash(t *testing.T) {
 			expected: 1929542909,
 		},
 	}
-
 	for _, tc := range testCases {
-		actual := resourceMachinePoolAwsHash(tc.input)
-		if actual != tc.expected {
-			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolAwsHash(tc.input)
+			assert.Equal(t, tc.expected, actual)
+		})
 	}
 }
 
 func TestResourceMachinePoolEksHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "EKS pool with launch template",
 			input: map[string]interface{}{
 				"disk_size_gb":  100,
 				"min":           2,
@@ -617,27 +628,50 @@ func TestResourceMachinePoolEksHash(t *testing.T) {
 			expected: 706444520,
 		},
 	}
-
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Input: %v", tc.input), func(t *testing.T) {
-			// Call the function with the test input
+		t.Run(tc.name, func(t *testing.T) {
 			result := resourceMachinePoolEksHash(tc.input)
-
-			// Check if the result matches the expected output
-			if result != tc.expected {
-				t.Errorf("Expected: %d, Got: %d", tc.expected, result)
-			}
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
 
+// EKS machine pool hashing must tolerate Terraform's []interface{}{nil} placeholder during diff
+// for optional nested blocks (same effective hash as omitting eks_launch_template).
+func TestResourceMachinePoolEksHash_eksLaunchTemplateNilListElement(t *testing.T) {
+	poolBase := map[string]interface{}{
+		"disk_size_gb":  100,
+		"min":           2,
+		"max":           5,
+		"instance_type": "t2.micro",
+		"capacity_type": "on-demand",
+		"max_price":     "0.05",
+		"az_subnets": map[string]interface{}{
+			"subnet1": "subnet-123",
+			"subnet2": "subnet-456",
+		},
+	}
+	withoutLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withoutLT[k] = v
+	}
+	withNilLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withNilLT[k] = v
+	}
+	withNilLT["eks_launch_template"] = []interface{}{nil}
+
+	assert.Equal(t, resourceMachinePoolEksHash(withoutLT), resourceMachinePoolEksHash(withNilLT))
+}
+
 func TestEksLaunchTemplate(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected string
 	}{
 		{
-
+			name: "launch template with security groups",
 			input: []interface{}{
 				map[string]interface{}{
 					"ami_id":                     "ami-123",
@@ -649,32 +683,29 @@ func TestEksLaunchTemplate(t *testing.T) {
 			},
 			expected: "ami-123-gp2-100-200-sg-456-sg-123-",
 		},
+		{name: "empty slice", input: []interface{}{}, expected: ""},
 		{
-			// Test case with invalid input type (slice of non-map)
-			input:    []interface{}{},
+			name:     "Terraform diff placeholder: list with nil element",
+			input:    []interface{}{nil},
 			expected: "",
 		},
 	}
-
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("Input: %v", tc.input), func(t *testing.T) {
-			// Call the function with the test input
+		t.Run(tc.name, func(t *testing.T) {
 			result := eksLaunchTemplate(tc.input)
-
-			// Check if the result matches the expected output
-			if result != tc.expected {
-				t.Errorf("Expected: %s, Got: %s", tc.expected, result)
-			}
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
 
 func TestResourceMachinePoolVsphereHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "with instance_type and placement",
 			input: map[string]interface{}{
 				"instance_type": []interface{}{
 					map[string]interface{}{
@@ -696,7 +727,7 @@ func TestResourceMachinePoolVsphereHash(t *testing.T) {
 			expected: 556255137,
 		},
 		{
-			// Test case with missing instance_type
+			name: "missing instance_type",
 			input: map[string]interface{}{
 				"placement": []interface{}{
 					map[string]interface{}{
@@ -711,93 +742,108 @@ func TestResourceMachinePoolVsphereHash(t *testing.T) {
 			expected: 3826670463,
 		},
 	}
-
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			// Call the function with the test input
+		t.Run(tc.name, func(t *testing.T) {
 			result := resourceMachinePoolVsphereHash(tc.input)
-
-			// Check if the result matches the expected output
-			if result != tc.expected {
-				t.Errorf("Expected: %d, Got: %d", tc.expected, result)
-			}
+			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func TestResourceMachinePoolVsphereHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"cpu":          2,
+				"disk_size_gb": 50,
+				"memory_mb":    4096,
+			},
+		},
+		"placement": []interface{}{
+			map[string]interface{}{
+				"cluster":           "c1",
+				"resource_pool":     "rp",
+				"datastore":         "ds",
+				"network":           "n",
+				"static_ip_pool_id": "",
+			},
+		},
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolVsphereHash(base), resourceMachinePoolVsphereHash(enabled),
+		"vSphere machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
-	testCases := []struct {
-		input    interface{}
-		expected int
-	}{
-		{
-			input:    map[string]interface{}{},
-			expected: 2166136261,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			result := resourceMachinePoolEdgeNativeHash(tc.input)
-
-			if result != tc.expected {
-				t.Errorf("Expected: %d, Got: %d", tc.expected, result)
-			}
-		})
-	}
-}
-
-func TestResourceMachinePoolEdgeNativeHashAdv(t *testing.T) {
+	// Equality: input -> expected hash
+	t.Run("empty_pool", func(t *testing.T) {
+		result := resourceMachinePoolEdgeNativeHash(map[string]interface{}{})
+		assert.Equal(t, 2166136261, result)
+	})
+	// Consistency: same input => same hash
 	machinePool1 := map[string]interface{}{
 		"edge_host": []interface{}{
-			map[string]interface{}{
-				"host_name": "host1",
-				"host_uid":  "uid1",
-				"static_ip": "192.168.1.1",
-			},
-			map[string]interface{}{
-				"host_name": "host2",
-				"host_uid":  "uid2",
-				"static_ip": "192.168.1.2",
-			},
+			map[string]interface{}{"host_name": "host1", "host_uid": "uid1", "static_ip": "192.168.1.1"},
+			map[string]interface{}{"host_name": "host2", "host_uid": "uid2", "static_ip": "192.168.1.2"},
 		},
 	}
-
+	t.Run("same_input_same_hash", func(t *testing.T) {
+		hash1 := resourceMachinePoolEdgeNativeHash(machinePool1)
+		hash2 := resourceMachinePoolEdgeNativeHash(machinePool1)
+		assert.Equal(t, hash1, hash2, "same input must produce same hash")
+	})
+	// Different inputs => different hashes
 	machinePool2 := map[string]interface{}{
 		"edge_host": []interface{}{
-			map[string]interface{}{
-				"host_name": "host3",
-				"host_uid":  "uid3",
-				"static_ip": "192.168.1.3",
-			},
-			map[string]interface{}{
-				"host_name": "host4",
-				"host_uid":  "uid4",
-				"static_ip": "192.168.1.4",
-			},
+			map[string]interface{}{"host_name": "host3", "host_uid": "uid3", "static_ip": "192.168.1.3"},
+			map[string]interface{}{"host_name": "host4", "host_uid": "uid4", "static_ip": "192.168.1.4"},
 		},
 	}
+	t.Run("different_inputs_different_hash", func(t *testing.T) {
+		hash1 := resourceMachinePoolEdgeNativeHash(machinePool1)
+		hash2 := resourceMachinePoolEdgeNativeHash(machinePool2)
+		assert.NotEqual(t, hash1, hash2, "different inputs must produce different hashes")
+	})
 
-	hash1 := resourceMachinePoolEdgeNativeHash(machinePool1)
-	hash2 := resourceMachinePoolEdgeNativeHash(machinePool1) // Same input as above
-	hash3 := resourceMachinePoolEdgeNativeHash(machinePool2) // Different input
-
-	if hash1 != hash2 {
-		t.Errorf("Hashes do not match for the same input: got %v want %v", hash2, hash1)
+	base := map[string]interface{}{
+		"name":          "worker",
+		"control_plane": false,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{"host_uid": "uid1"},
+		}),
+		"skip_k8s_upgrade": "disabled",
 	}
-
-	if hash1 == hash3 {
-		t.Errorf("Hashes should not match for different inputs: got %v", hash3)
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
 	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+	assert.NotEqual(t, resourceMachinePoolEdgeNativeHash(base), resourceMachinePoolEdgeNativeHash(enabled),
+		"edge native machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestGpuConfigHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    map[string]interface{}
 		expected string
 	}{
 		{
-
+			name: "with addresses",
 			input: map[string]interface{}{
 				"num_gpus":     2,
 				"device_model": "model1",
@@ -810,23 +856,15 @@ func TestGpuConfigHash(t *testing.T) {
 			expected: "2-model1-vendor1-address1-value1address2-value2",
 		},
 		{
-			// Test case with missing "addresses" key
-			input: map[string]interface{}{
-				"num_gpus":     1,
-				"device_model": "model2",
-				"vendor":       "vendor2",
-			},
+			name:     "missing addresses",
+			input:    map[string]interface{}{"num_gpus": 1, "device_model": "model2", "vendor": "vendor2"},
 			expected: "1-model2-vendor2-",
 		},
 	}
-
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			result := GpuConfigHash(tc.input)
-
-			if result != tc.expected {
-				t.Errorf("Expected: %s, Got: %s", tc.expected, result)
-			}
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
@@ -901,6 +939,43 @@ func TestResourceMachinePoolMaasHash(t *testing.T) {
 			assert.Equal(t, tc.expectedHash, hash)
 		})
 	}
+}
+
+func TestResourceMachinePoolMaasHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"min_cpu":       2,
+				"min_memory_mb": 4096,
+			},
+		},
+		"azs":        schema.NewSet(schema.HashString, []interface{}{"az1"}),
+		"node_tags":  schema.NewSet(schema.HashString, []interface{}{}),
+		"use_lxd_vm": false,
+		"placement": []interface{}{
+			map[string]interface{}{
+				"resource_pool": "rp",
+			},
+		},
+		"network":          []interface{}{},
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolMaasHash(base), resourceMachinePoolMaasHash(enabled),
+		"MAAS machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestResourceMachinePoolVirtualHash(t *testing.T) {
@@ -2073,4 +2148,173 @@ func TestAKSAndEKSHashWithAnnotationsAndOverride(t *testing.T) {
 				"Hash should change when additional_annotations or override_kubeadm_configuration is added")
 		})
 	}
+}
+
+// TestYamlContentHash Covers YamlContentHash,
+// yamlContentToCanonicalString, and toCanonicalString (three previously
+// 0% funcs). Round-trips a variety of YAML shapes and confirms:
+//   - equal content → equal hash regardless of formatting
+//   - different content → different hash
+//   - all canonical-string branches (map, slice, primitive types) are hit
+func TestYamlContentHash(t *testing.T) {
+	t.Run("empty input hashes to a stable empty-content hash", func(t *testing.T) {
+		h1 := YamlContentHash("")
+		h2 := YamlContentHash("   \n")
+		assert.Equal(t, h1, h2, "whitespace-only input should hash the same as empty")
+	})
+
+	t.Run("formatting differences produce same hash", func(t *testing.T) {
+		a := "name: foo\nvalue: 1\n"
+		b := "value: 1\nname: foo\n" // reordered keys
+		assert.Equal(t,
+			YamlContentHash(a), YamlContentHash(b),
+			"key order should not affect the canonical hash")
+	})
+
+	t.Run("content differences produce different hash", func(t *testing.T) {
+		a := "name: foo\n"
+		b := "name: bar\n"
+		assert.NotEqual(t, YamlContentHash(a), YamlContentHash(b))
+	})
+
+	t.Run("multi-document YAML with mixed types", func(t *testing.T) {
+		// Exercises toCanonicalString branches: map, slice, int, bool, string, null.
+		content := `---
+name: main
+count: 3
+enabled: true
+missing: ~
+items:
+  - a
+  - b
+---
+name: other
+count: 5
+`
+		h := YamlContentHash(content)
+		assert.NotEmpty(t, h)
+	})
+
+	t.Run("malformed YAML falls back to raw", func(t *testing.T) {
+		// Deliberately-bad YAML routes through the fallback branch that
+		// keeps the raw text; still produces a hash.
+		h := YamlContentHash("this: is: not: valid: [")
+		assert.NotEmpty(t, h)
+	})
+}
+
+// The following four tests guard the PLT-2298 hash fix: without
+// override_cluster_api_config in the pool hash, day-2 changes to the
+// passthrough on an existing pool would not flip the set hash, and Terraform
+// would silently skip UpdateMachinePool. See resource_cluster_{maas,vsphere,
+// gcp,gke}.go for the schema wiring.
+
+func TestResourceMachinePoolMaasHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"min_cpu":       2,
+				"min_memory_mb": 4096,
+			},
+		},
+		"azs":                         schema.NewSet(schema.HashString, []interface{}{"az1"}),
+		"node_tags":                   schema.NewSet(schema.HashString, []interface{}{}),
+		"use_lxd_vm":                  false,
+		"placement":                   []interface{}{map[string]interface{}{"resource_pool": "rp"}},
+		"network":                     []interface{}{},
+		"skip_k8s_upgrade":            "disabled",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "MaasCluster:\n  spec:\n    failureDomains: [az1]\n"
+
+	assert.NotEqual(t, resourceMachinePoolMaasHash(base), resourceMachinePoolMaasHash(withOverride),
+		"MAAS machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolVsphereHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"cpu":          2,
+				"disk_size_gb": 50,
+				"memory_mb":    4096,
+			},
+		},
+		"placement": []interface{}{
+			map[string]interface{}{
+				"cluster":           "c1",
+				"resource_pool":     "rp",
+				"datastore":         "ds",
+				"network":           "n",
+				"static_ip_pool_id": "",
+			},
+		},
+		"skip_k8s_upgrade":            "disabled",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "VSphereMachineTemplate:\n  spec:\n    diskGiB: 80\n"
+
+	assert.NotEqual(t, resourceMachinePoolVsphereHash(base), resourceMachinePoolVsphereHash(withOverride),
+		"vSphere machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolGcpHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                        "pool-a",
+		"instance_type":               "n1-standard-4",
+		"disk_size_gb":                60,
+		"azs":                         schema.NewSet(schema.HashString, []interface{}{"us-central1-a"}),
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "GCPMachineTemplate:\n  spec:\n    rootDeviceSize: 100\n"
+
+	assert.NotEqual(t, resourceMachinePoolGcpHash(base), resourceMachinePoolGcpHash(withOverride),
+		"GCP machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolGkeHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                        "gke-pool-1",
+		"count":                       3,
+		"disk_size_gb":                60,
+		"instance_type":               "n1-standard-4",
+		"update_strategy":             "RollingUpdateScaleOut",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "GCPManagedMachinePool:\n  spec:\n    nodePoolName: worker-basic\n"
+
+	assert.NotEqual(t, resourceMachinePoolGkeHash(base), resourceMachinePoolGkeHash(withOverride),
+		"GKE machine pool hash should change when override_cluster_api_config changes")
 }

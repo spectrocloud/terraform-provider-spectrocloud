@@ -3,12 +3,12 @@
 page_title: "spectrocloud_permission Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up permissions by name and scope.
 ---
 
 # spectrocloud_permission (Data Source)
 
-
+Data source for looking up permissions by name and scope.
 
 ## Example Usage
 

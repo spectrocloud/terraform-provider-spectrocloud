@@ -2,12 +2,12 @@
 page_title: "spectrocloud_virtual_machine Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing KubeVirt virtual machines on Spectro Cloud clusters.
 ---
 
 # spectrocloud_virtual_machine (Resource)
 
-  
+  Resource for managing KubeVirt virtual machines on Spectro Cloud clusters.
 
 ## Example Usage
 
@@ -508,7 +508,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 ### Required
 
 - `cluster_uid` (String) The cluster UID to which the virtual machine belongs to.
-- `name` (String) Name of the virtual machine, must be unique. Cannot be updated.
+- `name` (String) Unique virtual machine name within the namespace. This value is immutable after creation.
 - `resources` (Block List, Min: 1, Max: 1) Resources describes the Compute Resources required by this vmi. (see [below for nested schema](#nestedblock--resources))
 
 ### Optional
@@ -524,7 +524,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 - `eviction_strategy` (String) EvictionStrategy can be set to "LiveMigrate" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.
 - `features` (Block List, Max: 1) Features allows to configure various virtualization features. (see [below for nested schema](#nestedblock--features))
 - `firmware` (Block List, Max: 1) Firmware configuration for the virtual machine. (see [below for nested schema](#nestedblock--firmware))
-- `generate_name` (String) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency
+- `generate_name` (String) Prefix used by the server to generate a unique name only if `name` is not provided. This value is combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency.
 - `hostname` (String) Specifies the hostname of the vmi.
 - `interface` (Block List) Interfaces describe network interfaces which are added to the vmi. (see [below for nested schema](#nestedblock--interface))
 - `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select). May match selectors of replication controllers and services.
@@ -532,7 +532,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 - `memory` (Block List, Max: 1) Memory allows specifying the vmi memory features. (see [below for nested schema](#nestedblock--memory))
 - `namespace` (String) Namespace defines the space within, Name must be unique.
 - `network` (Block List) List of networks that can be attached to a vm's virtual interface. (see [below for nested schema](#nestedblock--network))
-- `node_selector` (Map of String) NodeSelector is a selector which must be true for the vmi to fit on a node. Selector which must match a node's labels for the vmi to be scheduled on that node.
+- `node_selector` (Map of String) Map of node label key to value strings that must match for the VMI to be scheduled on a node.
 - `pod_dns_config` (Block List, Max: 1) Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. Optional: Defaults to empty (see [below for nested schema](#nestedblock--pod_dns_config))
 - `priority_class_name` (String) If specified, indicates the pod's priority. If not specified, the pod priority will be default or zero if there is no default.
 - `readiness_probe` (Block List, Max: 1) Specification of the desired behavior of the VirtualMachineInstance on the host. (see [below for nested schema](#nestedblock--readiness_probe))
@@ -560,7 +560,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 
 Optional:
 
-- `limits` (Map of String) Requests is the maximum amount of compute resources allowed. Valid resource keys are "memory" and "cpu"
+- `limits` (Map of String) Map of maximum compute resources allowed. Valid keys include `memory` and `cpu`.
 - `over_commit_guest_overhead` (Boolean) Don't ask the scheduler to take the guest-management overhead into account. Instead put the overhead only into the container's memory limit. This can lead to crashes if all memory is in use on a node. Defaults to false.
 - `requests` (Map of String) Requests is a description of the initial vmi resources.
 
@@ -588,7 +588,7 @@ Optional:
 Required:
 
 - `preference` (Block List, Min: 1, Max: 1) A node selector term, associated with the corresponding weight. (see [below for nested schema](#nestedblock--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference))
-- `weight` (Number) weight is in the range 1-100
+- `weight` (Number) Weight in the range `1-100`.
 
 <a id="nestedblock--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference"></a>
 ### Nested Schema for `affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference`
@@ -649,8 +649,8 @@ Optional:
 
 Required:
 
-- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
-- `weight` (Number) weight associated with matching the corresponding podAffinityTerm, in the range 1-100
+- `pod_affinity_term` (Block List, Min: 1, Max: 1) Pod affinity term associated with the corresponding weight. (see [below for nested schema](#nestedblock--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `weight` (Number) Weight associated with the matching `pod_affinity_term`, in the range `1-100`.
 
 <a id="nestedblock--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
 ### Nested Schema for `affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
@@ -658,8 +658,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
-- `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
-- `topology_key` (String) empty topology key is interpreted by the scheduler as 'all topologies'
+- `namespaces` (Set of String) Set of namespace name strings that the label selector applies to; null or empty means this pod's namespace.
+- `topology_key` (String) Topology key used by the scheduler; an empty value is interpreted as all topologies.
 
 <a id="nestedblock--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
 ### Nested Schema for `affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
@@ -688,8 +688,8 @@ Optional:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
-- `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
-- `topology_key` (String) empty topology key is interpreted by the scheduler as 'all topologies'
+- `namespaces` (Set of String) Set of namespace name strings that the label selector applies to; null or empty means this pod's namespace.
+- `topology_key` (String) Topology key used by the scheduler; an empty value is interpreted as all topologies.
 
 <a id="nestedblock--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
 ### Nested Schema for `affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector`
@@ -725,8 +725,8 @@ Optional:
 
 Required:
 
-- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
-- `weight` (Number) weight associated with matching the corresponding podAffinityTerm, in the range 1-100
+- `pod_affinity_term` (Block List, Min: 1, Max: 1) Pod affinity term associated with the corresponding weight. (see [below for nested schema](#nestedblock--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `weight` (Number) Weight associated with the matching `pod_affinity_term`, in the range `1-100`.
 
 <a id="nestedblock--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
 ### Nested Schema for `affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
@@ -734,8 +734,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
-- `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
-- `topology_key` (String) empty topology key is interpreted by the scheduler as 'all topologies'
+- `namespaces` (Set of String) Set of namespace name strings that the label selector applies to; null or empty means this pod's namespace.
+- `topology_key` (String) Topology key used by the scheduler; an empty value is interpreted as all topologies.
 
 <a id="nestedblock--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
 ### Nested Schema for `affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
@@ -764,8 +764,8 @@ Optional:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
-- `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
-- `topology_key` (String) empty topology key is interpreted by the scheduler as 'all topologies'
+- `namespaces` (Set of String) Set of namespace name strings that the label selector applies to; null or empty means this pod's namespace.
+- `topology_key` (String) Topology key used by the scheduler; an empty value is interpreted as all topologies.
 
 <a id="nestedblock--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
 ### Nested Schema for `affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector`
@@ -794,7 +794,7 @@ Optional:
 
 Optional:
 
-- `cores` (Number) Cores is the number of cores inside the vmi. Must be a value greater or equal 1
+- `cores` (Number) Number of CPU cores inside the VMI. Must be greater than or equal to `1`.
 - `sockets` (Number) Sockets is the number of sockets inside the vmi. Must be a value greater or equal 1.
 - `threads` (Number) Threads is the number of threads inside the vmi. Must be a value greater or equal 1.
 
@@ -812,9 +812,9 @@ Required:
 
 Optional:
 
-- `annotations` (Map of String) An unstructured key value map stored with the DataVolume that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations
-- `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the DataVolume. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels
-- `name` (String) Name of the DataVolume, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names
+- `annotations` (Map of String) An unstructured key/value map stored with the DataVolume that can be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations.
+- `labels` (Map of String) Map of string key/value labels used to organize and categorize the DataVolume. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels.
+- `name` (String) Name of the DataVolume. Must be unique and cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names.
 - `namespace` (String) Namespace defines the space within which name of the DataVolume must be unique.
 
 Read-Only:
@@ -839,13 +839,13 @@ Optional:
 
 Required:
 
-- `access_modes` (Set of String) A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1
+- `access_modes` (Set of String) Set of desired access mode strings for the volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1.
 - `resources` (Block List, Min: 1, Max: 1) A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources (see [below for nested schema](#nestedblock--data_volume_templates--spec--pvc--resources))
 
 Optional:
 
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--data_volume_templates--spec--pvc--selector))
-- `storage_class_name` (String) Name of the storage class requested by the claim
+- `storage_class_name` (String) Name of the storage class requested by the claim.
 - `volume_mode` (String) volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
 
@@ -854,8 +854,8 @@ Optional:
 
 Optional:
 
-- `limits` (Map of String) Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/
-- `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+- `limits` (Map of String) Map describing the maximum compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/.
+- `requests` (Map of String) Map describing the minimum compute resources required. If omitted, it defaults to `limits` when explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/.
 
 
 <a id="nestedblock--data_volume_templates--spec--pvc--selector"></a>
@@ -907,8 +907,8 @@ Optional:
 
 Optional:
 
-- `name` (String) The name of the PVC.
-- `namespace` (String) The namespace which the PVC located in.
+- `name` (String) Name of the source PVC to clone from.
+- `namespace` (String) Namespace where the source PVC is located.
 
 
 <a id="nestedblock--data_volume_templates--spec--source--registry"></a>
@@ -925,10 +925,10 @@ Optional:
 
 Optional:
 
-- `access_modes` (Set of String) A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+- `access_modes` (Set of String) Set of desired access mode strings for the volume. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1.
 - `resources` (Block List, Max: 1) A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage--resources))
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage--selector))
-- `storage_class_name` (String) Name of the storage class requested by the claim
+- `storage_class_name` (String) Name of the storage class requested by the claim.
 - `volume_mode` (String) volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
 
@@ -937,8 +937,8 @@ Optional:
 
 Optional:
 
-- `limits` (Map of String) Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/
-- `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+- `limits` (Map of String) Map describing the maximum compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/.
+- `requests` (Map of String) Map describing the minimum compute resources required. If omitted, it defaults to `limits` when explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/.
 
 
 <a id="nestedblock--data_volume_templates--spec--storage--selector"></a>
@@ -969,7 +969,7 @@ Optional:
 Required:
 
 - `disk_device` (Block List, Min: 1) DiskDevice specifies as which device the disk should be added to the guest. (see [below for nested schema](#nestedblock--disk--disk_device))
-- `name` (String) Name is the device name
+- `name` (String) Device name for this disk.
 
 Optional:
 
@@ -992,7 +992,7 @@ Required:
 
 Optional:
 
-- `pci_address` (String) If specified, the virtual disk will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10
+- `pci_address` (String) If specified, the virtual disk is placed on the guest PCI address. For example: `0000:81:01.10`.
 - `read_only` (Boolean) ReadOnly. Defaults to false.
 
 
@@ -1099,7 +1099,7 @@ Optional:
 
 Required:
 
-- `name` (String) Network name.
+- `name` (String) Logical network name used to reference this network from VM interfaces.
 
 Optional:
 
@@ -1189,7 +1189,7 @@ Optional:
 Optional:
 
 - `action` (String) Indicates the type of action that is requested. e.g. Start or Stop.
-- `data` (Map of String) Provides additional data in order to perform the Action.
+- `data` (Map of String) Map of string key/value pairs with additional parameters required to perform the action.
 - `uid` (String) Indicates the UUID of an existing Virtual Machine Instance that this change request applies to -- if applicable.
 
 
@@ -1220,7 +1220,7 @@ Optional:
 
 Required:
 
-- `name` (String) Volume's name.
+- `name` (String) Unique volume name used to reference this volume from VM disk definitions.
 - `volume_source` (Block List, Min: 1, Max: 1) VolumeSource represents the location and type of the mounted volume. Defaults to Disk, if no type is specified. (see [below for nested schema](#nestedblock--volume--volume_source))
 
 <a id="nestedblock--volume--volume_source"></a>
@@ -1256,7 +1256,7 @@ Optional:
 
 Required:
 
-- `name` (String) Name of the referent.
+- `name` (String) Name of the referenced object (for example, a Secret or ConfigMap name).
 
 
 <a id="nestedblock--volume--volume_source--cloud_init_config_drive--user_data_secret_ref"></a>
@@ -1264,7 +1264,7 @@ Required:
 
 Required:
 
-- `name` (String) Name of the referent.
+- `name` (String) Name of the referenced object (for example, a Secret or ConfigMap name).
 
 
 
@@ -1285,7 +1285,7 @@ Optional:
 
 Required:
 
-- `name` (String) Name of the referent.
+- `name` (String) Name of the referenced object (for example, a Secret or ConfigMap name).
 
 
 <a id="nestedblock--volume--volume_source--cloud_init_no_cloud--user_data_secret_ref"></a>
@@ -1293,7 +1293,7 @@ Required:
 
 Required:
 
-- `name` (String) Name of the referent.
+- `name` (String) Name of the referenced object (for example, a Secret or ConfigMap name).
 
 
 
@@ -1310,7 +1310,7 @@ Optional:
 
 Optional:
 
-- `key` (String)
+- `key` (String) Key name from the referenced ConfigMap to project into the volume.
 
 
 
@@ -1327,7 +1327,7 @@ Required:
 
 Required:
 
-- `name` (String) Name represents the name of the DataVolume in the same namespace.
+- `name` (String) Name of the DataVolume in the same namespace to attach as the volume source.
 
 
 <a id="nestedblock--volume--volume_source--empty_disk"></a>
@@ -1350,7 +1350,7 @@ Optional:
 
 Required:
 
-- `claim_name` (String) ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+- `claim_name` (String) Name of the PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims.
 
 Optional:
 
@@ -1372,7 +1372,7 @@ Required:
 
 Required:
 
-- `claim_name` (String) ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+- `claim_name` (String) Name of the PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims.
 
 Optional:
 

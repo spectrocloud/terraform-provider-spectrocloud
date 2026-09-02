@@ -2,12 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToIpPool(t *testing.T) {
@@ -116,43 +117,15 @@ func prepareResourcePrivateCloudGatewayIpPool() *schema.ResourceData {
 	return d
 }
 
-func TestResourceIpPoolCreate(t *testing.T) {
-	d := prepareResourcePrivateCloudGatewayIpPool()
-	ctx := context.Background()
-	diags := resourceIpPoolCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-pcg-id", d.Id())
+func TestResourceIpPoolCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareResourcePrivateCloudGatewayIpPool, unitTestMockAPIClient,
+		resourceIpPoolCreate, resourceIpPoolRead, resourceIpPoolUpdate, resourceIpPoolDelete)
 }
-
-func TestResourceIpPoolRead(t *testing.T) {
-	d := prepareResourcePrivateCloudGatewayIpPool()
-	ctx := context.Background()
-	diags := resourceIpPoolRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-pcg-id", d.Id())
-}
-
 func TestResourceIpPoolReadRange(t *testing.T) {
 	d := prepareResourcePrivateCloudGatewayIpPool()
 	ctx := context.Background()
 	diags := resourceIpPoolRead(ctx, d, unitTestMockAPIClient)
 	_ = d.Set("network_type", "range")
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-pcg-id", d.Id())
-}
-
-func TestResourceIpPoolUpdate(t *testing.T) {
-	d := prepareResourcePrivateCloudGatewayIpPool()
-	ctx := context.Background()
-	diags := resourceIpPoolUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-pcg-id", d.Id())
-}
-
-func TestResourceIpPoolDelete(t *testing.T) {
-	d := prepareResourcePrivateCloudGatewayIpPool()
-	ctx := context.Background()
-	diags := resourceIpPoolDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "test-pcg-id", d.Id())
 }

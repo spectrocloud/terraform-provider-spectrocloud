@@ -24,6 +24,7 @@ func resourceClusterGroup() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterGroupImport,
 		},
+		Description: "Resource for managing host cluster groups in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -43,7 +44,7 @@ func resourceClusterGroup() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the cluster group",
+				Description: "Name of the cluster group.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -102,9 +103,10 @@ func resourceClusterGroup() *schema.Resource {
 							Description: "The allowed oversubscription percentage.",
 						},
 						"values": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "YAML values override string applied to the cluster group configuration.",
 						},
 						"k8s_distribution": {
 							Type:        schema.TypeString,

@@ -1,4 +1,4 @@
-data "spectrocloud_cloudaccount_aws" "account" {
+data "spectrocloud_cloudaccount_azure" "account" {
   # id = <uid>
   name = var.cluster_cloud_account_name
 }
@@ -15,13 +15,20 @@ data "spectrocloud_backup_storage_location" "bsl" {
 resource "spectrocloud_cluster_aks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
-    subscription_id = "subscription-id"
-    resource_group  = "dev"
-    ssh_key         = "ssh key value"
-    region          = "centralus"
+    subscription_id             = "subscription-id"
+    resource_group              = "dev"
+    ssh_key                     = "ssh key value"
+    region                      = "centralus"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {

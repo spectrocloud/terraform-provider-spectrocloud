@@ -21,7 +21,7 @@ func waitForProfileDownload(ctx context.Context, c *client.V1Client, scope, id s
 		Refresh:    resourceClusterProfileStateRefreshFunc(c, id),
 		Timeout:    timeout,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	_, err := stateConf.WaitForStateContext(ctx)

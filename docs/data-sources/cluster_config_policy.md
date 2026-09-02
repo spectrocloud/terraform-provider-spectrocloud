@@ -41,7 +41,7 @@ output "policy_tags" {
 
 - `id` (String) The ID of this resource.
 - `schedules` (List of Object) List of maintenance schedules for the policy. (see [below for nested schema](#nestedatt--schedules))
-- `tags` (Set of String) Tags assigned to the cluster config policy.
+- `tags` (Set of String) Set of tag strings assigned to the cluster config policy.
 
 <a id="nestedatt--schedules"></a>
 ### Nested Schema for `schedules`

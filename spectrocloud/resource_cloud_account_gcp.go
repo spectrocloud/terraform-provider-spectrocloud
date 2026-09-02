@@ -18,6 +18,7 @@ func resourceCloudAccountGcp() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountGcpImport,
 		},
+		Description: "Resource for managing GCP cloud account credentials in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

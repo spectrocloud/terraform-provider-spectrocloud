@@ -32,6 +32,13 @@ resource "spectrocloud_cluster_azure" "cluster" {
     resource_group  = var.azure_resource_group
     region          = var.azure_region
     ssh_key         = var.cluster_ssh_public_key
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
 
      //Static placement config
         #    network_resource_group = "test-resource-group"
@@ -96,6 +103,25 @@ resource "spectrocloud_cluster_azure" "cluster" {
     count         = 1
     instance_type = "Standard_D2_v3"
     azs           = [""]
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }

@@ -46,7 +46,7 @@ terraform import spectrocloud_project.{project_uid}/{project_name}
 ### Optional
 
 - `description` (String) The description of the project.
-- `tags` (Set of String) Assign tags to the project.
+- `tags` (Set of String) Set of tag strings to assign to the project.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

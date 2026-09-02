@@ -3,12 +3,12 @@
 page_title: "spectrocloud_registry Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up an OCI, Helm, or Spectro registry by name.
 ---
 
 # spectrocloud_registry (Data Source)
 
-
+Data source for looking up an OCI, Helm, or Spectro registry by name.
 
 ## Example Usage
 
@@ -29,7 +29,7 @@ output "registry_id" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the registry to look up.
 
 ### Optional
 

@@ -140,25 +140,27 @@ func resourceClusterAzure() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -241,6 +243,7 @@ func resourceClusterAzure() *schema.Resource {
 								},
 							},
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -317,6 +320,8 @@ func resourceClusterAzure() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"disk": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -437,6 +442,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -524,6 +530,9 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 	}
 	if config.Spec.ClusterConfig.ContainerName != "" {
 		m["container_name"] = config.Spec.ClusterConfig.ContainerName
+	}
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
 	}
 	if config.Spec.ClusterConfig.VnetResourceGroup != "" {
 		m["network_resource_group"] = config.Spec.ClusterConfig.VnetResourceGroup
@@ -618,6 +627,10 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -644,12 +657,19 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAzure(cloudConfigId, toCloudConfigAzure(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId)
 	if err != nil {
@@ -760,18 +780,9 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 			Profiles:        profiles,
 			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AzureClusterConfig{
-				Location:           types.Ptr(cloudConfig["region"].(string)),
-				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
-				ResourceGroup:      cloudConfig["resource_group"].(string),
-				StorageAccountName: cloudConfig["storage_account_name"].(string),
-				ContainerName:      cloudConfig["container_name"].(string),
-			},
+			CloudConfig:     azureClusterConfigFromMap(cloudConfig),
 		},
 	}
-	// setting static placements
-	toStaticPlacement(cluster, cloudConfig)
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
@@ -912,6 +923,10 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0
@@ -927,6 +942,32 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 	}
 
 	return mp, nil
+}
+
+func toCloudConfigAzure(cloudConfig map[string]interface{}) *models.V1AzureCloudClusterConfigEntity {
+	return &models.V1AzureCloudClusterConfigEntity{
+		ClusterConfig: azureClusterConfigFromMap(cloudConfig),
+	}
+}
+
+func azureClusterConfigFromMap(cloudConfig map[string]interface{}) *models.V1AzureClusterConfig {
+	cluster := &models.V1SpectroAzureClusterEntity{
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
+			CloudConfig: &models.V1AzureClusterConfig{
+				Location:           types.Ptr(cloudConfig["region"].(string)),
+				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
+				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
+				ResourceGroup:      cloudConfig["resource_group"].(string),
+				StorageAccountName: cloudConfig["storage_account_name"].(string),
+				ContainerName:      cloudConfig["container_name"].(string),
+			},
+		},
+	}
+	toStaticPlacement(cluster, cloudConfig)
+	if override, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		cluster.Spec.CloudConfig.OverrideClusterAPIConfig = override
+	}
+	return cluster.Spec.CloudConfig
 }
 
 func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {

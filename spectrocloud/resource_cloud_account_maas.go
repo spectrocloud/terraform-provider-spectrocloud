@@ -19,6 +19,7 @@ func resourceCloudAccountMaas() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountMaasImport,
 		},
+		Description: "Resource for managing MaaS cloud accounts in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -41,7 +42,7 @@ func resourceCloudAccountMaas() *schema.Resource {
 			"maas_api_endpoint": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Endpoint of the MAAS API that is used to connect to the MAAS cloud. I.e. http://maas:5240/MAAS",
+				Description: "Endpoint of the MAAS API used to connect to the MAAS cloud, for example `http://maas:5240/MAAS`.",
 			},
 			"maas_api_key": {
 				Type:        schema.TypeString,

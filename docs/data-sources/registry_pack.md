@@ -3,12 +3,12 @@
 page_title: "spectrocloud_registry_pack Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a Spectro pack registry by name.
 ---
 
 # spectrocloud_registry_pack (Data Source)
 
-
+Data source for looking up a Spectro pack registry by name.
 
 ## Example Usage
 
@@ -29,7 +29,7 @@ output "registry_pack_id" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the pack registry to look up.
 
 ### Read-Only
 

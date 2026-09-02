@@ -11,7 +11,7 @@ import (
 func WorkspaceNamespacesSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:        schema.TypeSet,
-		Optional:    true,
+		Required:    true,
 		Description: "The namespaces for the cluster.",
 		Set:         resourceWorkspaceNamespaceHash,
 		Elem: &schema.Resource{
@@ -36,8 +36,9 @@ func WorkspaceNamespacesSchema() *schema.Schema {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"uid": {
-								Type:     schema.TypeString,
-								Required: true,
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "UID of the cluster for this namespace-specific resource allocation.",
 							},
 							"resource_allocation": {
 								Type:     schema.TypeMap,

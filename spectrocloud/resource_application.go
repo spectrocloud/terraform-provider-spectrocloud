@@ -19,6 +19,7 @@ func resourceApplication() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceApplicationImport,
 		},
+		Description: "Resource for managing applications deployed through Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),

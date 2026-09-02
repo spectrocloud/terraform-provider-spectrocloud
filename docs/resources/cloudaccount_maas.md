@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_maas Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing MaaS cloud accounts in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_maas (Resource)
 
-  
+  Resource for managing MaaS cloud accounts in Spectro Cloud.
 
 ## Example Usage
 
@@ -42,7 +42,7 @@ terraform import spectrocloud_cloudaccount_maas.{cloud_account_uid}/{cloud_accou
 
 ### Required
 
-- `maas_api_endpoint` (String) Endpoint of the MAAS API that is used to connect to the MAAS cloud. I.e. http://maas:5240/MAAS
+- `maas_api_endpoint` (String) Endpoint of the MAAS API used to connect to the MAAS cloud, for example `http://maas:5240/MAAS`.
 - `maas_api_key` (String, Sensitive) API key that is used to connect to the MAAS cloud.
 - `name` (String) Name of the MAAS cloud account.
 - `private_cloud_gateway_id` (String) ID of the private cloud gateway that is used to connect to the MAAS cloud.

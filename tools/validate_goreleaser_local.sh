@@ -152,6 +152,9 @@ run_go_matrix_builds() {
       if [[ "${os}" == "darwin" && "${arch}" == "arm" ]]; then
         continue
       fi
+      if [[ "${os}" == "windows" && "${arch}" == "arm" ]]; then
+        continue
+      fi
 
       echo
       echo "== building ${os}/${arch} =="

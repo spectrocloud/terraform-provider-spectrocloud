@@ -55,7 +55,7 @@ resource "spectrocloud_role" "custom_role" {
 ### Required
 
 - `name` (String) The name of the role.
-- `permissions` (Set of String) The permission's assigned to the role.
+- `permissions` (Set of String) Set of permission ID strings assigned to the role.
 
 ### Optional
 

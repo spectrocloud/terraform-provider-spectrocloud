@@ -3,12 +3,12 @@
 page_title: "spectrocloud_project Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a Spectro Cloud project by name.
 ---
 
 # spectrocloud_project (Data Source)
 
-
+Data source for looking up a Spectro Cloud project by name.
 
 ## Example Usage
 
@@ -34,7 +34,7 @@ output "project_info" {
 
 ### Optional
 
-- `name` (String)
+- `name` (String) Name of the project to look up.
 
 ### Read-Only
 

@@ -3,12 +3,12 @@
 page_title: "spectrocloud_workspace Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a Spectro Cloud workspace by name.
 ---
 
 # spectrocloud_workspace (Data Source)
 
-
+Data source for looking up a Spectro Cloud workspace by name.
 
 ## Example Usage
 
@@ -29,7 +29,7 @@ output "workspace_name" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the workspace to look up.
 
 ### Read-Only
 

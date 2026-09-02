@@ -76,7 +76,9 @@ func TestReadClusterProfileFuncNameNegative(t *testing.T) {
 
 	var ctx context.Context
 	_ = d.Set("context", "project")
-	_ = d.Set("name", "test-cluster-profile-1")
+	// Name must not appear in mock metadata; if it matched, negative server would return 423 on GET by uid
+	// instead of the "cluster profile not found" path from getProfile.
+	_ = d.Set("name", "no-such-profile-negative-test")
 
 	diags = dataSourceClusterProfileRead(ctx, d, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "cluster profile not found")

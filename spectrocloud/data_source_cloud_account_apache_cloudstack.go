@@ -13,6 +13,7 @@ import (
 func dataSourceCloudAccountApacheCloudStack() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceCloudAccountApacheCloudStackRead,
+		Description: "Data source for looking up an Apache CloudStack cloud account by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

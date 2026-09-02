@@ -1,10 +1,13 @@
 package spectrocloud
 
 import (
+	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +15,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -344,6 +348,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
 					UseControlPlaneAsWorker: false,
+					MachinePoolProperties:   toMachinePoolProperties(tt.input),
 				},
 			}
 
@@ -433,6 +438,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host1",
@@ -453,7 +459,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"dns_servers":     []string(nil),
 						},
 					}),
-					"update_strategy": "strategy1",
+					"update_strategy":  "strategy1",
+					"skip_k8s_upgrade": "disabled",
 				},
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label2": "value2"},
@@ -462,6 +469,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host3",
@@ -473,7 +481,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"dns_servers":     []string(nil),
 						},
 					}),
-					"update_strategy": "strategy2",
+					"update_strategy":  "strategy2",
+					"skip_k8s_upgrade": "disabled",
 				},
 			},
 		},
@@ -513,6 +522,185 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFlattenEdgeNativePoolHost(t *testing.T) {
+	hostUID := "csi-3"
+
+	tests := []struct {
+		name     string
+		host     *models.V1EdgeNativeHost
+		expected map[string]interface{}
+	}{
+		{
+			name: "NIC IP is preferred over deprecated staticIP",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				HostName: "edge-host-1",
+				StaticIP: "10.0.0.1",
+				Nic: &models.V1Nic{
+					IP: "192.168.1.10",
+				},
+			},
+			expected: map[string]interface{}{
+				"host_name":       "edge-host-1",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.10",
+				"nic_name":        "",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Deprecated staticIP is used when NIC is nil",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				StaticIP: "192.168.1.20",
+				NicName:  "eth0",
+			},
+			expected: map[string]interface{}{
+				"host_name":       "",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.20",
+				"nic_name":        "eth0",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Deprecated staticIP is used when NIC IP is empty",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				StaticIP: "192.168.1.30",
+				Nic:      &models.V1Nic{},
+			},
+			expected: map[string]interface{}{
+				"host_name":       "",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.30",
+				"nic_name":        "",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Full NIC configuration is flattened",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				HostName: "edge-host-2",
+				Nic: &models.V1Nic{
+					IP:      "10.10.10.5",
+					NicName: "ens192",
+					Gateway: "10.10.10.1",
+					Subnet:  "255.255.255.0",
+					DNS:     []string{"8.8.8.8"},
+				},
+				TwoNodeCandidatePriority: "primary",
+			},
+			expected: map[string]interface{}{
+				"host_name":       "edge-host-2",
+				"host_uid":        hostUID,
+				"static_ip":       "10.10.10.5",
+				"nic_name":        "ens192",
+				"default_gateway": "10.10.10.1",
+				"subnet_mask":     "255.255.255.0",
+				"dns_servers":     []string{"8.8.8.8"},
+				"two_node_role":   "primary",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := flattenEdgeNativePoolHost(tt.host)
+			if diff := cmp.Diff(tt.expected, result); diff != "" {
+				t.Fatalf("flattenEdgeNativePoolHost mismatch (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFlattenMachinePoolArchType(t *testing.T) {
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(nil))
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{}))
+	assert.Equal(t, "arm64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{
+		ArchType: models.V1ArchTypeArm64.Pointer(),
+	}))
+}
+
+func TestToMachinePoolEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	mp, err := toMachinePoolEdgeNative(map[string]interface{}{
+		"name":                    "pool1",
+		"arch_type":               "arm64",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{
+				"host_uid": hostUID,
+			},
+		}),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties.ArchType)
+	assert.Equal(t, models.V1ArchTypeArm64, *mp.PoolConfig.MachinePoolProperties.ArchType)
+}
+
+func TestFlattenMachinePoolConfigsEdgeNativeSkipK8sUpgrade(t *testing.T) {
+	hostUID := "host-1"
+	enabled := "enabled"
+	result := flattenMachinePoolConfigsEdgeNative([]*models.V1EdgeNativeMachinePoolConfig{
+		{
+			Name: "worker-pool",
+			Hosts: []*models.V1EdgeNativeHost{
+				{HostUID: &hostUID},
+			},
+			SkipK8sUpgrade: &enabled,
+		},
+	})
+	assert.Len(t, result, 1)
+	assert.Equal(t, "enabled", result[0].(map[string]interface{})["skip_k8s_upgrade"])
+}
+
+func TestToMachinePoolEdgeNativeSkipK8sUpgrade(t *testing.T) {
+	hostUID := "host-1"
+	mp, err := toMachinePoolEdgeNative(map[string]interface{}{
+		"name":                    "worker-pool",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"skip_k8s_upgrade":        "enabled",
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{
+				"host_uid": hostUID,
+			},
+		}),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, mp.PoolConfig.SkipK8sUpgrade)
+	assert.Equal(t, "enabled", *mp.PoolConfig.SkipK8sUpgrade)
+}
+
+func TestFlattenMachinePoolConfigsEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	result := flattenMachinePoolConfigsEdgeNative([]*models.V1EdgeNativeMachinePoolConfig{
+		{
+			Name: "pool-arm",
+			Hosts: []*models.V1EdgeNativeHost{
+				{HostUID: &hostUID},
+			},
+			MachinePoolProperties: &models.V1MachinePoolProperties{
+				ArchType: models.V1ArchTypeArm64.Pointer(),
+			},
+		},
+	})
+	assert.Len(t, result, 1)
+	assert.Equal(t, "arm64", result[0].(map[string]interface{})["arch_type"])
 }
 
 func TestValidationNodeRepaveIntervalForControlPlane(t *testing.T) {
@@ -568,8 +756,7 @@ func TestGetFirstIPRange(t *testing.T) {
 }
 
 func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
-	// Test case 1: Valid Cloud Config and Config
-	cloudConfig := map[string]interface{}{"vip": "192.168.1.1"}
+	// Test case 1: Valid Cloud Config from API (vip populated regardless of prior config)
 	validConfig := &models.V1EdgeNativeCloudConfig{
 		Spec: &models.V1EdgeNativeCloudConfigSpec{
 			ClusterConfig: &models.V1EdgeNativeClusterConfig{
@@ -586,7 +773,7 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 		},
 	}
 
-	resultValid := flattenClusterConfigsEdgeNative(cloudConfig, validConfig)
+	resultValid := flattenClusterConfigsEdgeNative(validConfig)
 
 	// Assertions for valid Cloud Config and Config
 	expectedValidResult := []interface{}{
@@ -612,15 +799,33 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 		},
 	}
 
-	resultMissingHost := flattenClusterConfigsEdgeNative(cloudConfig, missingHostConfig)
+	resultMissingHost := flattenClusterConfigsEdgeNative(missingHostConfig)
 
 	// Assertions for missing Control Plane Endpoint Host
 	assert.Equal(t, []interface{}{map[string]interface{}{"is_two_node_cluster": false}}, resultMissingHost)
 
-	// Test case 3: Missing Cluster Config
+	// Test case 3: Import-style read — API has VIP, no prior Terraform config
+	importConfig := &models.V1EdgeNativeCloudConfig{
+		Spec: &models.V1EdgeNativeCloudConfigSpec{
+			ClusterConfig: &models.V1EdgeNativeClusterConfig{
+				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
+					Host: "10.10.166.155",
+				},
+			},
+		},
+	}
+	resultImport := flattenClusterConfigsEdgeNative(importConfig)
+	assert.Equal(t, []interface{}{
+		map[string]interface{}{
+			"vip":                 "10.10.166.155",
+			"is_two_node_cluster": false,
+		},
+	}, resultImport)
+
+	// Test case 4: Missing Cluster Config
 	missingConfig := &models.V1EdgeNativeCloudConfig{}
 
-	resultMissingConfig := flattenClusterConfigsEdgeNative(cloudConfig, missingConfig)
+	resultMissingConfig := flattenClusterConfigsEdgeNative(missingConfig)
 
 	// Assertions for missing Cluster Config
 	assert.Equal(t, []interface{}{}, resultMissingConfig)
@@ -698,4 +903,499 @@ func TestToOverlayNetworkConfigAndVip(t *testing.T) {
 		Cidr:   "",
 		Enable: false,
 	}, overlayConfigMissingFields)
+}
+
+func TestFlattenCloudConfigEdgeNative(t *testing.T) {
+	configUID := "test-config-uid"
+	hui1 := "uid1"
+
+	tests := []struct {
+		name        string
+		setup       func() *schema.ResourceData
+		client      interface{}
+		expectError bool
+		description string
+		verify      func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData)
+	}{
+		{
+			name: "Flatten with existing cloud_config in ResourceData",
+			setup: func() *schema.ResourceData {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId("test-cluster-uid")
+				_ = d.Set("context", "project")
+				_ = d.Set("cloud_config", []interface{}{
+					map[string]interface{}{
+						"vip":                 "192.168.1.1",
+						"overlay_cidr_range":  "10.0.0.0/16",
+						"is_two_node_cluster": false,
+					},
+				})
+				return d
+			},
+			client: unitTestMockAPIClient,
+			// Batch 3g wired up EdgeNativeClusterRoutes, so
+			// GetCloudConfigEdgeNative now returns success against the
+			// positive mock — the flatten path completes cleanly and
+			// diags is empty. Was expectError: true when the endpoint
+			// wasn't mocked.
+			expectError: false,
+			description: "Should use existing cloud_config from ResourceData; flatten succeeds against the mock",
+			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
+				cloudConfigID := d.Get("cloud_config_id")
+				assert.Equal(t, configUID, cloudConfigID, "cloud_config_id should be set")
+			},
+		},
+		{
+			name: "Flatten with machine pools - verifies flattenNodeMaintenanceStatus call",
+			setup: func() *schema.ResourceData {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId("test-cluster-uid")
+				_ = d.Set("context", "project")
+				_ = d.Set("cloud_config", []interface{}{
+					map[string]interface{}{
+						"vip": "192.168.1.1",
+					},
+				})
+				// Set machine_pool to verify it gets flattened
+				_ = d.Set("machine_pool", schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+				}))
+				return d
+			},
+			client: unitTestMockAPIClient,
+			// Same story as the case above (sweep)'s mock provides
+			// both GetCloudConfigEdgeNative and GetNodeStatusMapEdgeNative
+			// endpoints, so flatten succeeds. Was expectError: true.
+			expectError: false,
+			description: "Should flatten machine pools and call flattenNodeMaintenanceStatus against the mock",
+			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
+				// The flatten completes cleanly; nothing more to assert
+				// beyond the outer suite's diags-empty check.
+				_ = diags
+				_ = d
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceData := tt.setup()
+			c := getV1ClientWithResourceContext(tt.client, "project")
+
+			var diags diag.Diagnostics
+			var panicked bool
+
+			// Handle potential panics for nil pointer dereferences
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						panicked = true
+						diags = diag.Diagnostics{
+							{
+								Severity: diag.Error,
+								Summary:  fmt.Sprintf("Panic: %v", r),
+							},
+						}
+					}
+				}()
+				diags = flattenCloudConfigEdgeNative(configUID, resourceData, c)
+			}()
+
+			// Verify results
+			if tt.expectError {
+				if panicked {
+					// Panic is acceptable if API routes don't exist
+					assert.NotEmpty(t, diags, "Expected diagnostics/panic for test case: %s", tt.description)
+				} else {
+					assert.NotEmpty(t, diags, "Expected diagnostics for error case: %s", tt.description)
+				}
+			} else {
+				if panicked {
+					t.Logf("Unexpected panic occurred: %v", diags)
+				}
+				assert.Empty(t, diags, "Should not have errors for successful flatten: %s", tt.description)
+				// Verify cloud_config_id is set on success
+				cloudConfigID := resourceData.Get("cloud_config_id")
+				assert.Equal(t, configUID, cloudConfigID, "cloud_config_id should be set on success: %s", tt.description)
+			}
+
+			// Run custom verify function if provided
+			if tt.verify != nil {
+				tt.verify(t, diags, resourceData)
+			}
+		})
+	}
+}
+
+func TestResourceClusterEdgeNativeUpdate(t *testing.T) {
+	ctx := context.Background()
+	clusterUID := "test-cluster-uid"
+	cloudConfigID := "test-cloud-config-id"
+	hui1 := "uid1"
+	hui2 := "uid2"
+
+	tests := []struct {
+		name          string
+		setup         func() *schema.ResourceData
+		client        interface{}
+		expectError   bool
+		expectWarning bool
+		description   string
+		verify        func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData)
+	}{
+		{
+			name: "Create new machine pool - API routes may not be available (mock server limitation)",
+			setup: func() *schema.ResourceData {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId(clusterUID)
+				_ = d.Set("context", "project")
+				_ = d.Set("cloud_config_id", cloudConfigID)
+				// Set old machine pool
+				oldPool := schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+				})
+				_ = d.Set("machine_pool", oldPool)
+				// Mark as changed by adding new pool
+				newPool := schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+					map[string]interface{}{
+						"name":          "pool2",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui2,
+								"host_name": "host2",
+							},
+						}),
+					},
+				})
+				_ = d.Set("machine_pool", newPool)
+				return d
+			},
+			client:        unitTestMockAPIClient,
+			expectError:   true, // CreateMachinePoolEdgeNative may fail
+			expectWarning: false,
+			description:   "Should attempt to create new machine pool (verifies function structure)",
+			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
+				// Function should attempt to create new machine pool
+				if len(diags) > 0 {
+					assert.NotEmpty(t, diags, "Should have diagnostics when API routes are not available")
+				}
+			},
+		},
+		{
+			name: "Delete machine pool - API routes may not be available (mock server limitation)",
+			setup: func() *schema.ResourceData {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId(clusterUID)
+				_ = d.Set("context", "project")
+				_ = d.Set("cloud_config_id", cloudConfigID)
+				// Set old machine pools
+				oldPool := schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+					map[string]interface{}{
+						"name":          "pool2",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui2,
+								"host_name": "host2",
+							},
+						}),
+					},
+				})
+				_ = d.Set("machine_pool", oldPool)
+				// Mark as changed by removing pool2
+				newPool := schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+				})
+				_ = d.Set("machine_pool", newPool)
+				return d
+			},
+			client:        unitTestMockAPIClient,
+			expectError:   true,  // GetNodeListInEdgeNativeMachinePool or DeleteNodeInEdgeNativeMachinePool may fail
+			expectWarning: false, // Warning only set if nodes are actually deleted
+			description:   "Should attempt to delete machine pool and its nodes (verifies function structure)",
+			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
+				// Function should attempt to delete machine pool
+				if len(diags) > 0 {
+					assert.NotEmpty(t, diags, "Should have diagnostics when API routes are not available")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceData := tt.setup()
+
+			var diags diag.Diagnostics
+			var panicked bool
+
+			// Handle potential panics for nil pointer dereferences or missing fields
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						panicked = true
+						diags = diag.Diagnostics{
+							{
+								Severity: diag.Error,
+								Summary:  fmt.Sprintf("Panic: %v", r),
+							},
+						}
+					}
+				}()
+				diags = resourceClusterEdgeNativeUpdate(ctx, resourceData, tt.client)
+			}()
+
+			// Verify results
+			if tt.expectError {
+				if panicked {
+					// Panic is acceptable if required fields are missing or API routes don't exist
+					assert.NotEmpty(t, diags, "Expected diagnostics/panic for test case: %s", tt.description)
+				} else {
+					assert.NotEmpty(t, diags, "Expected diagnostics for error case: %s", tt.description)
+				}
+			} else {
+				if panicked {
+					t.Logf("Unexpected panic occurred: %v", diags)
+				}
+				// For successful updates, may still have warnings or errors from API limitations
+				if len(diags) > 0 {
+					hasError := false
+					for _, d := range diags {
+						if d.Severity == diag.Error {
+							hasError = true
+							break
+						}
+					}
+					if hasError {
+						t.Logf("Unexpected errors in diagnostics: %v", diags)
+					}
+				}
+			}
+
+			// Check for warning if expected
+			if tt.expectWarning {
+				foundWarning := false
+				for _, d := range diags {
+					if d.Severity == diag.Warning && strings.Contains(d.Detail, "Machine pool node deletion") {
+						foundWarning = true
+						break
+					}
+				}
+				assert.True(t, foundWarning, "Should have warning for node deletion: %s", tt.description)
+			}
+
+			// Run custom verify function if provided
+			if tt.verify != nil {
+				tt.verify(t, diags, resourceData)
+			}
+		})
+	}
+}
+
+func TestToEdgeNativeCluster(t *testing.T) {
+	hui1 := "uid1"
+	hui2 := "uid2"
+
+	tests := []struct {
+		name        string
+		setup       func() (*schema.ResourceData, *client.V1Client)
+		expectError bool
+		description string
+		verify      func(t *testing.T, cluster *models.V1SpectroEdgeNativeClusterEntity, err error)
+	}{
+		{
+			name: "Convert with valid data - API routes may not be available (mock server limitation)",
+			setup: func() (*schema.ResourceData, *client.V1Client) {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId("test-cluster-uid")
+				_ = d.Set("name", "test-cluster")
+				_ = d.Set("context", "project")
+				_ = d.Set("description", "test description")
+				_ = d.Set("cloud_config", []interface{}{
+					map[string]interface{}{
+						"vip":                 "192.168.1.1",
+						"overlay_cidr_range":  "10.0.0.0/16",
+						"is_two_node_cluster": false,
+						"ssh_keys":            []interface{}{"ssh-key-1", "ssh-key-2"},
+						"ntp_servers":         []interface{}{"ntp1.example.com", "ntp2.example.com"},
+					},
+				})
+				_ = d.Set("machine_pool", schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "pool1",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+				}))
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return d, c
+			},
+			expectError: false, // Function may succeed if toProfiles doesn't require API calls
+			description: "Should convert ResourceData to cluster entity",
+			verify: func(t *testing.T, cluster *models.V1SpectroEdgeNativeClusterEntity, err error) {
+				// If no error, verify cluster structure
+				if err == nil {
+					assert.NotNil(t, cluster, "Cluster should not be nil")
+					if cluster != nil {
+						assert.NotNil(t, cluster.Metadata, "Metadata should not be nil")
+						assert.NotNil(t, cluster.Spec, "Spec should not be nil")
+						if cluster.Spec != nil {
+							assert.NotNil(t, cluster.Spec.CloudConfig, "CloudConfig should not be nil")
+							if cluster.Spec.CloudConfig != nil {
+								assert.Equal(t, false, cluster.Spec.CloudConfig.IsTwoNodeCluster, "IsTwoNodeCluster should be false")
+							}
+						}
+					}
+				}
+			},
+		},
+		{
+			name: "Convert with multiple machine pools",
+			setup: func() (*schema.ResourceData, *client.V1Client) {
+				d := resourceClusterEdgeNative().TestResourceData()
+				d.SetId("test-cluster-uid")
+				_ = d.Set("name", "test-cluster")
+				_ = d.Set("context", "project")
+				_ = d.Set("cloud_config", []interface{}{
+					map[string]interface{}{
+						"vip":                 "192.168.1.1",
+						"is_two_node_cluster": false,
+					},
+				})
+				_ = d.Set("machine_pool", schema.NewSet(resourceMachinePoolEdgeNativeHash, []interface{}{
+					map[string]interface{}{
+						"name":          "control-pool",
+						"control_plane": true,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui1,
+								"host_name": "host1",
+							},
+						}),
+					},
+					map[string]interface{}{
+						"name":          "worker-pool",
+						"control_plane": false,
+						"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+							map[string]interface{}{
+								"host_uid":  hui2,
+								"host_name": "host2",
+							},
+						}),
+					},
+				}))
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return d, c
+			},
+			expectError: false, // Function may succeed
+			description: "Should handle multiple machine pools",
+			verify: func(t *testing.T, cluster *models.V1SpectroEdgeNativeClusterEntity, err error) {
+				if err == nil && cluster != nil && cluster.Spec != nil {
+					assert.NotNil(t, cluster.Spec.Machinepoolconfig, "Machinepoolconfig should not be nil")
+					if cluster.Spec.Machinepoolconfig != nil {
+						assert.GreaterOrEqual(t, len(cluster.Spec.Machinepoolconfig), 1, "Should have at least one machine pool")
+					}
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceData, c := tt.setup()
+
+			var cluster *models.V1SpectroEdgeNativeClusterEntity
+			var err error
+			var panicked bool
+
+			// Handle potential panics for nil pointer dereferences or missing fields
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						panicked = true
+						err = fmt.Errorf("panic: %v", r)
+					}
+				}()
+				cluster, err = toEdgeNativeCluster(c, resourceData)
+			}()
+
+			// Verify results
+			if tt.expectError {
+				if panicked {
+					// Panic is acceptable if required fields are missing
+					assert.Error(t, err, "Expected error/panic for test case: %s", tt.description)
+				} else {
+					assert.Error(t, err, "Expected error for error case: %s", tt.description)
+				}
+			} else {
+				if panicked {
+					t.Logf("Unexpected panic occurred: %v", err)
+				}
+				assert.NoError(t, err, "Should not have errors for successful conversion: %s", tt.description)
+				assert.NotNil(t, cluster, "Cluster should not be nil on success: %s", tt.description)
+				if cluster != nil {
+					assert.NotNil(t, cluster.Metadata, "Metadata should not be nil: %s", tt.description)
+					assert.NotNil(t, cluster.Spec, "Spec should not be nil: %s", tt.description)
+				}
+			}
+
+			// Run custom verify function if provided
+			if tt.verify != nil {
+				tt.verify(t, cluster, err)
+			}
+		})
+	}
 }

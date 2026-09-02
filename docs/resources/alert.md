@@ -2,12 +2,12 @@
 page_title: "spectrocloud_alert Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing project-level alert channels in Spectro Cloud.
 ---
 
 # spectrocloud_alert (Resource)
 
-  
+  Resource for managing project-level alert channels in Spectro Cloud.
 
 ## Example Usage
 
@@ -85,9 +85,9 @@ Optional:
 
 Optional:
 
-- `is_succeeded` (Boolean)
-- `message` (String)
-- `time` (String)
+- `is_succeeded` (Boolean) Whether the latest alert delivery operation succeeded.
+- `message` (String) Status message from the latest alert delivery operation.
+- `time` (String) Timestamp of the latest alert delivery status update.
 
 
 <a id="nestedblock--timeouts"></a>

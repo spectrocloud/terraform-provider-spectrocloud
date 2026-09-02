@@ -55,25 +55,8 @@ func GetCommonAppliance(d *schema.ResourceData, m interface{}) (*client.V1Client
 		return nil, err
 	}
 
-	// Set optional fields if they exist
-	if len(appliance.Metadata.Labels) > 0 {
-		if err := d.Set("tags", appliance.Metadata.Labels); err != nil {
-			return nil, err
-		}
-	}
-
-	if appliance.Spec != nil {
-		if err := d.Set("wait", false); err != nil {
-			return nil, err
-		}
-		if appliance.Spec.TunnelConfig != nil {
-			if err := d.Set("remote_shell", appliance.Spec.TunnelConfig.RemoteSSH); err != nil {
-				return nil, err
-			}
-			if err := d.Set("temporary_shell_credentials", appliance.Spec.TunnelConfig.RemoteSSHTempUser); err != nil {
-				return nil, err
-			}
-		}
+	if err := d.Set("wait", false); err != nil {
+		return nil, err
 	}
 
 	// Set the ID to the appliance UID

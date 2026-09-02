@@ -22,6 +22,7 @@ func resourcePlatformSetting() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcePlatformSettingImport,
 		},
+		Description: "Resource for managing tenant and project platform settings in Spectro Cloud.",
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -41,7 +42,7 @@ func resourcePlatformSetting() *schema.Resource {
 			"session_timeout": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette. Allowed only for `tenant` context",
+				Description: "Specifies the duration in minutes of inactivity before a user is automatically logged out. The default is 240 minutes in Palette. Allowed only for `tenant` context.",
 			},
 			"pause_agent_upgrades": {
 				Type:         schema.TypeString,
@@ -55,7 +56,7 @@ func resourcePlatformSetting() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "Enables automatic remediation. set only with `project' context",
+				Description: "Enables automatic remediation. Allowed only for `project` context.",
 			},
 			"cluster_auto_remediation": {
 				Type:     schema.TypeBool,
@@ -73,17 +74,17 @@ func resourcePlatformSetting() *schema.Resource {
 			"non_fips_addon_pack": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment. Allowed only for `tenant` context",
+				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` setting is supported only in Palette Vertex environments. Allowed only for `tenant` context.",
 			},
 			"non_fips_features": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment. Allowed only for `tenant` context",
+				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` setting is supported only in Palette Vertex environments. Allowed only for `tenant` context.",
 			},
 			"non_fips_cluster_import": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment. Allowed only for `tenant` context",
+				Description: "Allows users in this tenant to import clusters that may not be FIPS-compliant. The `non_fips_cluster_import` setting is supported only in Palette Vertex environments. Allowed only for `tenant` context.",
 			},
 			"login_banner": {
 				Type:        schema.TypeList,

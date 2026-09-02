@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"log"
+	"reflect"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ func resourceClusterProfile() *schema.Resource {
 		ReadContext:   resourceClusterProfileRead,
 		UpdateContext: resourceClusterProfileUpdate,
 		DeleteContext: resourceClusterProfileDelete,
+		CustomizeDiff: resourceClusterProfileCustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterProfileImport,
 		},
@@ -38,18 +40,48 @@ func resourceClusterProfile() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the cluster profile.",
 			},
 			"version": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
-					"**Important**: Modifying this value will only update the version number of the existing cluster profile. " +
-					"It will NOT create a new version in Palette. " +
-					"To create a new version of a cluster profile, refer to the example at: " +
-					"https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles",
+					"\n\n" +
+					"Default behavior (no feature flag set): changing this value on an existing " +
+					"profile updates the version in place via `PUT /v1/clusterprofiles/{uid}`, " +
+					"which destroys the previous version. This is the legacy behavior preserved " +
+					"for backward compatibility. " +
+					"\n\n" +
+					"When the `immutable-clusterprofiles` feature_preview flag is enabled, " +
+					"changing this value triggers a Terraform resource **replacement** " +
+					"(`ForceNew`) instead of an in-place update. This is the standard Terraform " +
+					"Plugin SDK v2 pattern for immutable-versioned resources. Combined with " +
+					"`skip_destroy = true` and `lifecycle { create_before_destroy = true }`, " +
+					"the new version is created by cloning from the existing Palette lineage " +
+					"while the previous version is preserved untouched in Palette. The Terraform " +
+					"resource id is set once at Create time and never mutates mid-update, so it " +
+					"respects the SDK v2 contract that a resource's primary id is stable across " +
+					"in-place updates -- outputs that reference `.id` always reflect the current " +
+					"version without needing `terraform apply -refresh-only`.",
+			},
+			"skip_destroy": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+				Description: "When `true`, `terraform destroy` removes the cluster profile from " +
+					"Terraform state without calling the Palette delete API, leaving the " +
+					"underlying profile version intact in Palette. " +
+					"\n\n" +
+					"This is the standard Terraform Plugin SDK v2 preservation pattern for " +
+					"immutable-versioned resources. Combined with the `immutable-clusterprofiles` " +
+					"feature_preview flag and `lifecycle { create_before_destroy = true }`, it " +
+					"lets you bump the `version` field as a normal in-HCL edit while every " +
+					"previous version stays preserved in Palette -- Terraform's state advances " +
+					"cleanly to the new version while older versions remain immutable in Palette. " +
+					"Defaults to `false`.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -69,8 +101,9 @@ func resourceClusterProfile() *schema.Resource {
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of the cluster profile.",
 			},
 			"cloud": {
 				Type:     schema.TypeString,
@@ -96,6 +129,366 @@ func resourceClusterProfile() *schema.Resource {
 	}
 }
 
+// resourceClusterProfileCustomizeDiff is invoked at plan time. When the
+// `immutable-clusterprofiles` feature_preview flag is enabled and the user is
+// changing the `version` field on an existing resource, mark the field as
+// `ForceNew` so Terraform plans a replacement (destroy + create) instead of an
+// in-place update.
+//
+// Marking an attribute change as `ForceNew` from `CustomizeDiff` is the standard
+// Terraform Plugin SDK v2 idiom for converting "this attribute changed" into
+// "this resource must be replaced". We do it conditionally here because
+// `spectrocloud_cluster_profile` has to preserve its legacy in-place mutation
+// behavior for existing users who don't opt into the new flag -- gating on
+// `CustomizeDiff` is the standard way to have one resource type with two
+// different lifecycles in SDK v2.
+//
+// Combined with `lifecycle { create_before_destroy = true }` and `skip_destroy = true`
+// in user HCL, the user gets one block per profile, a mutable `version` field
+// from their HCL perspective, clean `git diff` between tags, and immutable
+// preservation of old versions in Palette -- all while respecting Terraform Plugin
+// SDK v2's contract that a resource's primary id is stable across in-place
+// updates (which is why this approach has none of the stale-output or
+// "[WARN] tolerating it because it is using the legacy plugin SDK" issues that
+// come from trying to mutate `d.Id()` mid-Update).
+//
+// Validation happens in two shapes when the `immutable-clusterprofiles` flag is
+// enabled:
+//
+//  1. Version bump (`version` field changing): mark `version` as `ForceNew` so
+//     Terraform plans a replacement, AND require `skip_destroy = true` on the
+//     resource. Without `skip_destroy`, the replacement's Delete phase would call
+//     the Palette DELETE API and destroy the previous version -- defeating the
+//     whole point of immutable versioning. Since `skip_destroy` is a
+//     provider-schema attribute we can read at plan time, surfacing this as a
+//     plan error rather than a runtime surprise is strictly better UX. The
+//     companion `lifecycle { create_before_destroy = true }` block cannot be
+//     validated from the provider (Terraform core parses lifecycle blocks before
+//     the provider sees the diff), but the error message includes it so users
+//     get both knobs from a single diagnostic.
+//
+//  2. Content change WITHOUT a version bump (any of `name`, `tags`, `pack`,
+//     `description`, `profile_variables` changing while `version` stays the
+//     same): reject with a plan-time error. The whole point of the flag is that
+//     published cluster profile versions are immutable -- a user who edits the
+//     pack content of v1.0.0 and re-applies without bumping the version is
+//     asking the provider to silently mutate what's supposed to be an immutable
+//     object. Without this check, the legacy `Update` path below would happily
+//     send a PUT to the Palette API and the mutation would succeed silently
+//     (the Palette API currently does not enforce version immutability
+//     server-side). That would be the same class of bug as the
+//     `clone-on-version-change` stale-output issue this whole PR was written to
+//     fix -- a documented invariant that the code doesn't enforce.
+func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	if d.Id() == "" {
+		// New resource -- no in-place update to convert
+		return nil
+	}
+	if !isFeaturePreviewEnabled("immutable-clusterprofiles") {
+		return nil
+	}
+
+	if d.HasChange("version") {
+		// Version bump: mark ForceNew so Terraform plans a replacement, and
+		// require the skip_destroy knob so the replacement's Delete phase
+		// preserves the old version in Palette.
+		if err := d.ForceNew("version"); err != nil {
+			return err
+		}
+		if !d.Get("skip_destroy").(bool) {
+			return fmt.Errorf(
+				"immutable-clusterprofiles: version changes on %q require skip_destroy = true and "+
+					"lifecycle { create_before_destroy = true } on the resource, so that the previous "+
+					"version is preserved in Palette while Terraform replaces the resource. Add both to "+
+					"your resource block:\n\n"+
+					"  resource \"spectrocloud_cluster_profile\" %q {\n"+
+					"    # ...\n"+
+					"    skip_destroy = true\n\n"+
+					"    lifecycle {\n"+
+					"      create_before_destroy = true\n"+
+					"    }\n"+
+					"  }\n\n"+
+					"This follows the standard Terraform Plugin SDK v2 immutable-versioned-resource "+
+					"pattern used by aws_lambda_layer_version and similar resources. See the "+
+					"\"Immutable versioning\" section of the spectrocloud_cluster_profile docs for a "+
+					"full example.",
+				d.Get("name").(string),
+				d.Get("name").(string),
+			)
+		}
+		return nil
+	}
+
+	// Version did NOT change, but the flag is on. Look for any content changes
+	// that would have silently mutated the supposedly-immutable published
+	// version. If any content field has changed, reject the plan.
+	//
+	// `pack` and `profile_variables` go through semantic comparisons rather
+	// than the raw `d.HasChange` so that harmless refresh drift (API-normalized
+	// YAML, computed uid, defaulted type/format) doesn't false-positive on a
+	// no-op plan immediately after Create -- see hasSemanticPackChange for the
+	// full rationale.
+	var changedContentFields []string
+	for _, f := range []string{"name", "tags", "description"} {
+		if d.HasChange(f) {
+			changedContentFields = append(changedContentFields, f)
+		}
+	}
+	if hasSemanticPackChange(d) {
+		changedContentFields = append(changedContentFields, "pack")
+	}
+	if hasSemanticProfileVariablesChange(d) {
+		changedContentFields = append(changedContentFields, "profile_variables")
+	}
+	if len(changedContentFields) > 0 {
+		return fmt.Errorf(
+			"immutable-clusterprofiles: cluster profile versions are immutable. "+
+				"Detected changes to field(s) %v on %q (version %q) without a corresponding "+
+				"version bump. To push these changes, increment the version field "+
+				"(e.g., %q -> %q) so the provider creates a new immutable version via the "+
+				"clone endpoint while the previous version is preserved in Palette. If you "+
+				"intentionally want to mutate the existing version in place, remove the "+
+				"\"immutable-clusterprofiles\" feature_preview flag from your provider block "+
+				"(note: this reverts to the legacy destructive PUT behavior and is not "+
+				"recommended).",
+			changedContentFields,
+			d.Get("name").(string),
+			d.Get("version").(string),
+			d.Get("version").(string),
+			bumpPatchHint(d.Get("version").(string)),
+		)
+	}
+
+	return nil
+}
+
+// hasSemanticPackChange reports whether the pack list changed in a way the
+// user would consider a real edit -- i.e., beyond the harmless drift the API
+// introduces when Read writes normalized values back into state.
+//
+// The naive `d.HasChange("pack")` fires on ANY state-vs-config divergence.
+// `flattenPacksWithRegistryMaps` writes `pack.Values` from the API verbatim
+// into state, so any server-side normalization (whitespace, YAML key
+// reordering, expanded `{{.spectro.var.X}}` templates) shows up as drift on
+// the next refresh. Under the `immutable-clusterprofiles` flag this false
+// positive blocked plain `terraform plan` right after a successful `apply`.
+//
+// The comparison here mirrors the schema's per-field `DiffSuppressFunc`:
+//   - `values` and `manifest.*.content`: `strings.TrimSpace`
+//   - `type`: empty string treated as the schema default "spectro"
+//   - `uid`: ignored (Computed, API-populated -- config never sets it directly)
+//   - registry: only the identifier the user provided is compared, so a state
+//     that flattened `registry_name` back from the API and a config using
+//     `registry_name` still match
+//
+// If drift beyond these normalizations exists (e.g. YAML key reordering),
+// this returns true and the caller errors -- that's the correct outcome for
+// the immutability guardrail; the fix belongs at the flatten layer, not here.
+func hasSemanticPackChange(d *schema.ResourceDiff) bool {
+	oldPack, newPack := d.GetChange("pack")
+	return !reflect.DeepEqual(canonicalizePackList(oldPack), canonicalizePackList(newPack))
+}
+
+// hasSemanticProfileVariablesChange is the profile_variables analogue of
+// hasSemanticPackChange. `flattenProfileVariables` sorts variables to match
+// config order, but individual variables' optional fields can drift: `format`
+// and `input_type` have schema defaults ("string", "text") that the API may
+// return as empty, and the options list contains a Computed `default` field
+// that the user never sets.
+func hasSemanticProfileVariablesChange(d *schema.ResourceDiff) bool {
+	oldPV, newPV := d.GetChange("profile_variables")
+	return !reflect.DeepEqual(canonicalizeProfileVariablesList(oldPV), canonicalizeProfileVariablesList(newPV))
+}
+
+func canonicalizePackList(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, canonicalizePackElement(m))
+	}
+	return out
+}
+
+func canonicalizePackElement(m map[string]interface{}) map[string]interface{} {
+	packType := canonicalString(m["type"])
+	if packType == "" {
+		packType = "spectro"
+	}
+	return map[string]interface{}{
+		"name":          canonicalString(m["name"]),
+		"tag":           canonicalString(m["tag"]),
+		"type":          packType,
+		"values":        strings.TrimSpace(canonicalString(m["values"])),
+		"registry_uid":  canonicalString(m["registry_uid"]),
+		"registry_name": canonicalString(m["registry_name"]),
+		"manifest":      canonicalizeManifestList(m["manifest"]),
+	}
+}
+
+func canonicalizeManifestList(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, map[string]interface{}{
+			"name":    canonicalString(m["name"]),
+			"content": strings.TrimSpace(canonicalString(m["content"])),
+		})
+	}
+	return out
+}
+
+func canonicalizeProfileVariablesList(v interface{}) []map[string]interface{} {
+	// profile_variables is TypeList (MaxItems=1) wrapping a "variable" TypeList.
+	raw, ok := v.([]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	wrapper, ok := raw[0].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	vars, ok := wrapper["variable"].([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(vars))
+	for _, item := range vars {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, canonicalizeProfileVariable(m))
+	}
+	return out
+}
+
+func canonicalizeProfileVariable(m map[string]interface{}) map[string]interface{} {
+	format := canonicalString(m["format"])
+	if format == "" {
+		format = "string"
+	}
+	inputType := canonicalString(m["input_type"])
+	if inputType == "" {
+		inputType = "text"
+	}
+	return map[string]interface{}{
+		"name":          canonicalString(m["name"]),
+		"display_name":  canonicalString(m["display_name"]),
+		"description":   canonicalString(m["description"]),
+		"format":        format,
+		"default_value": canonicalString(m["default_value"]),
+		"regex":         canonicalString(m["regex"]),
+		"required":      canonicalBool(m["required"]),
+		"immutable":     canonicalBool(m["immutable"]),
+		"hidden":        canonicalBool(m["hidden"]),
+		"is_sensitive":  canonicalBool(m["is_sensitive"]),
+		"input_type":    inputType,
+		"options":       canonicalizeVariableOptions(m["options"]),
+	}
+}
+
+func canonicalizeVariableOptions(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		// `default` is Computed, the user never sets it directly -- excluded.
+		out = append(out, map[string]interface{}{
+			"description": canonicalString(m["description"]),
+			"label":       canonicalString(m["label"]),
+			"value":       canonicalString(m["value"]),
+		})
+	}
+	return out
+}
+
+func canonicalString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	if p, ok := v.(*string); ok && p != nil {
+		return *p
+	}
+	return ""
+}
+
+func canonicalBool(v interface{}) bool {
+	b, _ := v.(bool)
+	return b
+}
+
+// bumpPatchHint returns a best-effort "next patch version" suggestion for the
+// error message, purely cosmetic. If the version string isn't in a recognizable
+// semver shape, it returns "<next-version>" as a placeholder. This is only used
+// to make the error message more concrete -- the provider does not enforce any
+// particular version format.
+func bumpPatchHint(current string) string {
+	// Cheap heuristic: if the last segment is an integer, bump it by 1.
+	// Otherwise fall back to a placeholder.
+	parts := strings.Split(current, ".")
+	if len(parts) == 0 {
+		return "<next-version>"
+	}
+	last := parts[len(parts)-1]
+	n := 0
+	if _, err := fmt.Sscanf(last, "%d", &n); err != nil || n < 0 {
+		return "<next-version>"
+	}
+	parts[len(parts)-1] = fmt.Sprintf("%d", n+1)
+	return strings.Join(parts, ".")
+}
+
+// findAnyExistingProfileVersionUID returns the UID of any existing version of
+// the given profile name in the current scope, or an empty string if none exists.
+//
+// Used by the `immutable-clusterprofiles` Create path to find a clone source:
+// when the user bumps the `version` field, Terraform plans a replacement
+// (destroy + create), and the new resource's Create function runs against an
+// existing Palette lineage. To produce the new immutable version, Create needs
+// any existing uid in that lineage to call `CloneClusterProfile` against -- the
+// exact source version doesn't matter, since clone always produces a new uid
+// that we then overwrite with the user's pack content.
+//
+// This helper exists because Palette's data model treats every profile version
+// as a separate object with its own UID -- there is no "lineage parent" object,
+// so finding a clone source is a name-lookup across the listing endpoint rather
+// than a parent-child traversal.
+func findAnyExistingProfileVersionUID(c *client.V1Client, name string) (string, error) {
+	profiles, err := c.GetClusterProfiles()
+	if err != nil {
+		return "", err
+	}
+	for _, p := range profiles {
+		if p.Metadata != nil && p.Metadata.Name == name {
+			return p.Metadata.UID, nil
+		}
+	}
+	return "", nil
+}
+
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	ProfileContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, ProfileContext)
@@ -103,19 +496,137 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	// immutable-clusterprofiles: this is the Create half of the standard Terraform
+	// Plugin SDK v2 replacement lifecycle for immutable-versioned resources. When
+	// the user bumps `version` on an existing resource, CustomizeDiff marks the
+	// field as ForceNew, Terraform plans destroy + create, and (with the user's
+	// `lifecycle { create_before_destroy = true }`) the new resource's Create runs
+	// FIRST, against an existing Palette lineage. We need to produce a new
+	// immutable version of that lineage; the way Palette models this is via a
+	// clone of any existing version object. So we look up an existing version uid
+	// for the lineage by name, call CloneClusterProfile against it to get the new
+	// version's uid, then apply the user's HCL content to the cloned object via
+	// the same UpdateClusterProfile + PatchClusterProfile + PublishClusterProfile
+	// chain that the in-place Update path uses for non-version field changes.
+	//
+	// The Terraform resource id is set once at Create time (via d.SetId) and never
+	// mutates again, which is the SDK v2 contract -- and it's what makes outputs
+	// against `.id` correct in the post-apply state without needing
+	// `terraform apply -refresh-only`.
+	if isFeaturePreviewEnabled("immutable-clusterprofiles") {
+		name := d.Get("name").(string)
+		version := d.Get("version").(string)
+
+		// Check if the exact (name, version) already exists -- if so, adopt it.
+		// This handles re-applies, multi-workspace patterns where two state files
+		// declare the same profile, and the case where the user manually created
+		// the version via the Palette UI before applying. Adopting an existing
+		// uid into Terraform state is the standard SDK v2 pattern for handling
+		// "create against an existing object".
+		existingExactUID, lookupErr := c.GetClusterProfileUID(name, version)
+		if lookupErr == nil && existingExactUID != "" {
+			log.Printf("immutable-clusterprofiles: profile %s version %s already exists (UID %s), adopting (SDK v2 adopt-on-create pattern)", name, version, existingExactUID)
+			d.SetId(existingExactUID)
+			resourceClusterProfileRead(ctx, d, m)
+			return diags
+		}
+
+		// Look for ANY existing version of this profile lineage to clone from.
+		// We don't care which version we clone from -- clone always produces a new
+		// uid that we then overwrite with the user's HCL content via the standard
+		// update chain below.
+		sourceUID, err := findAnyExistingProfileVersionUID(c, name)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if sourceUID != "" {
+			log.Printf("immutable-clusterprofiles: cloning profile %s to create version %s from existing lineage source UID %s (SDK v2 ForceNew replacement Create path)", name, version, sourceUID)
+			cloneEntity := &models.V1ClusterProfileCloneEntity{
+				Metadata: &models.V1ClusterProfileCloneMetaInputEntity{
+					Name:    &name,
+					Version: version,
+				},
+			}
+			newUID, err := c.CloneClusterProfile(sourceUID, cloneEntity)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			d.SetId(newUID)
+
+			// Sync profile variables from HCL before updating packs. Palette validates
+			// pack variable references against variables stored on the profile during
+			// UpdateClusterProfile; clone only copies the source version's variables.
+			if err := syncClusterProfileVariablesFromConfig(d, c, newUID); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// Apply the user's pack/tags/description to the cloned version. The
+			// Palette clone API copies content from the source version, not from
+			// the user's HCL -- we have to overwrite it with the desired content
+			// using the standard Update + Patch + Publish chain.
+			cp, err := c.GetClusterProfile(newUID)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			cluster, err := toClusterProfileUpdateWithResolution(d, cp, c)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			metadata, err := toClusterProfilePatch(d)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.UpdateClusterProfile(cluster); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.PatchClusterProfile(cluster, metadata); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.PublishClusterProfile(newUID); err != nil {
+				return diag.FromErr(err)
+			}
+
+			resourceClusterProfileRead(ctx, d, m)
+			return diags
+		}
+		// No prior version of this lineage exists -- fall through to the regular
+		// Create path below to create the very first version. This is the
+		// "first version of a brand new profile" case.
+		log.Printf("immutable-clusterprofiles: no prior version of %s exists, falling through to fresh Create", name)
+	}
+
 	clusterProfile, err := toClusterProfileCreateWithResolution(d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	uid, err := c.CreateClusterProfile(clusterProfile)
+	adopted := false
 	if err != nil {
-		return diag.FromErr(err)
+		if !isFeaturePreviewEnabled("immutable-clusterprofiles") {
+			return diag.FromErr(err)
+		}
+		// SDK v2 adopt-on-create pattern: if the profile already exists in Palette
+		// (e.g. another root module created it, or it was created via the UI),
+		// adopt the existing uid into Terraform state instead of failing. This
+		// supports multi-environment patterns where multiple root modules declare
+		// the same profile.
+		name := d.Get("name").(string)
+		version := d.Get("version").(string)
+		existingUID, lookupErr := c.GetClusterProfileUID(name, version)
+		if lookupErr != nil || existingUID == "" {
+			return diag.FromErr(err) // return the original create error
+		}
+		log.Printf("immutable-clusterprofiles: profile %s version %s already exists (UID %s), adopting (SDK v2 adopt-on-create pattern)", name, version, existingUID)
+		uid = existingUID
+		adopted = true
 	}
 
-	// And then publish
-	if err = c.PublishClusterProfile(uid); err != nil {
-		return diag.FromErr(err)
+	// Publish only for newly created profiles -- adopted profiles are already published.
+	if !adopted {
+		if err = c.PublishClusterProfile(uid); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	d.SetId(uid)
 	resourceClusterProfileRead(ctx, d, m)
@@ -230,6 +741,22 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
+	// Note on interaction with `immutable-clusterprofiles`:
+	//
+	// When the flag is enabled, CustomizeDiff catches both version changes
+	// (by marking `version` as ForceNew, routing the work through
+	// Create + skip_destroy-preserved Delete) AND content changes without
+	// a version bump (by returning a plan-time error that tells the user
+	// to bump the version or disable the flag). Either way, this Update
+	// block is NOT reached when the flag is set -- replacement-based
+	// work goes through Create, and disallowed mutations are rejected
+	// at plan time before Update runs.
+	//
+	// This block is therefore the legacy in-place update path for users
+	// who have NOT opted into the flag. It preserves the original
+	// destructive PUT-based behavior (mutating the existing UID via
+	// UpdateClusterProfile) for backward compatibility with existing CI
+	// and HCL that was written against the pre-flag provider.
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") || d.HasChanges("version") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
@@ -245,7 +772,6 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 
-		//ProfileContext := d.Get("context").(string)
 		if err := c.UpdateClusterProfile(cluster); err != nil {
 			return diag.FromErr(err)
 		}
@@ -267,6 +793,19 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	var diags diag.Diagnostics
+
+	// skip_destroy: when set, removing the resource from Terraform state does NOT
+	// call the Palette delete API. This is the standard Terraform Plugin SDK v2
+	// preservation pattern for immutable-versioned resources. With `skip_destroy = true`,
+	// version-bump replacements (triggered by ForceNew via the `immutable-clusterprofiles`
+	// feature flag) and `lifecycle { create_before_destroy = true }` preserve old
+	// versions in Palette while Terraform's state advances cleanly to the new version.
+	// This is the canonical SDK v2 idiom for "I want my upstream system to keep
+	// historical versions even though Terraform's state only tracks the latest one".
+	if d.Get("skip_destroy").(bool) {
+		log.Printf("skip_destroy: removing cluster profile %s from Terraform state without deleting from Palette (SDK v2 immutable-versioned-resource preservation pattern)", d.Id())
+		return diags
+	}
 
 	if err := c.DeleteClusterProfile(d.Id()); err != nil {
 		return diag.FromErr(err)
@@ -577,6 +1116,56 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 	}
 
 	return ""
+}
+
+// syncClusterProfileVariablesFromConfig applies profile_variables from Terraform
+// config to the Palette /variables endpoint. New variables (not present on the
+// cloned profile) are registered via PATCH; the full desired set is then applied
+// via PUT so existing definitions stay in sync with HCL.
+//
+// This must run before UpdateClusterProfile on the immutable clone Create path:
+// UpdateClusterProfile validates pack references against variables already stored
+// on the profile. Applying variables after publish causes PackVariablesUndefined
+// when HCL adds packs or variables that the clone did not inherit.
+func syncClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
+	if _, ok := d.GetOk("profile_variables"); !ok {
+		return nil
+	}
+	desired, err := toClusterProfileVariables(d)
+	if err != nil {
+		return err
+	}
+	if len(desired) == 0 {
+		return nil
+	}
+
+	existing, err := c.GetProfileVariables(uid)
+	if err != nil {
+		return err
+	}
+	existingNames := make(map[string]struct{}, len(existing))
+	for _, v := range existing {
+		if v != nil && v.Name != nil {
+			existingNames[*v.Name] = struct{}{}
+		}
+	}
+
+	var newVars []*models.V1Variable
+	for _, v := range desired {
+		if v.Name == nil {
+			continue
+		}
+		if _, ok := existingNames[*v.Name]; !ok {
+			newVars = append(newVars, v)
+		}
+	}
+	if len(newVars) > 0 {
+		if err := c.PatchProfileVariables(&models.V1Variables{Variables: newVars}, uid); err != nil {
+			return err
+		}
+	}
+
+	return c.UpdateProfileVariables(&models.V1Variables{Variables: desired}, uid)
 }
 
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {

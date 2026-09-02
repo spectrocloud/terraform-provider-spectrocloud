@@ -27,6 +27,17 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
     network_search_domain = var.cluster_network_search
     // For Static (By Default static_ip is false, for static provisioning, it is set to be true. Not required to specify network_type & network_search_domain)
     # static_ip = true
+
+    # Optional: YAML passthrough for CAPV properties not yet first-class in
+    # Palette. Overrides pack-level and Palette-managed values. Palette does
+    # not pre-validate keys/types/values; the API surfaces any errors.
+    # override_cluster_api_config = <<-EOT
+    #   VSphereCluster:
+    #     spec:
+    #       identityRef:
+    #         kind: VSphereClusterIdentity
+    #         name: my-identity
+    # EOT
   }
 
   machine_pool {
@@ -62,5 +73,27 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
       memory_mb    = 8192
       cpu          = 4
     }
+
+    # Optional: YAML passthrough for pool-level CAPV properties (e.g. VSphereMachineTemplate).
+    # override_cluster_api_config = <<-EOT
+    #   VSphereMachineTemplate:
+    #     spec:
+    #       template:
+    #         spec:
+    #           diskGiB: 80
+    # EOT
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 }

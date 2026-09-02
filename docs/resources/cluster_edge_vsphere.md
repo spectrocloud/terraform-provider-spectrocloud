@@ -2,15 +2,24 @@
 page_title: "spectrocloud_cluster_edge_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.
 ---
 
 # spectrocloud_cluster_edge_vsphere (Resource)
 
-  
+  Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.
 
 ## Example Usage
 
+```hcl
+resource "spectrocloud_cluster_edge_vsphere" "example" {
+  name          = "edge-vsphere-cluster"
+  edge_host_uid = "edge-host-uid"
+
+  # Additional required fields such as cluster_profile,
+  # cloud_config, and machine_pool are omitted for brevity.
+}
+```
 
 
 
@@ -20,9 +29,9 @@ description: |-
 ### Required
 
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- `edge_host_uid` (String)
+- `edge_host_uid` (String) UID of the registered Edge host where this cluster is deployed. Changing this forces a new resource.
 - `machine_pool` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the Edge vSphere cluster. Changing this forces a new resource.
 
 ### Optional
 
@@ -43,37 +52,38 @@ description: |-
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `pause_agent_upgrades` (String) The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.
+- `renew_k8s_certificates_now` (String) Timestamp to trigger an immediate renewal of control plane Kubernetes PKI certificates for this cluster. NOTE: The renewal is initiated immediately when this value changes - the timestamp does NOT schedule a future renewal. Set this to the current timestamp each time you want to trigger certificate renewal. This field can also be used for tracking when renewals were triggered. Renewal may take several minutes depending on cluster size. Only control plane certificates are renewed; worker node certificates are not supported. Format: RFC3339 (e.g., '2024-01-15T10:30:00Z').
 - `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
 
 Required:
 
-- `datacenter` (String)
-- `folder` (String)
-- `vip` (String)
+- `datacenter` (String) Name of the vSphere datacenter used by this cluster.
+- `folder` (String) vSphere inventory folder where cluster virtual machines are created.
+- `vip` (String) Virtual IP address for the Kubernetes control plane endpoint.
 
 Optional:
 
-- `image_template_folder` (String)
-- `network_search_domain` (String)
-- `network_type` (String)
+- `image_template_folder` (String) vSphere folder containing VM image templates used for node provisioning.
+- `network_search_domain` (String) DNS search domain associated with the control plane endpoint.
+- `network_type` (String) Type of network endpoint used for the control plane address.
 - `ssh_key` (String) Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
-- `static_ip` (Boolean)
+- `static_ip` (Boolean) Whether to use static IP addressing for the control plane endpoint. Default is `false`.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -83,7 +93,7 @@ Required:
 
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
-- `name` (String)
+- `name` (String) Name of the machine pool.
 - `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
@@ -94,6 +104,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_health_check_configuration` (String) YAML override for Machine Health Check configuration at the node pool level (control plane and worker pools). Accepts CAPI MachineHealthCheck fields such as maxUnhealthy, nodeStartupTimeout, and unhealthyConditions. Falls back to Palette defaults when unset. Still respects the project/tenant Cluster Auto Remediation setting. Changing this value may repave your nodes.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
@@ -104,9 +115,9 @@ Optional:
 
 Required:
 
-- `cpu` (Number)
-- `disk_size_gb` (Number)
-- `memory_mb` (Number)
+- `cpu` (Number) Number of vCPUs for each node in this machine pool.
+- `disk_size_gb` (Number) Disk size in GB for each node in this machine pool.
+- `memory_mb` (Number) Memory size in MB for each node in this machine pool.
 
 
 <a id="nestedblock--machine_pool--placement"></a>
@@ -114,14 +125,14 @@ Required:
 
 Required:
 
-- `cluster` (String)
-- `datastore` (String)
-- `network` (String)
-- `resource_pool` (String)
+- `cluster` (String) Name of the vSphere compute cluster used for node placement.
+- `datastore` (String) Name of the vSphere datastore used for node disks.
+- `network` (String) Name of the vSphere network attached to machine pool nodes.
+- `resource_pool` (String) Name of the vSphere resource pool used for node placement.
 
 Optional:
 
-- `static_ip_pool_id` (String)
+- `static_ip_pool_id` (String) UID of the static IP pool used for machine pool networking.
 
 Read-Only:
 

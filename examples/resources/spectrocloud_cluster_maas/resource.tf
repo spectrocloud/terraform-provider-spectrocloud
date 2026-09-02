@@ -17,11 +17,26 @@ resource "spectrocloud_cluster_maas" "cluster" {
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
+  # Controls automatic upgrades of the Palette agent/components on this cluster.
+  # Set to "lock" to pause agent upgrades (e.g. while stepping through Canonical K8s
+  # LTS versions and you want to gate the agent bump); "unlock" (default) lets them
+  # flow automatically.
+  pause_agent_upgrades = "unlock"
+
   cloud_config {
-    subscription_id = "subscription-id"
-    resource_group  = "dev"
-    ssh_key         = "ssh key value"
-    region          = "centralus"
+    domain        = "maas.mycompany.com"
+    enable_lxd_vm = false
+    ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
+    ssh_keys      = var.cluster_ssh_public_keys
+
+    # Optional: YAML passthrough for CAPMAAS properties not yet first-class in
+    # Palette. Overrides pack-level and Palette-managed values. Palette does
+    # not pre-validate keys/types/values; the API surfaces any errors.
+    # override_cluster_api_config = <<-EOT
+    #   MaasCluster:
+    #     spec:
+    #       failureDomains: ["az1", "az2"]
+    # EOT
   }
 
   cluster_profile {
@@ -64,11 +79,67 @@ resource "spectrocloud_cluster_maas" "cluster" {
   }
 
   machine_pool {
-    name                 = "worker-basic"
-    count                = 1
-    instance_type        = "Standard_DS4"
-    disk_size_gb         = 60
-    is_system_node_pool  = true
-    storage_account_type = "Standard_LRS"
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = "cp-pool"
+    count                   = 1
+
+    placement {
+      resource_pool = "Medium-Generic"
+    }
+
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az1"]
+  }
+
+  machine_pool {
+    name  = "worker-basic"
+    count = 1
+
+    placement {
+      resource_pool = "Medium-Generic"
+    }
+
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az2"]
+
+    # Decouple this worker pool's Kubernetes upgrade from the control plane.
+    # "disabled" (default): worker pool upgrades with the cluster profile.
+    # "enabled": pool stays on its current K8s version when the profile is
+    # upgraded, allowing up to N-3 minor-version skew from the control plane.
+    # Useful for Canonical K8s LTS upgrade paths (e.g. 1.36 LTS -> 1.42 LTS)
+    # where you want to advance the control plane first and roll workers later.
+    skip_k8s_upgrade = "disabled"
+
+    # Optional: YAML passthrough for pool-level CAPMAAS properties. Same
+    # no-pre-validation posture as the cluster-level attribute.
+    # override_cluster_api_config = <<-EOT
+    #   MaasMachineTemplate:
+    #     spec:
+    #       template:
+    #         spec:
+    #           minCPU: 4
+    # EOT
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 }

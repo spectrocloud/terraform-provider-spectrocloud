@@ -99,16 +99,17 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 ```hcl
 # import existing user example
-  import {
-    to = spectrocloud_workspace.test_user
-    id = "{userUID}"
-  }
+import {
+  to = spectrocloud_workspace.test_user
+  id = "{userUID}"
+}
 
 # To generate TF configuration.
-  terraform plan -generate-config-out=test_workspace.tf
+terraform plan -generate-config-out=test_workspace.tf
+```
 
 ```bash
-  terraform import spectrocloud_user.test_workspace {workspaceUID}/{workspace_name}
+terraform import spectrocloud_workspace.test_workspace {workspaceUID/workspace_name}
 ```
 
 

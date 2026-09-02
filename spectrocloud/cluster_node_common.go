@@ -25,7 +25,7 @@ type GetNodeStatusMap func(string, string) (map[string]models.V1CloudMachineStat
 
 func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ConfigUID, MachineName, NodeId string) (error, bool) {
 	stateConf := &retry.StateChangeConf{
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 		Pending:    NodeMaintenanceLifecycleStates,
 		Target:     []string{"Completed"},
 		Refresh:    resourceClusterNodeMaintenanceRefreshFunc(c, fn, ConfigUID, MachineName, NodeId),
@@ -145,4 +145,22 @@ func getNodeValue(nodeId, action string) map[string]interface{} {
 		"node_id": nodeId,
 		"action":  action,
 	}
+}
+
+func toMachinePoolProperties(m map[string]interface{}) *models.V1MachinePoolProperties {
+	archType := "amd64"
+	if v, ok := m["arch_type"].(string); ok && v != "" {
+		archType = v
+	}
+	arch := models.V1ArchType(archType)
+	return &models.V1MachinePoolProperties{
+		ArchType: &arch,
+	}
+}
+
+func flattenMachinePoolArchType(properties *models.V1MachinePoolProperties) string {
+	if properties != nil && properties.ArchType != nil && string(*properties.ArchType) != "" {
+		return string(*properties.ArchType)
+	}
+	return "amd64"
 }

@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_aws Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing AWS cloud account credentials in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_aws (Resource)
 
-  
+  Resource for managing AWS cloud account credentials in Spectro Cloud.
 
 ## Example Usage
 
@@ -73,7 +73,7 @@ terraform import spectrocloud_cloudaccount_aws.{cloud_account_uid}/{cloud_accoun
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the AWS cloud account.
 
 ### Optional
 

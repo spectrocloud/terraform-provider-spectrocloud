@@ -26,6 +26,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceBackupStorageLocationImport,
 		},
+		Description: "Resource for managing backup storage locations in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -109,7 +110,8 @@ func resourceBackupStorageLocation() *schema.Resource {
 						"access_key": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The access key for S3 authentication, required if 'credential_type' is set to 'secret'.",
+							Sensitive:   true,
+							Description: "The access key for S3 authentication (credential), required if 'credential_type' is set to 'secret'.",
 						},
 						"secret_key": {
 							Type:        schema.TypeString,

@@ -82,7 +82,7 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		err = d.Set("tags", appliance.Metadata.Labels)
+		err = d.Set("tags", flattenTagsMap(appliance.Metadata.Labels))
 		if err != nil {
 			return diag.FromErr(err)
 		}

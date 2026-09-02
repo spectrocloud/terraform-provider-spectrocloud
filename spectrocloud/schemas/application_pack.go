@@ -48,7 +48,7 @@ func AppPackSchema() *schema.Schema {
 				"properties": {
 					Type:        schema.TypeMap,
 					Optional:    true,
-					Description: "The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.",
+					Description: "Map of property name to string value required by the pack tier (for example, `databaseName` or `databaseVolumeSize`).",
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},

@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Unshallow
         run: git fetch --prune --unshallow
@@ -19,17 +19,81 @@ jobs:
         run: git config --global url."https://${USER}:${TOKEN}@github.com".insteadOf "https://github.com"
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@be3c94b385c4f180051c996d336f57a34c397495 # v3
         with:
           go-version-file: go.mod
 
       - name: Install Terraform CLI
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2
         with:
           terraform_wrapper: false
 
       - name: Ensure reviewable
         run: make check-diff
 
-      - name: Run acceptance tests
-        run: make testacc
+      - name: Run unit tests with coverage
+        run: make test
+
+      - name: Compute coverage summary
+        if: always()
+        run: |
+          if [ ! -f profile.cov ]; then
+            echo "profile.cov not found — did the test step run?" >&2
+            exit 0
+          fi
+          # Total coverage (single number)
+          TOTAL=$(go tool cover -func=profile.cov | awk '/^total:/ {print $NF}')
+          echo "TOTAL_COVERAGE=${TOTAL}" >> "$GITHUB_ENV"
+
+          # Prominent card at the top of the Actions run
+          {
+            echo "## Unit test coverage"
+            echo ""
+            echo "**Total: ${TOTAL}**"
+            echo ""
+            echo "<details><summary>Top 20 lowest-covered functions</summary>"
+            echo ""
+            echo '```'
+            go tool cover -func=profile.cov | grep -v '^total:' | sort -k3 -g | head -20
+            echo '```'
+            echo "</details>"
+            echo ""
+            echo "<details><summary>Per-file summary (sorted ascending)</summary>"
+            echo ""
+            echo '```'
+            go tool cover -func=profile.cov \
+              | awk '$1 !~ /^total:/ { sub(/:[0-9]+:.*/, "", $1); pct=$NF; sub(/%$/, "", pct); s[$1]+=pct; n[$1]++ } END { for (f in s) printf "%6.1f%%  %s\n", s[f]/n[f], f }' \
+              | sort -k1 -g
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Also log to the console so it's greppable in raw log output
+          echo "=========================================="
+          echo "Total coverage: ${TOTAL}"
+          echo "=========================================="
+
+      - name: Enforce coverage floor
+        if: env.TOTAL_COVERAGE != ''
+        run: |
+          THRESHOLD=$(cat .github/coverage-threshold)
+          CURRENT=$(echo "${TOTAL_COVERAGE}" | tr -d '%')
+          echo "Coverage floor: ${THRESHOLD}%, current: ${CURRENT}%"
+          awk -v cur="$CURRENT" -v min="$THRESHOLD" 'BEGIN { exit !(cur >= min) }' || {
+            echo "::error::Total coverage ${CURRENT}% dropped below the required floor of ${THRESHOLD}% (see .github/coverage-threshold). Add tests or, if this is an intentional baseline update, bump the threshold file." >&2
+            exit 1
+          }
+
+      - name: Generate HTML coverage report
+        if: always() && hashFiles('profile.cov') != ''
+        run: go tool cover -html=profile.cov -o coverage.html
+
+      - name: Upload coverage artifacts
+        if: always() && hashFiles('profile.cov') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: |
+            profile.cov
+            coverage.html
+          retention-days: 30

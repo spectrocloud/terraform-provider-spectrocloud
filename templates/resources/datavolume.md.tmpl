@@ -1,0 +1,47 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+  Manage KubeVirt data volumes attached to virtual machines in Spectro Cloud.
+---
+
+# {{.Name}} ({{.Type}})
+
+Manage KubeVirt data volumes attached to virtual machines in Spectro Cloud.
+
+## Example Usage
+
+```hcl
+resource "spectrocloud_datavolume" "example" {
+  cluster_context = "project"
+  cluster_uid     = "cluster-uid"
+  vm_name         = "vm-example"
+  vm_namespace    = "default"
+
+  metadata {
+    name      = "data-volume-example"
+    namespace = "default"
+  }
+
+  # Full spec omitted for brevity.
+  spec {}
+
+  add_volume_options {
+    name = "data-volume-example"
+
+    disk {
+      name = "data-volume-example"
+      bus  = "virtio"
+    }
+
+    volume_source {
+      data_volume {
+        name         = "data-volume-example"
+        hotpluggable = true
+      }
+    }
+  }
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

@@ -25,9 +25,10 @@ resource "spectrocloud_developer_setting" "dev_setting" {
   storage = 100
   hide_system_cluster_group = false
 }
+```
 
 
-## import existing developer setting## Import
+## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
 to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
@@ -43,8 +44,6 @@ Using `terraform import`, import the cluster group using the `tenant_uid` or `te
 
 ```console
 terraform import {{ .Name }}.example tenant_uid/tenant_name
-```
-
 ```
 
 {{ .SchemaMarkdown | trimspace }}

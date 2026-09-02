@@ -10,6 +10,7 @@ import (
 func dataSourceRegistryHelm() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRegistryHelmRead,
+		Description: "Data source for looking up a Helm registry by name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -18,9 +19,10 @@ func dataSourceRegistryHelm() *schema.Resource {
 				Optional: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the Helm registry to look up.",
 			},
 		},
 	}

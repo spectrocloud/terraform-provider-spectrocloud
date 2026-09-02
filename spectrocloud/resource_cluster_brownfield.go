@@ -38,7 +38,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -63,19 +63,14 @@ func resourceClusterBrownfield() *schema.Resource {
 			"cloud_type": {
 				Type:     schema.TypeString,
 				Required: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"aws",
-					"eks-anywhere",
-					"azure",
-					"gcp",
-					"vsphere",
-					"openshift",
-					"generic",
-					"apache-cloudstack",
-					"edge-native",
-					"maas",
-				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`. This field cannot be updated after creation.",
+				// ValidateFunc: validation.StringInSlice([]string{
+				// 	"aws",
+				// 	"azure",
+				// 	"gcp",
+				// 	"generic",
+				// 	"apache-cloudstack",
+				// }, false),
+				Description: "The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` (\"generic\" should be used and considered for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -107,13 +102,13 @@ func resourceClusterBrownfield() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "Location to mount Proxy CA cert inside container. This field supports vsphere and openshift clusters. This field cannot be updated after creation.",
+				Description: "Location to mount Proxy CA cert inside container. This field supports for generic clusters. This field cannot be updated after creation.",
 			},
 			"no_proxy": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "Location to mount Proxy CA cert inside container. This field supports vsphere and openshift clusters. This field cannot be updated after creation.",
+				Description: "Location to mount Proxy CA cert inside container. This field supports for generic clusters. This field cannot be updated after creation.",
 			},
 			"manifest_url": {
 				Type:        schema.TypeString,
@@ -147,6 +142,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -296,13 +292,7 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecGcp(d),
 		}
 		clusterUID, err = c.ImportSpectroClusterGcp(entity)
-	case "vsphere", "openshift":
-		entity := &models.V1SpectroVsphereClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecVsphere(d),
-		}
-		clusterUID, err = c.ImportSpectroVsphereCluster(entity)
-	case "generic", "eks-anywhere":
+	case "generic":
 		entity := &models.V1SpectroGenericClusterImportEntity{
 			Metadata: metadata,
 			Spec:     toBrownfieldClusterSpecGeneric(d),
@@ -314,21 +304,12 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecCloudStack(d),
 		}
 		clusterUID, err = c.ImportSpectroClusterApacheCloudStack(entity)
-	case "maas":
-		entity := &models.V1SpectroMaasClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecMaas(d),
-		}
-		clusterUID, err = c.ImportSpectroClusterMaas(entity)
-	case "edge-native":
-		entity := &models.V1SpectroEdgeNativeClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecEdgeNative(d),
-		}
-		clusterUID, err = c.ImportSpectroClusterEdgeNative(entity)
-
 	default:
-		return diag.FromErr(fmt.Errorf("unsupported cloud type: %s", cloudType))
+		entity := &models.V1SpectroGenericClusterImportEntity{
+			Metadata: metadata,
+			Spec:     toBrownfieldClusterSpecGeneric(d),
+		}
+		clusterUID, err = c.ImportSpectroClusterGeneric(entity)
 	}
 
 	if err != nil {
@@ -722,7 +703,6 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 		config.ImportMode = ""
 	}
 
-	// Set Proxy if any proxy-related fields are provided (for vsphere and openshift clusters)
 	_, hasProxy := d.GetOk("proxy")
 	_, hasNoProxy := d.GetOk("no_proxy")
 	_, hasHostPath := d.GetOk("host_path")
@@ -848,6 +828,10 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 		}
 	}
 
+	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
+		return diags, true
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -917,16 +901,10 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusAzure
 	case "gcp":
 		return c.GetNodeMaintenanceStatusGcp
-	case "vsphere", "openshift":
-		return c.GetNodeMaintenanceStatusVsphere
-	case "generic", "eks-anywhere":
+	case "generic":
 		return c.GetNodeMaintenanceStatusGeneric
 	case "apache-cloudstack":
 		return c.GetNodeMaintenanceStatusCloudStack
-	case "maas":
-		return c.GetNodeMaintenanceStatusMaas
-	case "edge-native":
-		return c.GetNodeMaintenanceStatusEdgeNative
 	default:
 		return nil
 	}
@@ -941,16 +919,10 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListAzure
 	case "gcp":
 		return c.GetMachinesListGcp
-	case "vsphere", "openshift":
-		return c.GetMachinesListVsphere
-	case "generic", "eks-anywhere":
+	case "generic":
 		return c.GetMachinesListGeneric
 	case "apache-cloudstack":
 		return c.GetMachinesListApacheCloudstack
-	case "maas":
-		return c.GetMachinesListMaas
-	case "edge-native":
-		return c.GetMachinesListEdgeNative
 	default:
 		return nil
 	}
@@ -1047,61 +1019,16 @@ func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData
 }
 
 func flattenCommonAttributeForBrownfieldClusterImport(c *client.V1Client, d *schema.ResourceData) error {
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
-	if err != nil {
-		return err
-	}
-	err = d.Set("cluster_profile", clusterProfiles)
-	if err != nil {
-		return err
-	}
-
 	var diags diag.Diagnostics
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
 	}
+
+	if err := setClusterProfilesOrTemplateForImport(c, d, cluster); err != nil {
+		return err
+	}
+
 	_ = d.Set("import_mode", "")
-
-	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-			return err
-		}
-	}
-
-	if cluster.Metadata.Annotations["description"] != "" {
-		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
-			return err
-		}
-	}
-
-	if cluster.Status.SpcApply != nil {
-		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
-	if err != nil {
-		return err
-	}
-	if cluster.Status.Repave != nil {
-		if err = d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
-			return err
-		}
-	}
-	err = d.Set("force_delete", false)
-	if err != nil {
-		return err
-	}
-	err = d.Set("force_delete_delay", 20)
-	if err != nil {
-		return err
-	}
-	err = d.Set("skip_completion", false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return setCommonClusterImportAttributes(cluster, d, true)
 }
