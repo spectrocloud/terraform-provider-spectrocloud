@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -333,24 +334,41 @@ func TestPLT2401_HelmRegistryIsSynchronizationSchema(t *testing.T) {
 	assert.ElementsMatch(t, []string{"is_private", "is_synchronization"}, isSync.ExactlyOneOf)
 }
 
+// is_synchronization is the *inverse* of is_private, not an alias of it:
+// Palette only synchronizes public registries. Each case configures exactly
+// one of the two attributes (never both, matching what ExactlyOneOf allows
+// in real usage) via TestResourceDataRaw so GetOkExists sees genuine raw-config
+// presence/absence, the same distinction resolveHelmIsPrivate relies on.
 func TestPLT2401_ResolveHelmIsPrivate(t *testing.T) {
+	r := resourceRegistryHelm()
+	baseRaw := func(extra map[string]interface{}) map[string]interface{} {
+		raw := map[string]interface{}{
+			"name":     "test-reg-name",
+			"endpoint": "test.com",
+			"credentials": []interface{}{
+				map[string]interface{}{"credential_type": "noAuth"},
+			},
+		}
+		for k, v := range extra {
+			raw[k] = v
+		}
+		return raw
+	}
+
 	tests := []struct {
 		name         string
-		isPrivate    bool
-		isSync       bool
+		extra        map[string]interface{}
 		wantResolved bool
 	}{
-		{"only is_private true", true, false, true},
-		{"only is_private false", false, false, false},
-		{"only is_synchronization true", false, true, true},
-		{"only is_synchronization false", false, false, false},
+		{"only is_private true", map[string]interface{}{"is_private": true}, true},
+		{"only is_private false", map[string]interface{}{"is_private": false}, false},
+		{"only is_synchronization true resolves isPrivate false", map[string]interface{}{"is_synchronization": true}, false},
+		{"only is_synchronization false resolves isPrivate true", map[string]interface{}{"is_synchronization": false}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := prepareResourceRegistryHelm()
-			_ = d.Set("is_private", tt.isPrivate)
-			_ = d.Set("is_synchronization", tt.isSync)
+			d := schema.TestResourceDataRaw(t, r.Schema, baseRaw(tt.extra))
 			assert.Equal(t, tt.wantResolved, resolveHelmIsPrivate(d))
 			assert.Equal(t, tt.wantResolved, toRegistryEntityHelm(d).Spec.IsPrivate)
 			assert.Equal(t, tt.wantResolved, toRegistryHelm(d).Spec.IsPrivate)
@@ -358,14 +376,84 @@ func TestPLT2401_ResolveHelmIsPrivate(t *testing.T) {
 	}
 }
 
-// Read must mirror the single API isPrivate value into both is_private and
-// is_synchronization so neither attribute drifts regardless of which one the
-// practitioner configured.
+// Regression: after PLT-2401 shipped is_synchronization as an
+// Optional+Computed sibling of is_private, an EXISTING resource's Read
+// always mirrors the API's isPrivate value into both attributes. That means
+// once a resource has been read at least once, an existing user editing only
+// is_private on a later apply saw the edit silently dropped: GetOkExists
+// on is_synchronization reported "present" even though it was only a value
+// carried forward from prior state, not something in the practitioner's
+// config for this apply, so resolveHelmIsPrivate kept resolving from the
+// untouched is_synchronization instead of the just-edited is_private.
+//
+// These use buildUpdateResourceData/simpleDiff (see
+// cluster_update_haschange_test_helpers_test.go) to build a ResourceData
+// with genuine old-state + new-diff semantics, so HasChange behaves the way
+// it would for a real `terraform apply` against an existing resource --
+// unlike schema.TestResourceData()+d.Set(), which cannot distinguish "edited
+// in this apply" from "carried forward unchanged".
+func TestPLT2401_ResolveHelmIsPrivate_ExistingResourceUpdate(t *testing.T) {
+	res := resourceRegistryHelm()
+	baseAttrs := map[string]string{
+		"id": "reg-1", "name": "test-reg", "endpoint": "test.com",
+		"wait_for_sync": "false", "credentials.#": "1",
+		"credentials.0.credential_type": "noAuth",
+	}
+
+	tests := []struct {
+		name         string
+		basePrivate  string
+		baseSync     string
+		diff         map[string]*terraform.ResourceAttrDiff
+		wantResolved bool
+	}{
+		{
+			name:         "editing only is_private on an existing resource is honored",
+			basePrivate:  "false",
+			baseSync:     "true", // mirrored by a prior Read: !false
+			diff:         simpleDiff("is_private", "false", "true"),
+			wantResolved: true,
+		},
+		{
+			name:         "editing only is_private back to false is honored",
+			basePrivate:  "true",
+			baseSync:     "false", // mirrored by a prior Read: !true
+			diff:         simpleDiff("is_private", "true", "false"),
+			wantResolved: false,
+		},
+		{
+			name:         "migrating from is_private to is_synchronization is honored",
+			basePrivate:  "true",
+			baseSync:     "false",
+			diff:         simpleDiff("is_synchronization", "false", "true"),
+			wantResolved: false, // is_synchronization=true -> isPrivate=false
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrs := make(map[string]string, len(baseAttrs)+2)
+			for k, v := range baseAttrs {
+				attrs[k] = v
+			}
+			attrs["is_private"] = tt.basePrivate
+			attrs["is_synchronization"] = tt.baseSync
+
+			d := buildUpdateResourceData(res, "reg-1", attrs, tt.diff)
+			assert.Equal(t, tt.wantResolved, resolveHelmIsPrivate(d))
+			assert.Equal(t, tt.wantResolved, toRegistryHelm(d).Spec.IsPrivate)
+		})
+	}
+}
+
+// Read must mirror the single API isPrivate value into is_private directly
+// and into is_synchronization inverted, so neither attribute drifts
+// regardless of which one the practitioner configured.
 func TestPLT2401_HelmRegistryReadMirrorsIsPrivateAndIsSynchronization(t *testing.T) {
 	tests := []struct {
-		name string
-		uid  string
-		want bool
+		name          string
+		uid           string
+		wantIsPrivate bool
 	}{
 		{"private registry", "test-helm-private-uid", true},
 		{"public registry", "test-registry-uid", false},
@@ -379,8 +467,8 @@ func TestPLT2401_HelmRegistryReadMirrorsIsPrivateAndIsSynchronization(t *testing
 			diags := resourceRegistryHelmRead(context.Background(), d, unitTestMockAPIClient)
 			assert.False(t, diags.HasError(), "unexpected error: %v", diags)
 
-			assert.Equal(t, tt.want, d.Get("is_private"))
-			assert.Equal(t, tt.want, d.Get("is_synchronization"))
+			assert.Equal(t, tt.wantIsPrivate, d.Get("is_private"))
+			assert.Equal(t, !tt.wantIsPrivate, d.Get("is_synchronization"))
 		})
 	}
 }

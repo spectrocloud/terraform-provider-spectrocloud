@@ -49,14 +49,14 @@ func resourceRegistryHelm() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"is_private", "is_synchronization"},
 				Deprecated:   "Use `is_synchronization` instead. This field is retained for backward compatibility and will be removed in a future release.",
-				Description:  "Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead.",
+				Description:  "Specifies whether the Helm registry is private or public. When set to `true`, the registry is treated as private, requires authentication, and Palette will **not** synchronize it. **Deprecated:** use `is_synchronization` instead.",
 			},
 			"is_synchronization": {
 				Type:         schema.TypeBool,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"is_private", "is_synchronization"},
-				Description:  "Specifies whether the Helm registry is private (requiring authentication) and, as a result, synchronized by Palette. Replaces `is_private` for naming parity with `spectrocloud_registry_oci`; the Helm registry API has no independent sync flag, so this maps onto the same underlying value as the deprecated `is_private`. Mutually exclusive with `is_private` — set only one.",
+				Description:  "Specifies whether Palette synchronizes the Helm registry. When set to `true`, the registry is treated as public and Palette synchronizes it, reading the Helm charts in the repository so their details are shown in the cluster profile section when adding layers using Helm. When set to `false`, the registry is treated as private and is **not** synchronized — set this to `false` when the repository is not reachable by Palette. Mutually exclusive with `is_private` — set only one.",
 			},
 			"endpoint": {
 				Type:        schema.TypeString,
@@ -235,11 +235,12 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 	if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
 		return diag.FromErr(err)
 	}
-	// is_synchronization mirrors is_private: the Helm API has no separate sync
-	// flag, so both attributes always reflect the same underlying value. Both
-	// are Optional+Computed with ExactlyOneOf, so writing the same value into
-	// whichever one the practitioner did NOT configure produces no diff.
-	if err := d.Set("is_synchronization", registry.Spec.IsPrivate); err != nil {
+	// is_synchronization is the inverse of is_private: Palette only
+	// synchronizes public registries, so is_synchronization = !isPrivate.
+	// Both attributes are Optional+Computed with ExactlyOneOf, so writing a
+	// value into whichever one the practitioner did NOT configure produces no
+	// diff.
+	if err := d.Set("is_synchronization", !registry.Spec.IsPrivate); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
@@ -329,12 +330,37 @@ func resourceRegistryHelmDelete(ctx context.Context, d *schema.ResourceData, m i
 
 // resolveHelmIsPrivate resolves the single `isPrivate` API value from
 // whichever of `is_private` (deprecated) or `is_synchronization` the
-// practitioner configured. `ExactlyOneOf` guarantees at most one is present
-// in config; the other stays at its Computed zero/prior value, so an OR is
-// sufficient to recover the configured value regardless of which attribute
-// carries it (see PLT-2401).
+// practitioner is actually setting in this apply. `is_synchronization` is the
+// *inverse* of isPrivate (Palette only synchronizes public registries), not
+// an alias of it, so we cannot fall back to an OR across both Get() values
+// the way an equality mapping could.
+//
+// GetOkExists alone is not sufficient here: Read always mirrors the API's
+// isPrivate value into *both* attributes, so once a resource has been read
+// once, the attribute the practitioner never touches still carries a real,
+// non-null value forward from prior state. GetOkExists cannot tell that
+// carried-forward value apart from one actually present in this apply's
+// config, so it kept treating is_synchronization's stale mirrored value as
+// authoritative even on updates that only changed is_private — silently
+// ignoring is_private edits on every existing resource.
+//
+// HasChange compares old state against the new plan for one specific key, so
+// a value merely carried forward unchanged does not fool it; it correctly
+// identifies which of the two attributes the practitioner is editing. Its own
+// blind spot is a value explicitly configured to the same value as the
+// schema default (no visible change to detect) — GetOkExists still handles
+// that correctly, so it's kept as a fallback restricted to brand new
+// resources (Id() == ""), where it was already proven reliable.
 func resolveHelmIsPrivate(d *schema.ResourceData) bool {
-	return d.Get("is_private").(bool) || d.Get("is_synchronization").(bool)
+	if d.HasChange("is_synchronization") && !d.HasChange("is_private") {
+		return !d.Get("is_synchronization").(bool)
+	}
+	if d.Id() == "" {
+		if v, ok := d.GetOkExists("is_synchronization"); ok {
+			return !v.(bool)
+		}
+	}
+	return d.Get("is_private").(bool)
 }
 
 func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {

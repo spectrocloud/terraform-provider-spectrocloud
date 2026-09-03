@@ -9,13 +9,24 @@ description: |-
 
   Resource for managing Helm registries in Spectro Cloud.
 
+## Synchronization
+
+Synchronization allows Palette to understand the Helm charts in the repository, and will display their details in the cluster profile section when adding layers using Helm. When a Helm repository is not reachable by Palette, synchronization should be disabled. Refer to the Palette documentation for more.
+
+Use `is_synchronization` to control this:
+
+- `is_synchronization = true` — the registry is treated as **public** and is synchronized.
+- `is_synchronization = false` — the registry is treated as **private** and is **not** synchronized. Use this when the repository is not reachable by Palette.
+
+`is_synchronization` replaces the deprecated `is_private` and is its inverse (`is_synchronization = !is_private`), not an alias of it — the Helm registry API has no independent sync flag, so both attributes map onto the same underlying value, just negated.
+
 ## Example Usage
 
 ```terraform
 resource "spectrocloud_registry_helm" "r1" {
   name               = "us-artifactory"
   endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_synchronization = true # preferred; the deprecated is_private accepts the same value
+  is_synchronization = false # private registry, not reachable/synchronized by Palette; inverse of the deprecated is_private
   credentials {
     credential_type = "noAuth"
     username        = "abc"
@@ -61,8 +72,8 @@ The import will automatically populate all configuration fields from the Spectro
 
 ### Optional
 
-- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead.
-- `is_synchronization` (Boolean) Specifies whether the Helm registry is private (requiring authentication) and, as a result, synchronized by Palette. Replaces `is_private` for naming parity with `spectrocloud_registry_oci`; the Helm registry API has no independent sync flag, so this maps onto the same underlying value as the deprecated `is_private`. Mutually exclusive with `is_private` — set only one.
+- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. When set to `true`, the registry is treated as private, requires authentication, and Palette will **not** synchronize it. **Deprecated:** use `is_synchronization` instead.
+- `is_synchronization` (Boolean) Specifies whether Palette synchronizes the Helm registry. When set to `true`, the registry is treated as public and Palette synchronizes it, reading the Helm charts in the repository so their details are shown in the cluster profile section when adding layers using Helm. When set to `false`, the registry is treated as private and is **not** synchronized — set this to `false` when the repository is not reachable by Palette. Mutually exclusive with `is_private` — set only one.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.
 
