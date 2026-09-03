@@ -1076,6 +1076,9 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	// Hash override_scaling
 	if overrideScaling, ok := m["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {

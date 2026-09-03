@@ -131,6 +131,9 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	if val, ok := m["os_type"]; ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val.(string))
 	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	return int(hash(buf.String()))
 }
@@ -244,6 +247,9 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 
 	if _, ok := m["disk_size_gb"]; ok {
 		fmt.Fprintf(buf, "%d-", m["disk_size_gb"].(int))
+	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
 	}
 
 	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
