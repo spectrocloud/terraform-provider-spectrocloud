@@ -1,4 +1,4 @@
-git package spectrocloud
+package spectrocloud
 
 import (
 	"context"
