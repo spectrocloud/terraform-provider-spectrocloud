@@ -1,4 +1,4 @@
-package spectrocloud
+git package spectrocloud
 
 import (
 	"context"
@@ -83,7 +83,8 @@ func setHelmRegistryState(d *schema.ResourceData, registry *models.V1HelmRegistr
 		if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
 			return err
 		}
-		if err := d.Set("is_synchronization", registry.Spec.IsPrivate); err != nil {
+		// is_synchronization is the inverse of is_private; see resourceRegistryHelmRead.
+		if err := d.Set("is_synchronization", !registry.Spec.IsPrivate); err != nil {
 			return err
 		}
 	}
