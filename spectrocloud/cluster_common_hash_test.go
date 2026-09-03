@@ -978,6 +978,68 @@ func TestResourceMachinePoolMaasHashIncludesSkipK8sUpgrade(t *testing.T) {
 		"MAAS machine pool hash should change when skip_k8s_upgrade changes")
 }
 
+// PLT-2406: resourceMachinePoolAzureHash did not hash skip_k8s_upgrade, so a
+// TypeSet worker pool with only that field changed hashed identically to the
+// prior pool. Terraform reported no plan diff, and resourceClusterAzureUpdate
+// (gated on the hash changing) never PATCHed the pool.
+func TestResourceMachinePoolAzureHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":             "pool-a",
+		"count":            2,
+		"control_plane":    false,
+		"instance_type":    "Standard_D2s_v3",
+		"os_type":          "Linux",
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolAzureHash(base), resourceMachinePoolAzureHash(enabled),
+		"Azure machine pool hash should change when skip_k8s_upgrade changes")
+}
+
+// PLT-2406: same bug as Azure — resourceMachinePoolGcpHash did not hash
+// skip_k8s_upgrade.
+func TestResourceMachinePoolGcpHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":             "pool-a",
+		"instance_type":    "n1-standard-4",
+		"disk_size_gb":     60,
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolGcpHash(base), resourceMachinePoolGcpHash(enabled),
+		"GCP machine pool hash should change when skip_k8s_upgrade changes")
+}
+
+// PLT-2406: same bug class found in resourceMachinePoolApacheCloudStackHash
+// during triage, not in the original report — skip_k8s_upgrade is a valid
+// schema field on spectrocloud_cluster_apache_cloudstack but was never hashed.
+func TestResourceMachinePoolApacheCloudStackHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":             "pool-a",
+		"control_plane":    false,
+		"offering":         "Medium Instance",
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolApacheCloudStackHash(base), resourceMachinePoolApacheCloudStackHash(enabled),
+		"Apache CloudStack machine pool hash should change when skip_k8s_upgrade changes")
+}
+
 func TestResourceMachinePoolVirtualHash(t *testing.T) {
 	testCases := []struct {
 		name         string
