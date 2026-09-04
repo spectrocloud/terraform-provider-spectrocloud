@@ -9,17 +9,37 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
+## Synchronization
+
+Synchronization allows Palette to understand the Helm charts in the repository, and will display their details in the cluster profile section when adding layers using Helm. When a Helm repository is not reachable by Palette, synchronization should be disabled. Refer to the Palette documentation for more.
+
+Use `is_synchronization` to control this:
+
+- `is_synchronization = true` — the registry is treated as **public** and is synchronized.
+- `is_synchronization = false` — the registry is treated as **private** and is **not** synchronized. Use this when the repository is not reachable by Palette.
+
+`is_synchronization` replaces the deprecated `is_private` and is its inverse (`is_synchronization = !is_private`), not an alias of it — the Helm registry API has no independent sync flag, so both attributes map onto the same underlying value, just negated.
+
 ## Example Usage
 
 ```terraform
 resource "spectrocloud_registry_helm" "r1" {
-  name       = "us-artifactory"
-  endpoint   = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_private = true
+  name               = "us-artifactory"
+  endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
+  is_synchronization = false # private registry, not reachable/synchronized by Palette; inverse of the deprecated is_private
   credentials {
     credential_type = "noAuth"
     username        = "abc"
     password        = "def"
+    # Optional: TLS configuration. Omit the block to send no TLS configuration.
+    # Certificates are PEM content, not paths - use file() to read them from disk.
+    # tls_config {
+    #   enabled              = true
+    #   ca                   = file("${path.module}/ca.pem")
+    #   certificate          = file("${path.module}/client.pem")
+    #   key                  = file("${path.module}/client-key.pem")
+    #   insecure_skip_verify = false
+    # }
   }
   # Optional: Wait for the registry to complete synchronization
   # wait_for_sync = true

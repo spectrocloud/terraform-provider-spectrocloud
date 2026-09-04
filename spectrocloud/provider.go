@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -27,7 +28,7 @@ func isFeaturePreviewEnabled(name string) bool {
 	return ProviderFeaturePreview[name]
 }
 
-func New(_ string) func() *schema.Provider {
+func New(version string) func() *schema.Provider {
 	return func() *schema.Provider {
 		p := &schema.Provider{
 			Schema: map[string]*schema.Schema{
@@ -238,14 +239,34 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_registration_token":          dataSourceRegistrationToken(),
 				"spectrocloud_macros":                      dataSourceMacros(),
 			},
-			ConfigureContextFunc: providerConfigure,
+			ConfigureContextFunc: providerConfigureFunc(version),
 		}
 
 		return p
 	}
 }
 
-func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+// resolveClientHeader returns the value sent on every Palette API request in the
+// X-SpectroCloud-Client header, identifying which client is calling (for Hubble
+// observability). SPECTROCLOUD_CLIENT_HEADER is intentionally not a provider
+// schema field and is undocumented -- it exists only so wrapping tools (e.g. the
+// Crossplane provider, which runs this binary as a subprocess and inherits its
+// own environment into it) can identify themselves distinctly from plain
+// Terraform CLI usage. It is not meant to be set by end users.
+func resolveClientHeader(version string) string {
+	if override := os.Getenv("SPECTROCLOUD_CLIENT_HEADER"); override != "" {
+		return override
+	}
+	return "terraform-v" + version
+}
+
+func providerConfigureFunc(version string) schema.ConfigureContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		return providerConfigure(ctx, d, version)
+	}
+}
+
+func providerConfigure(ctx context.Context, d *schema.ResourceData, version string) (interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	configureFeatureFlags(d)
@@ -288,6 +309,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		client.WithAPIKey(apiKey),
 		client.WithInsecureSkipVerify(insecure),
 		client.WithRetries(retryAttempts),
+		client.WithClientHeader(resolveClientHeader(version)),
 	)
 	if transportDebug {
 		client.WithTransportDebug()(c)

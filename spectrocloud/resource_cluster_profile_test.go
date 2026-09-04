@@ -172,6 +172,57 @@ func TestFlattenProfileVariables(t *testing.T) {
 	assert.Equal(t, []interface{}{}, resultEmpty)
 }
 
+func TestFlattenProfileVariables_SensitiveMaskedDefaultValuePreservesPrior(t *testing.T) {
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("profile_variables", []interface{}{
+		map[string]interface{}{
+			"variable": []interface{}{
+				map[string]interface{}{
+					"name":          "tag",
+					"display_name":  "tag",
+					"format":        "version",
+					"default_value": "1.38.0",
+					"required":      true,
+				},
+				map[string]interface{}{
+					"name":          "health",
+					"display_name":  "health",
+					"format":        "string",
+					"default_value": "health",
+					"required":      true,
+					"immutable":     true,
+					"hidden":        true,
+					"is_sensitive":  true,
+				},
+			},
+		},
+	})
+
+	// API masks default_value for sensitive variables (e.g. "********"), regardless
+	// of what was actually configured -- matches the real Palette response shape.
+	pv := []*models.V1Variable{
+		{Name: StringPtr("tag"), DisplayName: "tag", Format: models.NewV1VariableFormat("version"), DefaultValue: "1.38.0", Required: true},
+		{Name: StringPtr("health"), DisplayName: "health", Format: models.NewV1VariableFormat("string"), DefaultValue: "********", Required: true, Immutable: true, Hidden: true, IsSensitive: true},
+	}
+
+	result, err := flattenProfileVariables(mockResourceData, pv)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+
+	vars := result[0].(map[string]interface{})["variable"].([]interface{})
+	assert.Len(t, vars, 2)
+
+	byName := make(map[string]map[string]interface{})
+	for _, v := range vars {
+		m := v.(map[string]interface{})
+		byName[String(m["name"].(*string))] = m
+	}
+
+	assert.Equal(t, "1.38.0", byName["tag"]["default_value"], "non-sensitive variable should reflect the API value as-is")
+	assert.Equal(t, "health", byName["health"]["default_value"], "sensitive variable's masked API value must not overwrite the prior real value")
+}
+
 func TestToClusterProfileVariablesInputTypeAndOptions(t *testing.T) {
 	// Test input_type and options (dropdown with options list)
 	mockResourceData := resourceClusterProfile().TestResourceData()
@@ -1283,14 +1334,24 @@ func TestResourceClusterProfileCreate_ImmutableCloneUpdatesVariables(t *testing.
 	assert.Equal(t, "cloned-profile-uid", d.Id())
 }
 
-func TestSyncClusterProfileVariablesFromConfigNewVariable(t *testing.T) {
+func TestAddNewProfileVariablesFromConfigNewVariable(t *testing.T) {
 	t.Parallel()
 
 	d := prepareBaseClusterProfileTestData()
 	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
 
-	// Mock GET /variables returns empty; variables from HCL are registered via PATCH then PUT.
-	assert.NoError(t, syncClusterProfileVariablesFromConfig(d, c, "cloned-profile-uid"))
+	// Mock GET /variables returns empty; new variables from HCL are registered via PATCH.
+	assert.NoError(t, addNewProfileVariablesFromConfig(d, c, "cloned-profile-uid"))
+}
+
+func TestPruneProfileVariablesToConfig(t *testing.T) {
+	t.Parallel()
+
+	d := prepareBaseClusterProfileTestData()
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	// Mock GET /variables returns empty; the desired set from HCL is applied via PUT.
+	assert.NoError(t, pruneProfileVariablesToConfig(d, c, "cloned-profile-uid"))
 }
 
 // TestFindAnyExistingProfileVersionUID_Found verifies that the helper finds

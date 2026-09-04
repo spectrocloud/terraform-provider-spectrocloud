@@ -11,6 +11,18 @@ fi
 
 echo "Generating spectrocloud local provider with version $PROVIDER_VERSION"
 
+# CLIENT_VERSION feeds main.version (the X-SpectroCloud-Client header value),
+# independent of $PROVIDER_VERSION above (which only controls where the built
+# binary is placed under providers/plugins/ so Terraform's version constraints
+# resolve it -- it is not a real version and would be meaningless in a header).
+# Falls back to 0.0.0 if no tag is reachable (e.g. a shallow clone).
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+if [ -z "$LATEST_TAG" ]
+then
+  LATEST_TAG=0.0.0
+fi
+export CLIENT_VERSION="${LATEST_TAG}-dev"
+
 OS=$(echo $(uname -s) | tr '[:upper:]' '[:lower:]')
 if [ $(uname -m) == "x86_64" ]; then
   OS_ARCH="amd64"

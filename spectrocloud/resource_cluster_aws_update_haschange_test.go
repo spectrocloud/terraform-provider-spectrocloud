@@ -68,6 +68,23 @@ func TestResourceClusterAwsUpdate_HasChange_ClusterTypeRejected(t *testing.T) {
 	assert.True(t, diags.HasError(), "changing cluster_type must produce a validation error")
 }
 
+// TestResourceClusterAwsUpdate_HasChange_UpdateWorkerPoolsInParallelRejected —
+// updateCommonFields rejects day-2 changes to update_worker_pools_in_parallel.
+func TestResourceClusterAwsUpdate_HasChange_UpdateWorkerPoolsInParallelRejected(t *testing.T) {
+	base := baseAwsUpdateAttrs()
+	base["update_worker_pools_in_parallel"] = "false"
+
+	d := buildUpdateResourceData(resourceClusterAws(), "test-cluster-uid",
+		base,
+		map[string]*terraform.ResourceAttrDiff{
+			"update_worker_pools_in_parallel": {Old: "false", New: "true"},
+		})
+
+	diags := resourceClusterAwsUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError(), "changing update_worker_pools_in_parallel must produce a validation error")
+	assert.Contains(t, diags[0].Summary, "update_worker_pools_in_parallel cannot be modified after cluster creation")
+}
+
 // TestResourceClusterAwsUpdate_HasChange_Timezone fires the
 // cluster_timezone branch → updateClusterTimezone. When the "new"
 // timezone is empty (or context is invalid) the helper's SDK call is

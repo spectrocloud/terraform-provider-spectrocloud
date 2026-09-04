@@ -448,7 +448,7 @@ func getMockSpectroCluster() *models.V1SpectroCluster {
 		},
 		Spec: &models.V1SpectroClusterSpec{
 			CloudType:   "aws",
-			ClusterType: "full",
+			ClusterType: models.V1ClusterTypePureManage.Pointer(),
 			CloudConfigRef: &models.V1ObjectReference{
 				UID: MockCloudConfigUID,
 			},

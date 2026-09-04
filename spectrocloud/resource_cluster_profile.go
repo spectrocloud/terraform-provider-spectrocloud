@@ -48,7 +48,10 @@ func resourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
-				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
+				Description: "Version of the cluster profile. Defaults to '1.0.0'. Must be a valid " +
+					"semantic version (e.g. `1.2.3`) or a short/coerced form (e.g. `1`, `1.2`, `v1.2.3`) - " +
+					"malformed versions (e.g. `1.2.3.beta`, `V1.2.3`, `chart-v1.2.3`) are rejected by the API " +
+					"on create and update. " +
 					"\n\n" +
 					"Default behavior (no feature flag set): changing this value on an existing " +
 					"profile updates the version in place via `PUT /v1/clusterprofiles/{uid}`, " +
@@ -553,10 +556,13 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 			}
 			d.SetId(newUID)
 
-			// Sync profile variables from HCL before updating packs. Palette validates
-			// pack variable references against variables stored on the profile during
-			// UpdateClusterProfile; clone only copies the source version's variables.
-			if err := syncClusterProfileVariablesFromConfig(d, c, newUID); err != nil {
+			// Register any NEW variables from HCL before updating packs. Palette
+			// validates pack variable references against variables stored on the
+			// profile during UpdateClusterProfile; clone only copies the source
+			// version's variables, so a pack referencing a variable the clone
+			// didn't inherit needs it registered first. This is always safe: it
+			// only ever adds, never removes.
+			if err := addNewProfileVariablesFromConfig(d, c, newUID); err != nil {
 				return diag.FromErr(err)
 			}
 
@@ -582,7 +588,26 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 			if err := c.PatchClusterProfile(cluster, metadata); err != nil {
 				return diag.FromErr(err)
 			}
+
+			// Publish BEFORE pruning variables -- deliberately, and this order
+			// matters more subtly than it looks. UpdateClusterProfile above only
+			// writes the DRAFT pack content; Palette validates variable removal
+			// against the PUBLISHED content, which still shows the stale,
+			// cloned-from-source values until Publish runs. Pruning before
+			// Publish still fails PackVariablesUndefined even though the draft
+			// no longer references the variable being removed -- confirmed by
+			// instrumenting each call in this sequence and observing that
+			// UpdateClusterProfile/PatchClusterProfile succeed but the prune
+			// call still fails when it runs before Publish (see the linked
+			// issue for the full debug trace).
 			if err := c.PublishClusterProfile(newUID); err != nil {
+				return diag.FromErr(err)
+			}
+
+			// Now that the published content matches the desired HCL (no longer
+			// references anything about to be removed), it's safe to prune the
+			// variable set down to exactly what HCL declares.
+			if err := pruneProfileVariablesToConfig(d, c, newUID); err != nil {
 				return diag.FromErr(err)
 			}
 
@@ -1118,36 +1143,21 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 	return ""
 }
 
-// syncClusterProfileVariablesFromConfig applies profile_variables from Terraform
-// config to the Palette /variables endpoint. New variables (not present on the
-// cloned profile) are registered via PATCH; the full desired set is then applied
-// via PUT so existing definitions stay in sync with HCL.
+// addNewProfileVariablesFromConfig registers, via PATCH, any profile_variables
+// in the Terraform config that the cloned profile doesn't already have. This
+// is always safe to run immediately after clone: it only ever adds variables,
+// never removes ones the cloned pack's (not-yet-overwritten) content might
+// still reference.
 //
-// This must run before UpdateClusterProfile on the immutable clone Create path:
-// UpdateClusterProfile validates pack references against variables already stored
-// on the profile. Applying variables after publish causes PackVariablesUndefined
-// when HCL adds packs or variables that the clone did not inherit.
-func syncClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
-	if _, ok := d.GetOk("profile_variables"); !ok {
-		return nil
-	}
-	desired, err := toClusterProfileVariables(d)
-	if err != nil {
+// Must run before the new pack content is pushed on the immutable clone
+// Create path: UpdateClusterProfile validates pack variable references
+// against variables already stored on the profile, so a pack referencing a
+// brand-new HCL variable the clone didn't inherit would fail validation if
+// this hasn't registered it yet.
+func addNewProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
+	desired, existingNames, err := desiredAndExistingProfileVariableNames(d, c, uid)
+	if err != nil || desired == nil {
 		return err
-	}
-	if len(desired) == 0 {
-		return nil
-	}
-
-	existing, err := c.GetProfileVariables(uid)
-	if err != nil {
-		return err
-	}
-	existingNames := make(map[string]struct{}, len(existing))
-	for _, v := range existing {
-		if v != nil && v.Name != nil {
-			existingNames[*v.Name] = struct{}{}
-		}
 	}
 
 	var newVars []*models.V1Variable
@@ -1159,13 +1169,61 @@ func syncClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1C
 			newVars = append(newVars, v)
 		}
 	}
-	if len(newVars) > 0 {
-		if err := c.PatchProfileVariables(&models.V1Variables{Variables: newVars}, uid); err != nil {
-			return err
-		}
+	if len(newVars) == 0 {
+		return nil
+	}
+	return c.PatchProfileVariables(&models.V1Variables{Variables: newVars}, uid)
+}
+
+// pruneProfileVariablesToConfig replaces the profile's full variable set with
+// exactly what the Terraform config declares, via PUT -- dropping any
+// variable a clone source had that current HCL no longer declares.
+//
+// Must run AFTER the new pack content has been pushed (see
+// resourceClusterProfileCreate's immutable-clone Create path): removing a
+// variable while pack content still references it -- e.g. a freshly cloned
+// object's not-yet-overwritten stale values -- fails server-side
+// pack/variable validation with PackVariablesUndefined. By the time this
+// runs, pack content already matches the desired HCL and cannot reference
+// anything this call removes, regardless of which existing version was
+// picked as the clone source or what changed in the same apply.
+func pruneProfileVariablesToConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
+	desired, _, err := desiredAndExistingProfileVariableNames(d, c, uid)
+	if err != nil || desired == nil {
+		return err
+	}
+	return c.UpdateProfileVariables(&models.V1Variables{Variables: desired}, uid)
+}
+
+// desiredAndExistingProfileVariableNames returns the profile_variables the
+// Terraform config declares, and the set of variable names already present
+// on uid. Returns (nil, nil, nil) when there's nothing to reconcile (no
+// profile_variables block, or an empty one), which both
+// addNewProfileVariablesFromConfig and pruneProfileVariablesToConfig treat as
+// "nothing to do".
+func desiredAndExistingProfileVariableNames(d *schema.ResourceData, c *client.V1Client, uid string) ([]*models.V1Variable, map[string]struct{}, error) {
+	if _, ok := d.GetOk("profile_variables"); !ok {
+		return nil, nil, nil
+	}
+	desired, err := toClusterProfileVariables(d)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(desired) == 0 {
+		return nil, nil, nil
 	}
 
-	return c.UpdateProfileVariables(&models.V1Variables{Variables: desired}, uid)
+	existing, err := c.GetProfileVariables(uid)
+	if err != nil {
+		return nil, nil, err
+	}
+	existingNames := make(map[string]struct{}, len(existing))
+	for _, v := range existing {
+		if v != nil && v.Name != nil {
+			existingNames[*v.Name] = struct{}{}
+		}
+	}
+	return desired, existingNames, nil
 }
 
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {
@@ -1269,10 +1327,48 @@ func flattenVariableOptions(opts []*models.V1VariableOption) []interface{} {
 	return out
 }
 
+// priorProfileVariableDefaultValues returns the previously-stored default_value for each
+// profile variable, keyed by name, so a masked API response for a sensitive variable can
+// fall back to what was already in state/config instead of overwriting it.
+func priorProfileVariableDefaultValues(d *schema.ResourceData) map[string]string {
+	prior := make(map[string]string)
+	v, ok := d.GetOk("profile_variables")
+	if !ok {
+		return prior
+	}
+	list, ok := v.([]interface{})
+	if !ok || len(list) == 0 || list[0] == nil {
+		return prior
+	}
+	wrapper, ok := list[0].(map[string]interface{})
+	if !ok {
+		return prior
+	}
+	vars, ok := wrapper["variable"].([]interface{})
+	if !ok {
+		return prior
+	}
+	for _, item := range vars {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := m["name"].(string)
+		if name == "" {
+			continue
+		}
+		if dv, ok := m["default_value"].(string); ok {
+			prior[name] = dv
+		}
+	}
+	return prior
+}
+
 func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([]interface{}, error) {
 	if len(pv) == 0 {
 		return make([]interface{}, 0), nil
 	}
+	priorDefaults := priorProfileVariableDefaultValues(d)
 	var variables []interface{}
 	for _, v := range pv {
 		variable := make(map[string]interface{})
@@ -1280,7 +1376,11 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		variable["display_name"] = v.DisplayName
 		variable["description"] = v.Description
 		variable["format"] = v.Format
-		variable["default_value"] = v.DefaultValue
+		// The API masks default_value (e.g. "********") whenever the variable is
+		// IsSensitive, so writing it straight to state clobbers the real value on
+		// every refresh -- see PLT-2249's resolveProfileVariableValue, which this
+		// mirrors for profile_variables' own default_value field.
+		variable["default_value"] = resolveProfileVariableValue(priorDefaults[String(v.Name)], v.DefaultValue, v.IsSensitive)
 		variable["regex"] = v.Regex
 		variable["required"] = v.Required
 		variable["immutable"] = v.Immutable

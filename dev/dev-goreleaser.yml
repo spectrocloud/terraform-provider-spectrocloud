@@ -16,7 +16,10 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+      # main.version drives the X-SpectroCloud-Client header (see spectrocloud/provider.go).
+      # {{.Env.CLIENT_VERSION}} is set by generate_dev_provider.sh to <latest-tag>-dev,
+      # independent of $PROVIDER_VERSION (which only controls the plugin install path).
+      - '-s -w -X main.version={{.Env.CLIENT_VERSION}} -X main.commit={{.Commit}}'
     goos:
       - linux
       - darwin

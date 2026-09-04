@@ -495,7 +495,7 @@ This is the standard Terraform Plugin SDK v2 preservation pattern for immutable-
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String) Specify the cluster profile type to use. Allowed values are `cluster`, `infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile.For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`.System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.
-- `version` (String) Version of the cluster profile. Defaults to '1.0.0'. 
+- `version` (String) Version of the cluster profile. Defaults to '1.0.0'. Must be a valid semantic version (e.g. `1.2.3`) or a short/coerced form (e.g. `1`, `1.2`, `v1.2.3`) - malformed versions (e.g. `1.2.3.beta`, `V1.2.3`, `chart-v1.2.3`) are rejected by the API on create and update. 
 
 Default behavior (no feature flag set): changing this value on an existing profile updates the version in place via `PUT /v1/clusterprofiles/{uid}`, which destroys the previous version. This is the legacy behavior preserved for backward compatibility. 
 

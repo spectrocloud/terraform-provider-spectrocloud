@@ -44,10 +44,13 @@ func resourceApplicationProfile() *schema.Resource {
 				Required:    true,
 			},
 			"version": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "1.0.0", // default as in UI
-				Description: "Version of the profile. Default value is 1.0.0.",
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0", // default as in UI
+				Description: "Version of the profile. Default value is 1.0.0. Must be a valid semantic " +
+					"version (e.g. `1.2.3`) or a short/coerced form (e.g. `1`, `1.2`, `v1.2.3`) - malformed " +
+					"versions (e.g. `1.2.3.beta`, `V1.2.3`, `chart-v1.2.3`) are rejected by the API on " +
+					"create and update.",
 			},
 			"context": {
 				Type:         schema.TypeString,

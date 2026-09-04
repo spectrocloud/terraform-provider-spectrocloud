@@ -44,9 +44,19 @@ func resourceRegistryHelm() *schema.Resource {
 				Description: "The name of the Helm registry. This must be unique.",
 			},
 			"is_private": {
-				Type:        schema.TypeBool,
-				Required:    true,
-				Description: "Specifies whether the Helm registry is private or public.",
+				Type:         schema.TypeBool,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"is_private", "is_synchronization"},
+				Deprecated:   "Use `is_synchronization` instead. This field is retained for backward compatibility and will be removed in a future release.",
+				Description:  "Specifies whether the Helm registry is private or public. When set to `true`, the registry is treated as private, requires authentication, and Palette will **not** synchronize it. **Deprecated:** use `is_synchronization` instead.",
+			},
+			"is_synchronization": {
+				Type:         schema.TypeBool,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"is_private", "is_synchronization"},
+				Description:  "Specifies whether Palette synchronizes the Helm registry. When set to `true`, the registry is treated as public and Palette synchronizes it, reading the Helm charts in the repository so their details are shown in the cluster profile section when adding layers using Helm. When set to `false`, the registry is treated as private and is **not** synchronized — set this to `false` when the repository is not reachable by Palette. Mutually exclusive with `is_private` — set only one.",
 			},
 			"endpoint": {
 				Type:        schema.TypeString,
@@ -82,6 +92,44 @@ func resourceRegistryHelm() *schema.Resource {
 							Optional:    true,
 							Sensitive:   true,
 							Description: "Auth token (credential). Required when credential_type is `token`.",
+						},
+						"tls_config": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							MaxItems:    1,
+							Description: "TLS configuration for the registry. If omitted, no TLS configuration is sent.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     true,
+										Description: "Specifies whether TLS is enabled for the connection to the Helm registry. Default value is `true`.",
+									},
+									"ca": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The certificate authority (CA) certificate, in PEM format, used to validate the Helm registry's TLS certificate.",
+									},
+									"certificate": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The client certificate, in PEM format, used for mutual TLS (mTLS) authentication with the Helm registry.",
+									},
+									"key": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Sensitive:   true,
+										Description: "The private key, in PEM format, corresponding to the client certificate used for mutual TLS (mTLS) authentication with the Helm registry.",
+									},
+									"insecure_skip_verify": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -121,6 +169,53 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
+// helmRegistryCredentialFieldForRead preserves a sensitive credential field
+// (password, token) from state instead of the value the API just returned.
+// Palette's GET does not echo back the plaintext secret (empty or masked),
+// so writing it into state on every Read produces perpetual plan drift
+// against the value configured in HCL. Mirrors the fix already applied to
+// spectrocloud_registry_oci for the same root cause (see PLT-2400).
+func helmRegistryCredentialFieldForRead(d *schema.ResourceData, field string, apiValue string) interface{} {
+	if credsRaw, ok := d.Get("credentials").([]interface{}); ok && len(credsRaw) > 0 {
+		if credMap, ok := credsRaw[0].(map[string]interface{}); ok {
+			if val, exists := credMap[field]; exists && val != nil {
+				return val
+			}
+		}
+	}
+	return apiValue
+}
+
+// helmRegistryTLSConfigForRead flattens the API TLS payload back into state.
+// It mirrors ociBasicTLSConfigForRead: the block is only emitted when the
+// practitioner configured one or the API returned something meaningful, so a
+// registry stored without TLS does not produce a diff.
+func helmRegistryTLSConfigForRead(d *schema.ResourceData, apiTLS *models.V1TLSConfiguration) []interface{} {
+	tlsConfig := make([]interface{}, 0, 1)
+	if apiTLS == nil {
+		return tlsConfig
+	}
+	hasStateTLS := false
+	if credsRaw, ok := d.Get("credentials").([]interface{}); ok && len(credsRaw) > 0 {
+		if credMap, ok := credsRaw[0].(map[string]interface{}); ok {
+			if tlsRaw, ok := credMap["tls_config"].([]interface{}); ok && len(tlsRaw) > 0 {
+				hasStateTLS = true
+			}
+		}
+	}
+	hasMeaningfulTLS := apiTLS.Ca != "" || apiTLS.Certificate != "" || apiTLS.Key != "" || apiTLS.InsecureSkipVerify
+	if hasStateTLS || hasMeaningfulTLS {
+		tlsConfig = append(tlsConfig, map[string]interface{}{
+			"enabled":              apiTLS.Enabled,
+			"ca":                   apiTLS.Ca,
+			"certificate":          apiTLS.Certificate,
+			"key":                  apiTLS.Key,
+			"insecure_skip_verify": apiTLS.InsecureSkipVerify,
+		})
+	}
+	return tlsConfig
+}
+
 func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
@@ -140,6 +235,14 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 	if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
 		return diag.FromErr(err)
 	}
+	// is_synchronization is the inverse of is_private: Palette only
+	// synchronizes public registries, so is_synchronization = !isPrivate.
+	// Both attributes are Optional+Computed with ExactlyOneOf, so writing a
+	// value into whichever one the practitioner did NOT configure produces no
+	// diff.
+	if err := d.Set("is_synchronization", !registry.Spec.IsPrivate); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 		return diag.FromErr(err)
 	}
@@ -151,11 +254,14 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
+	tlsConfig := helmRegistryTLSConfigForRead(d, registry.Spec.Auth.TLS)
+
 	switch registry.Spec.Auth.Type {
 	case "noAuth":
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "noAuth"
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -165,7 +271,8 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "basic"
 		acc["username"] = registry.Spec.Auth.Username
-		acc["password"] = registry.Spec.Auth.Password.String()
+		acc["password"] = helmRegistryCredentialFieldForRead(d, "password", registry.Spec.Auth.Password.String())
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -175,7 +282,8 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "token"
 		acc["username"] = registry.Spec.Auth.Username
-		acc["token"] = registry.Spec.Auth.Token.String()
+		acc["token"] = helmRegistryCredentialFieldForRead(d, "token", registry.Spec.Auth.Token.String())
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -220,9 +328,44 @@ func resourceRegistryHelmDelete(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
+// resolveHelmIsPrivate resolves the single `isPrivate` API value from
+// whichever of `is_private` (deprecated) or `is_synchronization` the
+// practitioner is actually setting in this apply. `is_synchronization` is the
+// *inverse* of isPrivate (Palette only synchronizes public registries), not
+// an alias of it, so we cannot fall back to an OR across both Get() values
+// the way an equality mapping could.
+//
+// GetOkExists alone is not sufficient here: Read always mirrors the API's
+// isPrivate value into *both* attributes, so once a resource has been read
+// once, the attribute the practitioner never touches still carries a real,
+// non-null value forward from prior state. GetOkExists cannot tell that
+// carried-forward value apart from one actually present in this apply's
+// config, so it kept treating is_synchronization's stale mirrored value as
+// authoritative even on updates that only changed is_private — silently
+// ignoring is_private edits on every existing resource.
+//
+// HasChange compares old state against the new plan for one specific key, so
+// a value merely carried forward unchanged does not fool it; it correctly
+// identifies which of the two attributes the practitioner is editing. Its own
+// blind spot is a value explicitly configured to the same value as the
+// schema default (no visible change to detect) — GetOkExists still handles
+// that correctly, so it's kept as a fallback restricted to brand new
+// resources (Id() == ""), where it was already proven reliable.
+func resolveHelmIsPrivate(d *schema.ResourceData) bool {
+	if d.HasChange("is_synchronization") && !d.HasChange("is_private") {
+		return !d.Get("is_synchronization").(bool)
+	}
+	if d.Id() == "" {
+		if v, ok := d.GetOkExists("is_synchronization"); ok {
+			return !v.(bool)
+		}
+	}
+	return d.Get("is_private").(bool)
+}
+
 func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 	endpoint := d.Get("endpoint").(string)
-	isPrivate := d.Get("is_private").(bool)
+	isPrivate := resolveHelmIsPrivate(d)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 	return &models.V1HelmRegistryEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -239,7 +382,7 @@ func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 
 func toRegistryHelm(d *schema.ResourceData) *models.V1HelmRegistry {
 	endpoint := d.Get("endpoint").(string)
-	isPrivate := d.Get("is_private").(bool)
+	isPrivate := resolveHelmIsPrivate(d)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 	return &models.V1HelmRegistry{
 		Metadata: &models.V1ObjectMeta{
@@ -269,6 +412,19 @@ func toRegistryHelmCredential(regCred map[string]interface{}) *models.V1Registry
 		auth.Username = regCred["username"].(string)
 		auth.Token = strfmt.Password(regCred["token"].(string))
 	}
+
+	// TLS is only sent when configured, so existing configs are unaffected.
+	if tlsCfg, ok := regCred["tls_config"].([]interface{}); ok && len(tlsCfg) > 0 && tlsCfg[0] != nil {
+		tlsMap := tlsCfg[0].(map[string]interface{})
+		auth.TLS = &models.V1TLSConfiguration{
+			Enabled:            tlsMap["enabled"].(bool),
+			Ca:                 tlsMap["ca"].(string),
+			Certificate:        tlsMap["certificate"].(string),
+			Key:                tlsMap["key"].(string),
+			InsecureSkipVerify: tlsMap["insecure_skip_verify"].(bool),
+		}
+	}
+
 	return auth
 }
 

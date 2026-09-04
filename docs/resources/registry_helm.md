@@ -9,17 +9,37 @@ description: |-
 
   Resource for managing Helm registries in Spectro Cloud.
 
+## Synchronization
+
+Synchronization allows Palette to understand the Helm charts in the repository, and will display their details in the cluster profile section when adding layers using Helm. When a Helm repository is not reachable by Palette, synchronization should be disabled. Refer to the Palette documentation for more.
+
+Use `is_synchronization` to control this:
+
+- `is_synchronization = true` — the registry is treated as **public** and is synchronized.
+- `is_synchronization = false` — the registry is treated as **private** and is **not** synchronized. Use this when the repository is not reachable by Palette.
+
+`is_synchronization` replaces the deprecated `is_private` and is its inverse (`is_synchronization = !is_private`), not an alias of it — the Helm registry API has no independent sync flag, so both attributes map onto the same underlying value, just negated.
+
 ## Example Usage
 
 ```terraform
 resource "spectrocloud_registry_helm" "r1" {
-  name       = "us-artifactory"
-  endpoint   = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_private = true
+  name               = "us-artifactory"
+  endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
+  is_synchronization = false # private registry, not reachable/synchronized by Palette; inverse of the deprecated is_private
   credentials {
     credential_type = "noAuth"
     username        = "abc"
     password        = "def"
+    # Optional: TLS configuration. Omit the block to send no TLS configuration.
+    # Certificates are PEM content, not paths - use file() to read them from disk.
+    # tls_config {
+    #   enabled              = true
+    #   ca                   = file("${path.module}/ca.pem")
+    #   certificate          = file("${path.module}/client.pem")
+    #   key                  = file("${path.module}/client-key.pem")
+    #   insecure_skip_verify = false
+    # }
   }
   # Optional: Wait for the registry to complete synchronization
   # wait_for_sync = true
@@ -48,11 +68,12 @@ The import will automatically populate all configuration fields from the Spectro
 
 - `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Helm registry. (see [below for nested schema](#nestedblock--credentials))
 - `endpoint` (String) The URL endpoint of the Helm registry where the charts are hosted.
-- `is_private` (Boolean) Specifies whether the Helm registry is private or public.
 - `name` (String) The name of the Helm registry. This must be unique.
 
 ### Optional
 
+- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. When set to `true`, the registry is treated as private, requires authentication, and Palette will **not** synchronize it. **Deprecated:** use `is_synchronization` instead.
+- `is_synchronization` (Boolean) Specifies whether Palette synchronizes the Helm registry. When set to `true`, the registry is treated as public and Palette synchronizes it, reading the Helm charts in the repository so their details are shown in the cluster profile section when adding layers using Helm. When set to `false`, the registry is treated as private and is **not** synchronized — set this to `false` when the repository is not reachable by Palette. Mutually exclusive with `is_private` — set only one.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.
 
@@ -70,8 +91,21 @@ Required:
 Optional:
 
 - `password` (String, Sensitive) Password for basic auth (credential). Required when credential_type is `basic`.
+- `tls_config` (Block List, Max: 1) TLS configuration for the registry. If omitted, no TLS configuration is sent. (see [below for nested schema](#nestedblock--credentials--tls_config))
 - `token` (String, Sensitive) Auth token (credential). Required when credential_type is `token`.
 - `username` (String) The username for basic authentication. Required if 'credential_type' is set to 'basic'.
+
+<a id="nestedblock--credentials--tls_config"></a>
+### Nested Schema for `credentials.tls_config`
+
+Optional:
+
+- `ca` (String) The certificate authority (CA) certificate, in PEM format, used to validate the Helm registry's TLS certificate.
+- `certificate` (String) The client certificate, in PEM format, used for mutual TLS (mTLS) authentication with the Helm registry.
+- `enabled` (Boolean) Specifies whether TLS is enabled for the connection to the Helm registry. Default value is `true`.
+- `insecure_skip_verify` (Boolean) Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.
+- `key` (String, Sensitive) The private key, in PEM format, corresponding to the client certificate used for mutual TLS (mTLS) authentication with the Helm registry.
+
 
 
 <a id="nestedblock--timeouts"></a>

@@ -27,9 +27,13 @@ check-diff: reviewable ## Execute branch is clean
 	git diff --quiet || ($(ERR) please run 'make reviewable' to include all changes && false)
 	@$(OK) branch is clean
 
+# Keep module graph readonly during generate so local GOFLAGS=-mod=mod
+# (or tfplugindocs) cannot leave go.mod/go.sum dirty before tidy.
+GO_MOD_READONLY ?= GOFLAGS=-mod=readonly
+
 reviewable: fmt vet lint generate docs-score-check ## Ensure code is ready for review
 	git submodule update --remote
-	go mod tidy
+	$(GO_MOD_READONLY) go mod tidy
 
 fmt: ## Run go fmt against code
 	go fmt ./...
@@ -41,7 +45,7 @@ lint: golangci-lint ## Run golangci-lint against code
 	$(GOLANGCI_LINT) run --allow-parallel-runners
 
 generate:
-	go generate ./...
+	$(GO_MOD_READONLY) go generate ./...
 
 docs-score-check: ## Fail when docs score has unresolved defects
 	python3 tools/docs_score/score.py --json-only
