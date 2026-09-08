@@ -7,11 +7,12 @@ each folder here is scoped to a single named tutorial, so you can follow the doc
 by side.
 
 Each example folder contains its own `README.md` linking back to the docs tutorial it accompanies, along
-with prerequisites and apply/destroy instructions specific to that example.
+with prerequisites and apply/destroy instructions specific to that example. New examples are ported
+following [PORTING_CHECKLIST.md](PORTING_CHECKLIST.md).
 
 | Folder | Docs tutorial | Status |
 |---|---|---|
-| [`custom-pack/`](custom-pack) | [Deploy a Custom Pack](https://docs.spectrocloud.com/tutorials/packs-registries/deploy-pack/) | In progress |
+| [`custom-pack/`](custom-pack) | [Deploy a Custom Pack](https://docs.spectrocloud.com/tutorials/packs-registries/deploy-pack/) | Done |
 | [`getting-started-multicloud/`](getting-started-multicloud) | [Cluster Management with Terraform (Getting Started)](https://docs.spectrocloud.com/tutorials/getting-started/palette/aws/deploy-manage-k8s-cluster-tf/) | Planned |
 | [`profile-variables/`](profile-variables) | [Deploy Cluster with Profile Variables](https://docs.spectrocloud.com/tutorials/profiles/cluster-profile-variables/) | Planned |
 | [`cluster-templates/`](cluster-templates) | [Standardize Clusters with Cluster Templates (Terraform)](https://docs.spectrocloud.com/tutorials/clusters/cluster-templates/standardize-clusters-with-cluster-templates-terraform/) | Planned |
