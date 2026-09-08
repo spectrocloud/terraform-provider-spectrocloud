@@ -31,12 +31,17 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			return diag.FromErr(err), true
 		}
 	}
+	// Skip gracefully if the caller lacks `cluster.adminKubeconfigDownload` -
+	// this is a separate, more restrictive permission than what's needed to
+	// manage the cluster itself, so a 403 here must not fail the whole read.
 	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id())
-	if err != nil {
+	if err != nil && !isForbiddenErr(err) {
 		return diag.FromErr(err), true
 	}
-	if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
-		return diag.FromErr(err), true
+	if adminKubeConfig != "" {
+		if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
 
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {

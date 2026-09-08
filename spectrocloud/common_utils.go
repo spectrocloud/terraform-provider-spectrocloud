@@ -4,9 +4,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-sdk-go/client/apiutil"
 	"github.com/spectrocloud/palette-sdk-go/client/herr"
 	"log"
 )
+
+// isForbiddenErr returns true if the error represents an API authorization
+// failure (e.g. the caller lacks a specific permission such as
+// `cluster.adminKubeconfigDownload`), as opposed to a genuine failure.
+func isForbiddenErr(err error) bool {
+	code := apiutil.ToV1ErrorObj(err).Code
+	return code == "OperationForbidden" || code == "ResOperationForbidden"
+}
 
 func getV1ClientWithResourceContext(m interface{}, resourceContext string) *client.V1Client {
 	c := m.(*client.V1Client)
