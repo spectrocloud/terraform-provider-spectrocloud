@@ -38,6 +38,33 @@ func clusterGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AdminKubeConfigForbiddenUID is the sentinel cluster UID that makes
+// adminKubeConfigHandler return 403 OperationForbidden, simulating a caller
+// that lacks the cluster.adminKubeconfigDownload permission (PLT-2355).
+const AdminKubeConfigForbiddenUID = "cluster-uid-admin-kubeconfig-forbidden"
+
+// adminKubeConfigHandler serves GET
+// /v1/spectroclusters/{uid}/assets/adminKubeconfig. Any UID other than
+// AdminKubeConfigForbiddenUID keeps the original 200 behavior every
+// pre-existing test relies on; that sentinel UID returns a 403 so tests can
+// exercise the provider's tolerance for a missing
+// cluster.adminKubeconfigDownload permission.
+func adminKubeConfigHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == AdminKubeConfigForbiddenUID {
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(getError("OperationForbidden", "Operation 'cluster.adminKubeconfigDownload' is forbidden"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	var buf bytes.Buffer
+	_ = json.NewEncoder(w).Encode(&v1.V1SpectroClustersUIDKubeConfigOK{
+		ContentDisposition: "test-content",
+		Payload:            &buf,
+	})
+}
+
 // clusterFixtureFor is a pure lookup — no side effects, no state — so tests
 // can rely on repeated GETs against the same UID returning the same payload.
 // Add a new case here (and a corresponding constant) when a new
@@ -547,15 +574,13 @@ func ClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/assets/adminKubeconfig",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &v1.V1SpectroClustersUIDKubeConfigOK{
-					ContentDisposition: "test-content",
-					Payload:            &buffer,
-				},
-			},
+			// UID-dispatched so tests can exercise the
+			// cluster.adminKubeconfigDownload 403 tolerance (PLT-2355)
+			// via the "cluster-uid-admin-kubeconfig-forbidden" sentinel,
+			// while every other UID keeps the original 200 behavior.
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/assets/adminKubeconfig",
+			Handler: adminKubeConfigHandler,
 		},
 		{
 			Method: "GET",
