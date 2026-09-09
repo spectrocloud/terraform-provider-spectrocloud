@@ -18,6 +18,6 @@ following [PORTING_CHECKLIST.md](PORTING_CHECKLIST.md).
 | [`cluster-templates/`](cluster-templates) | [Standardize Clusters with Cluster Templates (Terraform)](https://docs.spectrocloud.com/tutorials/clusters/cluster-templates/standardize-clusters-with-cluster-templates-terraform/) | Done |
 | [`pcg-vmware-app/`](pcg-vmware-app) | [Deploy App Workloads with a PCG](https://docs.spectrocloud.com/tutorials/clusters/pcg/deploy-app-pcg/) | Planned |
 | [`pde-virtual-cluster-app/`](pde-virtual-cluster-app) | [Deploy an Application using Palette Dev Engine](https://docs.spectrocloud.com/tutorials/pde/deploy-app/) | Planned |
-| [`cluster-profile-update/`](cluster-profile-update) | [Deploy Cluster Profile Updates](https://docs.spectrocloud.com/tutorials/profiles/update-k8s-cluster/) | Planned |
+| [`cluster-profile-update/`](cluster-profile-update) | [Deploy Cluster Profile Updates](https://docs.spectrocloud.com/tutorials/profiles/update-k8s-cluster/) | Done |
 
 This table will be kept current as each example is ported and validated against the current provider build.
