@@ -1,0 +1,43 @@
+# Copyright (c) Spectro Cloud
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-universe
+--- 
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-universe-service
+  namespace: hello-universe
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: hello-universe
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-universe-deployment
+  namespace: hello-universe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-universe
+  template:
+    metadata:
+      labels:
+        app: hello-universe
+    spec:
+      containers:
+      - name: hello-universe
+        image: ghcr.io/spectrocloud/hello-universe:1.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
