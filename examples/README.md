@@ -8,3 +8,4 @@ This directory contains examples that are mostly used for documentation, but can
 * **data-sources/\<full data source name\>/data-source.tf** example file for the named data source page
 * **resources/\<full resource name\>/resource.tf** example file for the named data source page
 * **e2e/\<cloud\>/** directory contains end-to-end examples of provisioning K8s clusters.
+* **tutorials/\<name\>/** directory contains examples aligned to specific tutorials at [docs.spectrocloud.com/tutorials](https://docs.spectrocloud.com/tutorials/) — see [tutorials/README.md](tutorials/README.md) for the full list.
