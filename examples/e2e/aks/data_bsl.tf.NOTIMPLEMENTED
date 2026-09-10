@@ -1,3 +1,0 @@
-data "spectrocloud_backup_storage_location" "bsl" {
-  name = var.backup_storage_location_name
-}
