@@ -4,27 +4,45 @@ data "spectrocloud_cluster" "cluster1" {
   name = "api-aks-cazfl"
 }
 
+# Day-2 mutability: nothing on this resource is ForceNew - name, tags, description,
+# workspace_quota, clusters, cluster_rbac_binding, namespaces, and backup_policy all update in
+# place.
 resource "spectrocloud_workspace" "workspace" {
-  name        = "wsp-tf-123"
+  # Required.
+  name = "wsp-tf-123"
+  # Optional. Tags in `key:value` form.
+  tags = ["dev", "department:devops", "owner:bob"]
+  # Optional.
   description = "test123"
+
+  # Optional, at most one block. Default resource limits for the whole workspace; 0 (default)
+  # means no limit.
   workspace_quota {
-    cpu    = 16
-    memory = 32768
+    cpu    = 16    # vCPU
+    memory = 32768 # MiB
     gpu    = 4
   }
+
+  # Required, one or more. Clusters this workspace spans.
   clusters {
     uid = data.spectrocloud_cluster.cluster1.id
     # cluster_name is computed automatically by fetching cluster details from the API
   }
 
+  # Optional, repeatable. Grants Kubernetes RBAC to users/groups/service accounts across the
+  # workspace's clusters.
   cluster_rbac_binding {
+    # Required. "RoleBinding" (namespace-scoped, requires `namespace` below) or
+    # "ClusterRoleBinding" (cluster-scoped, used here).
     type = "ClusterRoleBinding"
 
+    # Optional map with "kind" and "name" keys. Required if type = "RoleBinding".
     role = {
       kind = "ClusterRole"
       name = "testrole3"
     }
     subjects {
+      # Required. "User", "Group", or "ServiceAccount".
       type = "User"
       name = "testRoleUser4"
     }
@@ -33,14 +51,19 @@ resource "spectrocloud_workspace" "workspace" {
       name = "testRoleGroup4"
     }
     subjects {
+      # namespace required when type = "ServiceAccount".
       type      = "ServiceAccount"
       name      = "testrolesubject3"
       namespace = "testrolenamespace"
     }
   }
 
+  # Required, one or more. Kubernetes namespaces created/managed across this workspace's
+  # clusters.
   namespaces {
     name = "multi-cluster-ns"
+    # Required. Default per-cluster resource allocation for this namespace. Only cpu_cores,
+    # memory_MiB, gpu, and gpu_provider are honored - any other key is silently ignored.
     resource_allocation = {
       cpu_cores    = "8"
       memory_MiB   = "8192"
@@ -48,7 +71,8 @@ resource "spectrocloud_workspace" "workspace" {
       gpu_provider = "nvidia"
     }
 
-    # Cluster-specific resource allocations
+    # Optional, at most one block. Overrides resource_allocation above for one specific cluster.
+    # Note: gpu_provider is not supported here - only in the default resource_allocation.
     cluster_resource_allocations {
       uid = data.spectrocloud_cluster.cluster1.id
       resource_allocation = {
@@ -58,6 +82,7 @@ resource "spectrocloud_workspace" "workspace" {
       }
     }
 
+    # Optional. Container images disallowed in this namespace.
     images_blacklist = ["nginx:latest", "redis:latest"]
   }
 

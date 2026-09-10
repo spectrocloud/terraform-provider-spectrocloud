@@ -12,10 +12,18 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. cloud_config (domain,
+# enable_lxd_vm, ntp_servers, ssh_keys) and machine_pool update in place. The optional
+# hyper_shift_config block (not shown here - for running HyperShift/OpenShift hosted control
+# planes on MAAS) has both of its fields (cluster_deployment_type, host_cluster_uid) ForceNew.
 resource "spectrocloud_cluster_maas" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
+
+  # Optional, default false. true updates all worker pools simultaneously; false (default)
+  # updates them one at a time.
+  # update_worker_pools_in_parallel = false
 
   # Controls automatic upgrades of the Palette agent/components on this cluster.
   # Set to "lock" to pause agent upgrades (e.g. while stepping through Canonical K8s

@@ -3,10 +3,16 @@ data "spectrocloud_private_cloud_gateway" "nutanix_pcg" {
 }
 
 resource "spectrocloud_cloudaccount_custom" "cloud_account" {
-  name                     = "test-custom-cloud-account"
-  cloud                    = "nutanix"
+  # Required. Updates in place.
+  name = "test-custom-cloud-account"
+  # Required, ForceNew. The custom cloud provider name (e.g. "nutanix").
+  cloud = "nutanix"
+  # Required, ForceNew. Connects this account to the underlying infrastructure through a PCG.
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.nutanix_pcg.id
-  context                  = "tenant"
+  # Optional, default "project", ForceNew. Allowed: "project", "tenant".
+  context = "tenant"
+  # Optional, sensitive. Provider-specific credential key/value pairs - the required keys
+  # depend on the custom cloud provider (shown here: Nutanix). Updates in place.
   credentials = {
     "NUTANIX_USER"     = "test_user",
     "NUTANIX_PASSWORD" = sensitive("test123"),

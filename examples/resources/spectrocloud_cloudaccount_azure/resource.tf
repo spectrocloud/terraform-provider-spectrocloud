@@ -1,8 +1,14 @@
+# Nothing on this resource is ForceNew - every attribute below updates in place.
+
 # Example 1: Basic Azure cloud account for public cloud
 resource "spectrocloud_cloudaccount_azure" "azure_public" {
-  name                = "azure-public-account"
-  azure_tenant_id     = var.azure_tenant_id
-  azure_client_id     = var.azure_client_id
+  # Required.
+  name = "azure-public-account"
+  # Required.
+  azure_tenant_id = var.azure_tenant_id
+  # Required.
+  azure_client_id = var.azure_client_id
+  # Required, sensitive.
   azure_client_secret = var.azure_client_secret
 
   # Optional: Context (defaults to "project")
@@ -42,7 +48,7 @@ resource "spectrocloud_cloudaccount_azure" "azure_secret" {
   cloud   = "AzureUSSecretCloud"
   context = "project"
 
-  # TLS certificate is only allowed when cloud is set to "AzureUSSecretCloud"
+  # Optional. Only allowed when cloud is set to "AzureUSSecretCloud".
   tls_cert = var.azure_secret_tls_cert
 
   tenant_name = "Secret Cloud Tenant"

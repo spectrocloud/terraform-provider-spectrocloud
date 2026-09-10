@@ -10,7 +10,7 @@ data "spectrocloud_registry" "db_registry" {
   name = "svtest"
 }
 
-data "spectrocloud_registry" "Bitnami_registry" {
+data "spectrocloud_registry" "bitnami_registry" {
   name = "Bitnami"
 
 }
@@ -47,16 +47,35 @@ data "spectrocloud_pack_simple" "kafka_pack" {
   type         = "helm"
   name         = "kafka"
   version      = "20.0.0"
-  registry_uid = data.spectrocloud_registry.Bitnami_registry.id
+  registry_uid = data.spectrocloud_registry.bitnami_registry.id
 }
 
+# This profile demonstrates every pack tier type an application profile supports: a plain
+# container image, a Helm chart, a raw Kubernetes manifest, and three operator-instance tiers
+# (each backed by a Palette operator pack). Nothing on this resource is ForceNew - the whole
+# profile, including its packs, updates in place.
 resource "spectrocloud_application_profile" "app_profile_all_tiers" {
-  name        = "profile-all-tiers-test"
-  version     = "1.0.0"
-  context     = "project"
-  tags        = ["sivaa", "terraform"]
-  description = "test"
-  cloud       = "all"
+  # Required.
+  name = "profile-all-tiers-test"
+  # Optional, default "1.0.0". Must be a valid (or coercible) semantic version.
+  version = "1.0.0"
+  # Optional, default "project". Allowed: "project", "tenant", "system".
+  context = "project"
+  # Optional. Tags are conventionally "key:value" strings.
+  tags = ["owner:sivaa", "managed-by:terraform"]
+  # Optional.
+  description = "Application profile demonstrating container, Helm, manifest, and operator-instance tiers."
+  # Optional, default "all". The cloud provider this profile is eligible for.
+  cloud = "all"
+
+  # Required, at least one pack block - each pack is one tier of the application. Common pack
+  # fields: name (Required, unique per profile), type (Optional, default "spectro"; here always
+  # set explicitly to "container"/"helm"/"manifest"/"operator-instance"), registry_uid/
+  # registry_name (Optional, mutually exclusive), source_app_tier (Optional, the source pack's
+  # UID), uid (Computed - don't set), tag (Optional), values (Optional, YAML/JSON pack values),
+  # properties (Optional, simple key-value pack inputs), install_order (Optional, default 0,
+  # lower runs first), manifest (Optional, one or more raw-manifest blocks with name/content).
+
   # Sample Container Tier
   pack {
     name            = "container-tier"
@@ -89,7 +108,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   pack {
     name            = "kafka-tier"
     type            = data.spectrocloud_pack_simple.kafka_pack.type
-    registry_uid    = data.spectrocloud_registry.Bitnami_registry.id
+    registry_uid    = data.spectrocloud_registry.bitnami_registry.id
     source_app_tier = data.spectrocloud_pack_simple.kafka_pack.id
     manifest {
       name    = "kafka"

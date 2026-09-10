@@ -12,14 +12,24 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. Inside `cloud_config`,
+# ssh_key_name, region, vpc_id, azs, az_subnets, endpoint_access, and encryption_config_arn are
+# ALL ForceNew - changing any of them recreates the cluster. public_access_cidrs,
+# private_access_cidrs, and override_cluster_api_config are the exceptions and update in place.
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name                = "default"
-    region                      = "us-west-2"
+    ssh_key_name = "default"
+    region       = "us-west-2"
+    # Optional, default "public". Allowed: "public", "private", "private_and_public".
+    # endpoint_access = "public"
+    # Optional. Restricts public/private API server access to these CIDR blocks. Update in
+    # place, unlike the other cloud_config fields above.
+    # public_access_cidrs  = ["203.0.113.0/24"]
+    # private_access_cidrs = ["10.0.0.0/16"]
     override_cluster_api_config = <<-EOT
       spec:
         controlPlaneConfiguration:
