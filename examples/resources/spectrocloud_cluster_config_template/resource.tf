@@ -1,3 +1,7 @@
+# Day-2 mutability: only `cloud_type` is ForceNew - changing it recreates the template. `name`,
+# `context`, `policy`, `cluster_profile` (including its variable overrides), and `upgrade_now`
+# all update in place. `execution_state` and `attached_cluster` are Computed/read-only - Palette
+# populates them, they cannot be set here.
 resource "spectrocloud_cluster_config_template" "aws_template" {
   name       = "aws-prod-template"
   cloud_type = "aws"

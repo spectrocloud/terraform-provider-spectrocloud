@@ -6,6 +6,10 @@ data "spectrocloud_cloudaccount_azure" "account" {
   name = "jayesh-azure-ca"
 }
 
+# Day-2 mutability: only `name` and `cloud_account_id` (below) are ForceNew - changing either
+# recreates the cluster. Unlike AWS/AKS, the fields inside `cloud_config` here (subscription_id,
+# resource_group, region, ssh_key, networking) are NOT ForceNew and update in place, along with
+# cluster_profile, machine_pool, backup_policy, and scan_policy.
 resource "spectrocloud_cluster_azure" "cluster" {
   name = "tf-azure-js-1"
   cluster_profile {
@@ -26,25 +30,29 @@ resource "spectrocloud_cluster_azure" "cluster" {
               authorization-mode: Node,RBAC
     EOT
 
-    //Static placement config
-    #    network_resource_group = "test-resource-group"
-    #    virtual_network_name = "test-network-name"
-    #    virtual_network_cidr_block = "10.0.0.9/10"
-    #    control_plane_subnet {
-    #      name="cp_subnet_name"
-    #      cidr_block="10.0.0.9/16"
-    #      security_group_name="cp_subnet_security_name"
-    #    }
-    #    worker_node_subnet {
-    #      name="worker_subnet_name"
-    #      cidr_block="10.0.0.9/16"
-    #      security_group_name="worker_subnet_security_name"
-    #    }
-    #    private_api_server {
-    #      resource_group = "test-resource-group"
-    #      private_dns_zone = "test-private-dns-zone"
-    #      static_ip = "10.11.12.51"
-    #    }
+    # Optional: static (bring-your-own) network placement, instead of Palette managing the
+    # VNet for you. network_resource_group/virtual_network_name/virtual_network_cidr_block are
+    # required together (RequiredWith) if you set control_plane_subnet, worker_node_subnet, or
+    # private_api_server.
+    # network_resource_group     = "test-resource-group"
+    # virtual_network_name       = "test-network-name"
+    # virtual_network_cidr_block = "10.0.0.9/10"
+    # control_plane_subnet {
+    #   name                 = "cp_subnet_name"
+    #   cidr_block           = "10.0.0.9/16"
+    #   security_group_name  = "cp_subnet_security_name" # Optional.
+    # }
+    # worker_node_subnet {
+    #   name                = "worker_subnet_name"
+    #   cidr_block          = "10.0.0.9/16"
+    #   security_group_name = "worker_subnet_security_name" # Optional.
+    # }
+    # Optional: gives the cluster a private API server endpoint instead of a public one.
+    # private_api_server {
+    #   resource_group   = "test-resource-group"  # Required.
+    #   private_dns_zone = "test-private-dns-zone" # Optional - created automatically if omitted.
+    #   static_ip        = "10.11.12.51"           # Optional - dynamic IP allocation if omitted.
+    # }
 
   }
 

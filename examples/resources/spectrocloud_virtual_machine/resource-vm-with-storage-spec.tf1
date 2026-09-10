@@ -82,7 +82,18 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-with-storage" {
   }
 
   memory {
-    size = "4Gi"
+    guest = "4Gi"
+  }
+
+  resources {
+    requests = {
+      memory = "4Gi"
+      cpu    = 2
+    }
+    limits = {
+      memory = "4Gi"
+      cpu    = 2
+    }
   }
 
   interface {
@@ -91,8 +102,10 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-with-storage" {
   }
 
   network {
-    name           = "default"
-    network_source = "pod"
+    name = "default"
+    network_source {
+      pod {}
+    }
   }
 }
 
@@ -196,7 +209,18 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-mixed-storage" {
   }
 
   memory {
-    size = "4Gi"
+    guest = "4Gi"
+  }
+
+  resources {
+    requests = {
+      memory = "4Gi"
+      cpu    = 2
+    }
+    limits = {
+      memory = "4Gi"
+      cpu    = 2
+    }
   }
 
   interface {
@@ -205,7 +229,9 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-mixed-storage" {
   }
 
   network {
-    name           = "default"
-    network_source = "pod"
+    name = "default"
+    network_source {
+      pod {}
+    }
   }
 }

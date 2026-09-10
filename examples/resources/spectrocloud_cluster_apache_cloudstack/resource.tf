@@ -8,6 +8,10 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
+# Day-2 mutability: only `name` and `cloud_account_id` are ForceNew on this resource - changing
+# either recreates the cluster. Everything else below (cloud_config, cluster_profile,
+# machine_pool, backup_policy, scan_policy, tags) updates in place, unlike some other cloud
+# cluster resources where cloud_config itself is ForceNew.
 resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "cloudstack"]
@@ -122,22 +126,17 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     name                    = "cp-pool"
     count                   = 1
 
-    # Placement Configuration
-    placement {
-      zone         = var.cloudstack_zone_name
-      compute      = var.cloudstack_compute_offering
-      network_name = var.cloudstack_network_name
+    # Required. CloudStack compute offering (instance type/size) name for this pool.
+    offering = var.cloudstack_compute_offering
 
-      # Optional: Static IP Pool
-      # static_ip_pool_id = var.static_ip_pool_id
+    # Optional. Selects the network within the cloud_config zone this pool's nodes attach to.
+    # If omitted, the zone's own network (set in cloud_config.zone.network) is used.
+    network {
+      network_name = var.cloudstack_network_name
     }
 
-    # Optional: Instance Configuration
-    # instance_config {
-    #   disk_gib   = 100
-    #   memory_mib = 8192
-    #   num_cpus   = 4
-    # }
+    # instance_config is Computed (read-only) - CloudStack returns the resolved disk/memory/CPU
+    # sizing for the chosen `offering` here; it cannot be set directly.
 
     # Optional: CloudStack Template Override
     # template {
@@ -162,22 +161,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     name  = "worker-pool"
     count = 2
 
-    # Placement Configuration
-    placement {
-      zone         = var.cloudstack_zone_name
-      compute      = var.cloudstack_compute_offering_worker
+    # Required. CloudStack compute offering (instance type/size) name for this pool.
+    offering = var.cloudstack_compute_offering_worker
+
+    # Optional. Selects the network within the cloud_config zone this pool's nodes attach to.
+    network {
       network_name = var.cloudstack_network_name
-
-      # Optional: Static IP Pool
-      # static_ip_pool_id = var.static_ip_pool_id
     }
-
-    # Optional: Instance Configuration with custom resources
-    # instance_config {
-    #   disk_gib   = 200
-    #   memory_mib = 16384
-    #   num_cpus   = 8
-    # }
 
     additional_labels = {
       "role"    = "worker"
@@ -207,6 +197,10 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
           spec:
             nodeDrainTimeout: 5m
     EOT
+
+    # Optional, default "disabled". Set to "enabled" to skip the OS/Kubernetes version upgrade
+    # for this worker pool when the cluster profile is upgraded (worker pools only).
+    # skip_k8s_upgrade = "disabled"
 
     # Update Strategy Options:
     # - "RollingUpdateScaleOut" (default): Adds new nodes before removing old ones
@@ -249,9 +243,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   min     = 1
   #   max     = 5
   #
-  #   placement {
-  #     zone         = var.cloudstack_zone_name
-  #     compute      = var.cloudstack_compute_offering_worker
+  #   offering = var.cloudstack_compute_offering_worker
+  #
+  #   network {
   #     network_name = var.cloudstack_network_name
   #   }
   #
@@ -270,9 +264,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   min   = 2
   #   max   = 5
   #
-  #   placement {
-  #     zone         = var.cloudstack_zone_name
-  #     compute      = var.cloudstack_compute_offering_worker
+  #   offering = var.cloudstack_compute_offering_worker
+  #
+  #   network {
   #     network_name = var.cloudstack_network_name
   #   }
   #
@@ -304,9 +298,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   min   = 2
   #   max   = 10
   #
-  #   placement {
-  #     zone         = var.cloudstack_zone_name
-  #     compute      = var.cloudstack_compute_offering_worker
+  #   offering = var.cloudstack_compute_offering_worker
+  #
+  #   network {
   #     network_name = var.cloudstack_network_name
   #   }
   #

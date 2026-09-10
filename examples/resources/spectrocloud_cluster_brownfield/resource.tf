@@ -1,10 +1,22 @@
 # Basic Brownfield Cluster Registration (Day-1)
-# This example shows the minimal required fields for registering an existing Kubernetes cluster
+# This example shows the minimal required fields for registering an existing Kubernetes cluster.
+#
+# Day-2 mutability: nothing on this resource is marked ForceNew in the schema (Terraform will
+# always try an in-place update, never a destroy/recreate), but the provider's own docs state
+# that `context` and `import_mode` "cannot be updated after creation" - changing them will not
+# trigger a resource replacement, so re-applying with a different value may be a no-op or error
+# at the API level rather than doing what you'd expect. Treat both as effectively set-once.
 
 resource "spectrocloud_cluster_brownfield" "basic" {
-  name        = "my-existing-cluster"
-  cloud_type  = "generic" # Options: aws, eks-anywhere, azure, gcp, vsphere, openshift, generic, maas
-  context     = "project" # Optional, defaults to "project"
+  name = "my-existing-cluster"
+  # Required. Intended allowed values: aws, eks-anywhere, azure, gcp, vsphere, openshift,
+  # generic, maas - note validation for this field is currently disabled in the provider, so any
+  # string is accepted; use one of the above for a value Palette actually recognizes.
+  cloud_type = "generic"
+  # Optional, default "project". Allowed: "project", "tenant". Not updatable after creation.
+  context = "project"
+  # Optional, default "full" (documented; empty string on the wire). Allowed: "read_only", "full".
+  # Not updatable after creation.
   import_mode = "full"
 
   description      = "My existing Kubernetes cluster"
@@ -20,6 +32,7 @@ resource "spectrocloud_cluster_brownfield" "basic" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+  # Optional, default "unlock". Allowed: "lock" (pin the Palette agent version), "unlock".
   pause_agent_upgrades = "lock"
   machine_pool {
     name = "worker-pool"

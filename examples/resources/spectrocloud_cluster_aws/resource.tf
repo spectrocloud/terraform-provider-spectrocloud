@@ -12,6 +12,11 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` (below) are ForceNew - changing either
+# recreates the cluster. Inside `cloud_config`, `ssh_key_name`, `region`, `vpc_id`, and
+# `control_plane_lb` are also ForceNew; `override_cluster_api_config` is the one cloud_config
+# field that is NOT ForceNew. Everything else - cluster_profile, backup_policy, scan_policy,
+# machine_pool, tags - updates in place.
 resource "spectrocloud_cluster_aws" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]

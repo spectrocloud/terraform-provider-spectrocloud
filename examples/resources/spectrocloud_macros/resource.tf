@@ -1,8 +1,11 @@
+# Day-2 mutability: neither attribute is ForceNew - both `macros` and `context` update in place.
 resource "spectrocloud_macros" "project_macro" {
+  # Required. Key-value map of macro/service-variable-output names to their values.
   macros = {
     "project_macro_1" = "val1",
     "project_macro_2" = "val2",
   }
+  # Optional, default "tenant". Allowed: "project", "tenant".
   context = "project"
 }
 
@@ -11,6 +14,7 @@ resource "spectrocloud_macros" "tenant_macro" {
     "tenant_macro_1" = "tenant_val1",
     "tenant_macro_2" = "tenant_val2",
   }
+  # context omitted here - defaults to "tenant".
 }
 
 
