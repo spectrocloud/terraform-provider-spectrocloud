@@ -12,6 +12,13 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Day-2 mutability: `name`, `namespace`, `cluster_uid`, and `base_vm_name` are ForceNew -
+# changing any of them recreates the virtual machine. `run_on_launch` and `run_strategy` are
+# mutually exclusive - set only one. Everything else - labels, volume, disk, cpu, memory,
+# resources, interface, network, data_volume_templates, and the Day-2 scheduling/affinity
+# attributes shown further below - updates in place (KubeVirt itself may still require a VM
+# restart to pick up some of these changes, but Terraform does not recreate the resource for
+# them).
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
   name    = "tenant-cluster-002"
   context = "project"
@@ -25,11 +32,17 @@ locals {
 // Create a VM with default cloud init disk, container disk , interface and network
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
-  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  # Required, ForceNew. Unique within the namespace.
+  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  # Optional, default "project". Allowed: "project", "tenant".
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  run_on_launch   = true
-  name            = "tf-test-vm-basic-type"
-  namespace       = "default"
+  # Optional, default true. Mutually exclusive with `run_strategy` (see the data-volume-template
+  # example further below, which uses run_strategy = "Manual" instead).
+  run_on_launch = true
+  # Required, ForceNew.
+  name = "tf-test-vm-basic-type"
+  # Optional, default "default", ForceNew.
+  namespace = "default"
   labels = {
     "tf" = "test"
   }
