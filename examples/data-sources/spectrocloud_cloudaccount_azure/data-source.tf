@@ -30,8 +30,7 @@ output "azure_client_id" {
   value = data.spectrocloud_cloudaccount_azure.example.azure_client_id
 }
 
-# Computed, but not currently populated by the provider's read implementation - expect these to
-# come back empty regardless of the account's actual configuration.
+# Computed.
 output "azure_tenant_name" {
   value = data.spectrocloud_cloudaccount_azure.example.tenant_name
 }

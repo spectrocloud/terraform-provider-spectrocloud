@@ -26,8 +26,8 @@ output "maas_api_endpoint" {
   value = data.spectrocloud_cloudaccount_maas.example.maas_api_endpoint
 }
 
-# Computed. Credential material - the schema does not mark this Sensitive, but treat it as a
-# secret regardless and mark any output of it sensitive yourself, as done here.
+# Computed. Credential material - the schema marks this Sensitive, but Terraform still
+# requires the output itself to be marked sensitive to suppress it from CLI output.
 output "maas_api_key" {
   value     = data.spectrocloud_cloudaccount_maas.example.maas_api_key
   sensitive = true

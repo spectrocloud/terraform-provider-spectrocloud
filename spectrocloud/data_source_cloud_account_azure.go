@@ -123,5 +123,15 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := d.Set("tenant_name", account.Spec.TenantName); err != nil {
+		return diag.FromErr(err)
+	}
+	disablePropertiesRequest := false
+	if account.Spec.Settings != nil {
+		disablePropertiesRequest = account.Spec.Settings.DisablePropertiesRequest
+	}
+	if err := d.Set("disable_properties_request", disablePropertiesRequest); err != nil {
+		return diag.FromErr(err)
+	}
 	return diags
 }
