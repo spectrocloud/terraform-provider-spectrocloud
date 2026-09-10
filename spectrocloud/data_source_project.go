@@ -10,7 +10,7 @@ import (
 func dataSourceProject() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceProjectRead,
-		Description: "Data source for looking up a Spectro Cloud project by name.",
+		Description: "Data source for looking up a Spectro Cloud project by name or id.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -18,6 +18,7 @@ func dataSourceProject() *schema.Resource {
 				Computed:      true,
 				Optional:      true,
 				ConflictsWith: []string{"name"},
+				Description:   "ID of the project to look up.",
 			},
 			"name": {
 				Type:        schema.TypeString,
@@ -39,6 +40,15 @@ func dataSourceProjectRead(_ context.Context, d *schema.ResourceData, m interfac
 		}
 		d.SetId(uid)
 		if err := d.Set("name", v.(string)); err != nil {
+			return diag.FromErr(err)
+		}
+	} else if v, ok := d.GetOk("id"); ok {
+		project, err := c.GetProject(v.(string))
+		if err != nil {
+			return handleReadError(d, err, diags)
+		}
+		d.SetId(project.Metadata.UID)
+		if err := d.Set("name", project.Metadata.Name); err != nil {
 			return diag.FromErr(err)
 		}
 	}

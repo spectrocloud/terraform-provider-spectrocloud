@@ -4,6 +4,10 @@ terraform {
       version = ">= 0.13.2"
       source  = "spectrocloud/spectrocloud"
     }
+    local = {
+      source  = "hashicorp/local"
+      version = ">= 2.0"
+    }
   }
 }
 

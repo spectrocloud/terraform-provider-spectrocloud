@@ -1,18 +1,16 @@
-# Fetch details of a specific team in SpectroCloud
+# Looks up a team by ID or by name.
 data "spectrocloud_team" "example" {
-  # Provide either `id` or `name`, but not both.
-  # Allowed values:
-  # - `id`: A unique identifier for the team (e.g., "team-12345").
-  # - `name`: The readable name of the team (e.g., "DevOps Team").
-
+  # Lookup key, optional (conflicts with `name`), also Computed.
   id = "team-12345"
-  # name = "DevOps Team"  # Alternative way to reference a team by name
+  # Lookup key, optional (conflicts with `id`).
+  # name = "DevOps Team"
 }
 
 output "team_info" {
   value = {
-    id       = data.spectrocloud_team.example.id
-    name     = data.spectrocloud_team.example.name
+    id   = data.spectrocloud_team.example.id
+    name = data.spectrocloud_team.example.name
+    # Computed. Role IDs assigned to this team.
     role_ids = data.spectrocloud_team.example.role_ids
   }
 }

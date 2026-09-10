@@ -13,11 +13,12 @@ Data source for looking up a user by ID or email address.
 ## Example Usage
 
 ```terraform
-# Fetch details of a specific user in SpectroCloud
+# Looks up a user by email address.
 data "spectrocloud_user" "example" {
-  # Provide either `id` or `email`, but not both.
-  id = "user-12345"
-  # email = "user@example.com"  # Alternative way to reference a user by email
+  # Lookup key, optional, also Computed. The schema also exposes `id` (ConflictsWith `email`),
+  # but only `email`-based lookup is actually implemented by the provider today - setting `id`
+  # alone does not resolve anything; use `email` as shown here.
+  email = "user@example.com"
 }
 
 # Output user details for reference
