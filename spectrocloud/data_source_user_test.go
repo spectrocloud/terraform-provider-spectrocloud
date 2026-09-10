@@ -16,6 +16,15 @@ func prepareBaseUserResourceData() *schema.ResourceData {
 	return d
 }
 
+func prepareUserResourceDataByID() *schema.ResourceData {
+	d := dataSourceUser().TestResourceData()
+	err := d.Set("id", "12345")
+	if err != nil {
+		return nil
+	}
+	return d
+}
+
 func TestDataSourceUserRead(t *testing.T) {
 	// Initialize ResourceData with a test email
 	resourceData := prepareBaseUserResourceData()
@@ -35,4 +44,17 @@ func TestDataSourceUserNegativeRead(t *testing.T) {
 	// Call the dataSourceUserRead function
 	diags := dataSourceUserRead(context.Background(), resourceData, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "User not found")
+}
+
+func TestDataSourceUserReadByID(t *testing.T) {
+	// Initialize ResourceData with a test id
+	resourceData := prepareUserResourceDataByID()
+
+	// Call the dataSourceUserRead function
+	diags := dataSourceUserRead(context.Background(), resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, "12345", resourceData.Id())
+	assert.NoError(t, resourceData.Set("email", "test@spectrocloud.com"))
+	assert.Empty(t, diags)
 }
