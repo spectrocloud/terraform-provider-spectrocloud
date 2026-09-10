@@ -20,3 +20,8 @@ variable "cluster_uid" {
   type        = string
 }
 
+variable "cluster_profile_uid" {
+  description = "The unique identifier of the cluster profile to attach as an addon deployment"
+  type        = string
+}
+

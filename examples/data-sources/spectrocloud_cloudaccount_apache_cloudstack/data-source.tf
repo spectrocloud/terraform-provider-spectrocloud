@@ -1,12 +1,18 @@
+# Looks up an existing Apache CloudStack cloud account registered in Palette, by name or by ID.
+#
 # Retrieve details of an Apache CloudStack cloud account using name
 data "spectrocloud_cloudaccount_apache_cloudstack" "example" {
-  name    = "apache-cloudstack-account-1" # Required if 'id' is not provided
-  context = "project"                     # Optional: Allowed values are "project", "tenant", or "" (default)
+  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
+  name = "apache-cloudstack-account-1"
+  # Optional. Allowed: "project", "tenant", "" (default). Required only to disambiguate when
+  # more than one account shares the same `name` across scopes.
+  context = "project"
 }
 
 # Retrieve details of an Apache CloudStack cloud account using ID
 data "spectrocloud_cloudaccount_apache_cloudstack" "by_id" {
-  id = "123e4567-e89b-12d3-a456-426614174000" # Required if 'name' is not provided
+  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
+  id = "123e4567-e89b-12d3-a456-426614174000"
 }
 
 # Output cloud account details
@@ -25,18 +31,9 @@ output "cloudstack_account_context" {
   description = "Context scope of the cloud account (project/tenant)"
 }
 
-output "cloudstack_api_url" {
-  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.api_url
-  description = "CloudStack API endpoint URL"
-}
-
-output "cloudstack_domain" {
-  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.domain
-  description = "CloudStack domain for the account"
-}
-
+# Computed. There is no api_url or domain attribute on this data source - only the Private
+# Cloud Gateway the account routes through is exposed.
 output "private_cloud_gateway_id" {
   value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.private_cloud_gateway_id
   description = "Private Cloud Gateway ID associated with this account"
 }
-

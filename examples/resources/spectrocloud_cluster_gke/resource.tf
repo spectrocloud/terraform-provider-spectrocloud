@@ -7,6 +7,10 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew, and so are `cloud_config.project`
+# and `cloud_config.region` - unlike the plain (non-GKE) GCP cluster resource, where those two
+# update in place. `cluster_profile`, `machine_pool`, and the worker-pool-parallel-update setting
+# below all update in place.
 resource "spectrocloud_cluster_gke" "cluster" {
   name             = var.cluster_name
   description      = "Gke Cluster"
@@ -31,7 +35,9 @@ resource "spectrocloud_cluster_gke" "cluster" {
     #       releaseChannel: REGULAR
     # EOT
   }
-  update_worker_pool_in_parallel = true
+  # Use update_worker_pools_in_parallel (plural) - the singular update_worker_pool_in_parallel is
+  # deprecated and will be removed.
+  update_worker_pools_in_parallel = true
   machine_pool {
     name          = "worker-basic"
     count         = 3

@@ -1,5 +1,7 @@
 variable "shared_vmware_cloud_account_name" {}
 
+variable "backup_storage_location_name" {}
+
 variable "cluster_ssh_public_key" {}
 variable "cluster_network_search" {}
 

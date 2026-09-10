@@ -106,138 +106,96 @@ func New(version string) func() *schema.Provider {
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
-				"spectrocloud_team": resourceTeam(),
-
-				"spectrocloud_project": resourceProject(),
-
-				"spectrocloud_macros": resourceMacros(),
-
-				"spectrocloud_filter": resourceFilter(),
-
-				"spectrocloud_cluster_config_template": resourceClusterConfigTemplate(),
-				"spectrocloud_cluster_config_policy":   resourceClusterConfigPolicy(),
-
-				"spectrocloud_application_profile":    resourceApplicationProfile(),
-				"spectrocloud_cluster_profile":        resourceClusterProfile(),
-				"spectrocloud_cluster_profile_import": resourceClusterProfileImportFeature(),
-
-				"spectrocloud_cloudaccount_custom":  resourceCloudAccountCustom(),
-				"spectrocloud_cluster_custom_cloud": resourceClusterCustomCloud(),
-
-				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
-				"spectrocloud_cluster_aws":      resourceClusterAws(),
-
-				"spectrocloud_cloudaccount_maas": resourceCloudAccountMaas(),
-				"spectrocloud_cluster_maas":      resourceClusterMaas(),
-
-				"spectrocloud_cluster_eks": resourceClusterEks(),
-
-				"spectrocloud_cloudaccount_azure": resourceCloudAccountAzure(),
-				"spectrocloud_cluster_azure":      resourceClusterAzure(),
-
-				"spectrocloud_cluster_aks": resourceClusterAks(),
-
-				"spectrocloud_cluster_brownfield": resourceClusterBrownfield(),
-
-				"spectrocloud_cloudaccount_gcp": resourceCloudAccountGcp(),
-
-				"spectrocloud_cluster_gcp": resourceClusterGcp(),
-				"spectrocloud_cluster_gke": resourceClusterGke(),
-
+				"spectrocloud_team":                           resourceTeam(),
+				"spectrocloud_project":                        resourceProject(),
+				"spectrocloud_macros":                         resourceMacros(),
+				"spectrocloud_filter":                         resourceFilter(),
+				"spectrocloud_cluster_config_template":        resourceClusterConfigTemplate(),
+				"spectrocloud_cluster_config_policy":          resourceClusterConfigPolicy(),
+				"spectrocloud_application_profile":            resourceApplicationProfile(),
+				"spectrocloud_cluster_profile":                resourceClusterProfile(),
+				"spectrocloud_cluster_profile_import":         resourceClusterProfileImportFeature(),
+				"spectrocloud_cloudaccount_custom":            resourceCloudAccountCustom(),
+				"spectrocloud_cluster_custom_cloud":           resourceClusterCustomCloud(),
+				"spectrocloud_cloudaccount_aws":               resourceCloudAccountAws(),
+				"spectrocloud_cluster_aws":                    resourceClusterAws(),
+				"spectrocloud_cloudaccount_maas":              resourceCloudAccountMaas(),
+				"spectrocloud_cluster_maas":                   resourceClusterMaas(),
+				"spectrocloud_cluster_eks":                    resourceClusterEks(),
+				"spectrocloud_cloudaccount_azure":             resourceCloudAccountAzure(),
+				"spectrocloud_cluster_azure":                  resourceClusterAzure(),
+				"spectrocloud_cluster_aks":                    resourceClusterAks(),
+				"spectrocloud_cluster_brownfield":             resourceClusterBrownfield(),
+				"spectrocloud_cloudaccount_gcp":               resourceCloudAccountGcp(),
+				"spectrocloud_cluster_gcp":                    resourceClusterGcp(),
+				"spectrocloud_cluster_gke":                    resourceClusterGke(),
 				"spectrocloud_cloudaccount_apache_cloudstack": resourceCloudAccountApacheCloudStack(),
 				"spectrocloud_cluster_apache_cloudstack":      resourceClusterApacheCloudStack(),
-
-				"spectrocloud_cloudaccount_vsphere": resourceCloudAccountVsphere(),
-				"spectrocloud_cluster_vsphere":      resourceClusterVsphere(),
-
-				"spectrocloud_cluster_edge_native": resourceClusterEdgeNative(),
-
-				"spectrocloud_cluster_edge_vsphere": resourceClusterEdgeVsphere(),
-
-				"spectrocloud_virtual_cluster": resourceClusterVirtual(),
-
-				"spectrocloud_cluster_group": resourceClusterGroup(),
-
-				"spectrocloud_addon_deployment": resourceAddonDeployment(),
-
-				"spectrocloud_virtual_machine": resourceKubevirtVirtualMachine(),
-
-				"spectrocloud_datavolume": resourceKubevirtDataVolume(),
-
-				"spectrocloud_application": resourceApplication(),
-
-				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
-
-				"spectrocloud_privatecloudgateway_dns_map": resourcePrivateCloudGatewayDNSMap(),
-
-				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
-
-				"spectrocloud_registry_oci":  resourceRegistryOciEcr(),
-				"spectrocloud_registry_helm": resourceRegistryHelm(),
-
-				"spectrocloud_appliance": resourceAppliance(),
-
-				"spectrocloud_workspace":          resourceWorkspace(),
-				"spectrocloud_alert":              resourceAlert(),
-				"spectrocloud_ssh_key":            resourceSSHKey(),
-				"spectrocloud_user":               resourceUser(),
-				"spectrocloud_role":               resourceRole(),
-				"spectrocloud_password_policy":    resourcePasswordPolicy(),
-				"spectrocloud_resource_limit":     resourceResourceLimit(),
-				"spectrocloud_developer_setting":  resourceDeveloperSetting(),
-				"spectrocloud_platform_setting":   resourcePlatformSetting(),
-				"spectrocloud_registration_token": resourceRegistrationToken(),
-				"spectrocloud_audit_trail":        resourceAuditTrail(),
-				"spectrocloud_sso":                resourceSSO(),
+				"spectrocloud_cloudaccount_vsphere":           resourceCloudAccountVsphere(),
+				"spectrocloud_cluster_vsphere":                resourceClusterVsphere(),
+				"spectrocloud_cluster_edge_native":            resourceClusterEdgeNative(),
+				"spectrocloud_cluster_edge_vsphere":           resourceClusterEdgeVsphere(),
+				"spectrocloud_virtual_cluster":                resourceClusterVirtual(),
+				"spectrocloud_cluster_group":                  resourceClusterGroup(),
+				"spectrocloud_addon_deployment":               resourceAddonDeployment(),
+				"spectrocloud_virtual_machine":                resourceKubevirtVirtualMachine(),
+				"spectrocloud_datavolume":                     resourceKubevirtDataVolume(),
+				"spectrocloud_application":                    resourceApplication(),
+				"spectrocloud_privatecloudgateway_ippool":     resourcePrivateCloudGatewayIpPool(),
+				"spectrocloud_privatecloudgateway_dns_map":    resourcePrivateCloudGatewayDNSMap(),
+				"spectrocloud_backup_storage_location":        resourceBackupStorageLocation(),
+				"spectrocloud_registry_oci":                   resourceRegistryOciEcr(),
+				"spectrocloud_registry_helm":                  resourceRegistryHelm(),
+				"spectrocloud_appliance":                      resourceAppliance(),
+				"spectrocloud_workspace":                      resourceWorkspace(),
+				"spectrocloud_alert":                          resourceAlert(),
+				"spectrocloud_ssh_key":                        resourceSSHKey(),
+				"spectrocloud_user":                           resourceUser(),
+				"spectrocloud_role":                           resourceRole(),
+				"spectrocloud_password_policy":                resourcePasswordPolicy(),
+				"spectrocloud_resource_limit":                 resourceResourceLimit(),
+				"spectrocloud_developer_setting":              resourceDeveloperSetting(),
+				"spectrocloud_platform_setting":               resourcePlatformSetting(),
+				"spectrocloud_registration_token":             resourceRegistrationToken(),
+				"spectrocloud_audit_trail":                    resourceAuditTrail(),
+				"spectrocloud_sso":                            resourceSSO(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
-				"spectrocloud_permission": dataSourcePermission(),
-
-				"spectrocloud_team": dataSourceTeam(),
-
-				"spectrocloud_user":    dataSourceUser(),
-				"spectrocloud_project": dataSourceProject(),
-
-				"spectrocloud_filter": dataSourceFilter(),
-
-				"spectrocloud_cluster_config_template": dataSourceClusterConfigTemplate(),
-				"spectrocloud_cluster_config_policy":   dataSourceClusterConfigPolicy(),
-
-				"spectrocloud_role": dataSourceRole(),
-
-				"spectrocloud_pack":        dataSourcePack(),
-				"spectrocloud_pack_simple": dataSourcePackSimple(),
-
-				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
-
-				"spectrocloud_cloudaccount_aws": dataSourceCloudAccountAws(),
-
+				"spectrocloud_permission":                     dataSourcePermission(),
+				"spectrocloud_team":                           dataSourceTeam(),
+				"spectrocloud_user":                           dataSourceUser(),
+				"spectrocloud_project":                        dataSourceProject(),
+				"spectrocloud_filter":                         dataSourceFilter(),
+				"spectrocloud_cluster_config_template":        dataSourceClusterConfigTemplate(),
+				"spectrocloud_cluster_config_policy":          dataSourceClusterConfigPolicy(),
+				"spectrocloud_role":                           dataSourceRole(),
+				"spectrocloud_pack":                           dataSourcePack(),
+				"spectrocloud_pack_simple":                    dataSourcePackSimple(),
+				"spectrocloud_cluster_profile":                dataSourceClusterProfile(),
+				"spectrocloud_cloudaccount_aws":               dataSourceCloudAccountAws(),
 				"spectrocloud_cloudaccount_azure":             dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":               dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere":           dataSourceCloudAccountVsphere(),
 				"spectrocloud_cloudaccount_apache_cloudstack": dataSourceCloudAccountApacheCloudStack(),
 				"spectrocloud_cloudaccount_maas":              dataSourceCloudAccountMaas(),
 				"spectrocloud_cloudaccount_custom":            dataSourceCloudAccountCustom(),
-
-				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
-
-				"spectrocloud_registry_pack": dataSourceRegistryPack(),
-				"spectrocloud_registry_helm": dataSourceRegistryHelm(),
-				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
-				"spectrocloud_registry":      dataSourceRegistry(), // registry datasource for all types.
-
-				"spectrocloud_appliance":                   dataSourceAppliance(),
-				"spectrocloud_appliances":                  dataSourceAppliances(),
-				"spectrocloud_cluster":                     dataSourceCluster(),
-				"spectrocloud_cluster_group":               dataSourceClusterGroup(),
-				"spectrocloud_application_profile":         dataSourceApplicationProfile(),
-				"spectrocloud_workspace":                   dataSourceWorkspace(),
-				"spectrocloud_private_cloud_gateway":       dataSourcePCG(),
-				"spectrocloud_ippool":                      dataSourcePrivateCloudGatewayIpPool(),
-				"spectrocloud_privatecloudgateway_dns_map": dataSourcePrivateCloudGatewayDNSMap(),
-				"spectrocloud_ssh_key":                     dataSourceSSHKey(),
-				"spectrocloud_registration_token":          dataSourceRegistrationToken(),
-				"spectrocloud_macros":                      dataSourceMacros(),
+				"spectrocloud_backup_storage_location":        dataSourceBackupStorageLocation(),
+				"spectrocloud_registry_pack":                  dataSourceRegistryPack(),
+				"spectrocloud_registry_helm":                  dataSourceRegistryHelm(),
+				"spectrocloud_registry_oci":                   dataSourceRegistryOci(),
+				"spectrocloud_registry":                       dataSourceRegistry(), // registry datasource for all types.
+				"spectrocloud_appliance":                      dataSourceAppliance(),
+				"spectrocloud_appliances":                     dataSourceAppliances(),
+				"spectrocloud_cluster":                        dataSourceCluster(),
+				"spectrocloud_cluster_group":                  dataSourceClusterGroup(),
+				"spectrocloud_application_profile":            dataSourceApplicationProfile(),
+				"spectrocloud_workspace":                      dataSourceWorkspace(),
+				"spectrocloud_private_cloud_gateway":          dataSourcePCG(),
+				"spectrocloud_ippool":                         dataSourcePrivateCloudGatewayIpPool(),
+				"spectrocloud_privatecloudgateway_dns_map":    dataSourcePrivateCloudGatewayDNSMap(),
+				"spectrocloud_ssh_key":                        dataSourceSSHKey(),
+				"spectrocloud_registration_token":             dataSourceRegistrationToken(),
+				"spectrocloud_macros":                         dataSourceMacros(),
 			},
 			ConfigureContextFunc: providerConfigureFunc(version),
 		}

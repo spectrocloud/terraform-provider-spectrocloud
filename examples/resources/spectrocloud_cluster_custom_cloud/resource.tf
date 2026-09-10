@@ -52,6 +52,10 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
+# Day-2 mutability: `name`, `cloud`, and `cloud_account_id` are ForceNew - changing any of them
+# recreates the cluster. `cloud_config.values` and `machine_pool.node_pool_config` (both raw
+# templated YAML) are NOT ForceNew and update in place, along with cluster_profile,
+# backup_policy, scan_policy, namespaces, and the RBAC/OS-patch settings below.
 resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   name             = local.cloud_config_override_variables.CLUSTER_NAME
   cloud            = "nutanix"
@@ -127,9 +131,11 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   // pause_agent_upgrades = "lock"
   os_patch_on_boot  = true
   os_patch_schedule = "0 0 * * SUN"
-  os_patch_after    = "2025-02-14T13:09:21+05:30"
-  skip_completion   = true
-  force_delete      = true
+  # RFC3339 timestamp; the provider requires this to be at least 10 minutes in the future at
+  # apply time, so it's computed here rather than hardcoded to a fixed date.
+  os_patch_after  = timeadd(timestamp(), "24h")
+  skip_completion = true
+  force_delete    = true
   location_config {
     latitude  = local.location["latitude"]
     longitude = local.location["longitude"]

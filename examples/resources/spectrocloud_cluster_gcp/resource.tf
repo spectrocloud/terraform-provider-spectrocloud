@@ -9,6 +9,9 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
+# Day-2 mutability: only `name` and `cloud_account_id` are ForceNew - changing either recreates
+# the cluster. Unlike AWS/EKS/AKS, GCP's cloud_config (network, project, region) is NOT
+# ForceNew and updates in place, along with cluster_profile, machine_pool, and tags.
 resource "spectrocloud_cluster_gcp" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]

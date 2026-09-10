@@ -9,11 +9,17 @@
 #   }
 # }
 
+# Tech Preview: this resource may change. Nothing on it is ForceNew - name, context, tags, and
+# schedules all update in place.
+#
 # Example with multiple schedules and tags
 resource "spectrocloud_cluster_config_policy" "multi_schedule" {
   name    = "multi-schedule-policy-updated"
   context = "project"
   tags    = ["env:production", "team:devops", "test"]
+  # Optional, default "maintenance" - currently the only supported value ("upgrade" is reserved
+  # for future use and not yet supported).
+  # policy_type = "maintenance"
 
   schedules {
     name         = "weekday-maintenance"

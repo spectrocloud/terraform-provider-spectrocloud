@@ -10,9 +10,14 @@ data "spectrocloud_role" "roles" {
   name     = each.key
 }
 
+# Day-2 mutability: nothing on this resource is ForceNew - name, type, and permissions all
+# update in place.
 resource "spectrocloud_role" "custom_role" {
-  name        = "Test Cluster Role"
-  type        = "project"
+  # Required.
+  name = "Test Cluster Role"
+  # Optional, default "project". Allowed: "project", "tenant", "resource".
+  type = "project"
+  # Required. Set of permission ID strings - here composed from other roles' permission sets.
   permissions = flatten([for role in data.spectrocloud_role.roles : role.permissions])
 }
 
@@ -33,3 +38,5 @@ resource "spectrocloud_role" "custom_role_permission" {
   type        = "tenant"
   permissions = flatten([for p in data.spectrocloud_permission.app_permissions : p.permissions])
 }
+
+# terraform import spectrocloud_role.custom_role "<role-uid>"
