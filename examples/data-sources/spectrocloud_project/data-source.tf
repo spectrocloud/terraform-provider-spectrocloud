@@ -1,8 +1,9 @@
-# Fetch details of a specific project in SpectroCloud
+# Looks up a Spectro Cloud project by name and resolves its ID.
 data "spectrocloud_project" "example" {
-  # Provide either `id` or `name`, but not both.
-  id = "project-12345"
-  # name = "MyProject"  # Alternative way to reference a project by name
+  # Lookup key, optional, also Computed. Only `name`-based lookup is actually implemented by
+  # the provider today - the schema also exposes `id` (ConflictsWith `name`), but setting `id`
+  # alone does not resolve anything; use `name` as shown here.
+  name = "MyProject"
 }
 
 # Output project details for reference

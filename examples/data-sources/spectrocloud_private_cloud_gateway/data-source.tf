@@ -1,14 +1,14 @@
-# Retrieve details of a specific Private Cloud Gateway (PCG) by name
+# Looks up a Private Cloud Gateway (PCG) by name and resolves its ID.
 data "spectrocloud_private_cloud_gateway" "example_pcg" {
-  name = "my-private-cloud-gateway" # Specify the name of the PCG
+  # Lookup key, optional (conflicts with `id`), also Computed.
+  name = "my-private-cloud-gateway"
 }
 
-# Output the retrieved PCG ID
+# Computed.
 output "pcg_id" {
   value = data.spectrocloud_private_cloud_gateway.example_pcg.id
 }
 
-# Output the retrieved PCG name
 output "pcg_name" {
   value = data.spectrocloud_private_cloud_gateway.example_pcg.name
 }

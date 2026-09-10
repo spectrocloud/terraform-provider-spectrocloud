@@ -3,21 +3,22 @@
 page_title: "spectrocloud_project Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  Data source for looking up a Spectro Cloud project by name.
+  Data source for looking up a Spectro Cloud project by name or id.
 ---
 
 # spectrocloud_project (Data Source)
 
-Data source for looking up a Spectro Cloud project by name.
+Data source for looking up a Spectro Cloud project by name or id.
 
 ## Example Usage
 
 ```terraform
-# Fetch details of a specific project in SpectroCloud
+# Looks up a Spectro Cloud project by name and resolves its ID.
 data "spectrocloud_project" "example" {
-  # Provide either `id` or `name`, but not both.
-  id = "project-12345"
-  # name = "MyProject"  # Alternative way to reference a project by name
+  # Lookup key, optional, also Computed. Only `name`-based lookup is actually implemented by
+  # the provider today - the schema also exposes `id` (ConflictsWith `name`), but setting `id`
+  # alone does not resolve anything; use `name` as shown here.
+  name = "MyProject"
 }
 
 # Output project details for reference
@@ -34,8 +35,5 @@ output "project_info" {
 
 ### Optional
 
+- `id` (String) ID of the project to look up.
 - `name` (String) Name of the project to look up.
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
