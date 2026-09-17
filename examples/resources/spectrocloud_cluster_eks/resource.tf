@@ -17,7 +17,9 @@ data "spectrocloud_backup_storage_location" "bsl" {
 # ALL ForceNew - changing any of them recreates the cluster. public_access_cidrs,
 # private_access_cidrs, and override_cluster_api_config are the exceptions and update in place.
 resource "spectrocloud_cluster_eks" "cluster" {
-  name             = var.cluster_name
+  name = var.cluster_name
+  # `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two are
+  # ConflictsWith each other - use only one.
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 

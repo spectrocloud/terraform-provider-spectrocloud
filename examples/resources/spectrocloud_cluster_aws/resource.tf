@@ -18,7 +18,9 @@ data "spectrocloud_backup_storage_location" "bsl" {
 # field that is NOT ForceNew. Everything else - cluster_profile, backup_policy, scan_policy,
 # machine_pool, tags - updates in place.
 resource "spectrocloud_cluster_aws" "cluster" {
-  name             = var.cluster_name
+  name = var.cluster_name
+  # `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two are
+  # ConflictsWith each other - use only one.
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 

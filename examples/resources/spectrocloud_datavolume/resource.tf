@@ -11,11 +11,14 @@ data "spectrocloud_cluster" "vm_enabled_base_cluster" {
 # the plan rather than a replace, but any changed attribute recreates the underlying data volume
 # on the cluster. Treat every attribute here as effectively ForceNew in practice.
 resource "spectrocloud_datavolume" "example" {
-  # Required. UID of the cluster the target VM runs on.
+  # Optional in the schema, but the provider's create logic rejects an empty value at apply
+  # time - so set it in practice. UID of the cluster the target VM runs on.
   cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   # Required. Allowed: "project", "tenant".
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  # Required. Name and namespace of the existing virtual machine to attach this volume to.
+  # Optional in the schema, but the provider's create logic rejects an empty value at apply
+  # time - so set both in practice. Name and namespace of the existing virtual machine to attach
+  # this volume to.
   vm_name      = var.vm_name
   vm_namespace = var.vm_namespace
 
@@ -40,7 +43,8 @@ resource "spectrocloud_datavolume" "example" {
 
   # Required, at most one block. Kubernetes object metadata for the DataVolume itself.
   metadata {
-    # Required, ForceNew.
+    # Optional, Computed, ForceNew - if omitted Kubernetes generates a name, but set it
+    # explicitly here since add_volume_options.volume_source.data_volume.name above must match.
     name = "extra-datavolume"
     # Optional, default "default", ForceNew.
     namespace = var.vm_namespace

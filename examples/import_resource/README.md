@@ -15,7 +15,7 @@ in its Go schema) - 51 resources in total, grouped into sections:
   `appliance`, `privatecloudgateway_ippool`, `privatecloudgateway_dns_map`)
 - IAM & organization (`role`, `team`, `user`, `ssh_key`, `project`, `workspace`, `filter`,
   `registration_token`)
-- Pack registries (`registry_helm`, `registry_oci_ecr`)
+- Pack registries (`registry_helm`, `registry_oci`)
 - Tenant-level settings (`resource_limit`, `password_policy`, `developer_setting`,
   `platform_setting`, `macros`, `sso`)
 - Alerts & audit (`alert`, `audit_trail`)

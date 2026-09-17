@@ -10,7 +10,7 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
   # Only one policy is supported (MaxItems: 1)
   # Policy can be replaced by changing the ID
   policy {
-    id   = "69131adb05561b51307764e5"
+    id   = var.maintenance_policy_id
     kind = "maintenance"
   }
 
@@ -32,7 +32,7 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
   }
 
   cluster_profile {
-    id = "69130518a2d75382d3f0ee89"
+    id = var.infra_profile_id
 
     variables {
       name            = "environment"
@@ -51,9 +51,11 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
 # ═══════════════════════════════════════════════════════════════════════════
 # IMPORT EXAMPLE
 # ═══════════════════════════════════════════════════════════════════════════
-# Import an existing cluster config template using its UID
+# Import an existing cluster config template. The ID must be
+# "<template_id_or_name>:<project|tenant>" - the context suffix is required, not optional;
+# omitting it causes the import to fail.
 #
 # import {
 #   to = spectrocloud_cluster_config_template.imported_template
-#   id = "63d48062b3a0c92a6f230112"
+#   id = "63d48062b3a0c92a6f230112:project"
 # }

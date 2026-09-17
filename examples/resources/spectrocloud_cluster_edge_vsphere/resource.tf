@@ -30,7 +30,8 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   }
 
   cloud_config {
-    # ssh_keys is preferred over the deprecated singular ssh_key field.
+    # ssh_key (singular) and ssh_keys are mutually exclusive (ExactlyOneOf) - neither is
+    # deprecated, ssh_keys just accepts a list instead of one string.
     ssh_keys = [var.cluster_ssh_public_key]
 
     datacenter = var.vsphere_datacenter
@@ -74,7 +75,9 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
       resource_pool = var.vsphere_resource_pool
       datastore     = var.vsphere_datastore
       network       = var.vsphere_network
-      # Optional. Required only when cloud_config.static_ip is true.
+      # Optional. UID of a static IP pool to allocate node addresses from - the schema has no
+      # coded link to cloud_config.static_ip, so set this whenever you want IP-pool-based
+      # placement regardless of that flag.
       # static_ip_pool_id = data.spectrocloud_ippool.pool.id
     }
     instance_type {

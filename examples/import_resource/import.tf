@@ -451,14 +451,17 @@ import {
   id = "my-helm-registry"
 }
 
-# --- spectrocloud_registry_oci_ecr ---
+# --- spectrocloud_registry_oci ---
+# Despite the Go source living in resource_registry_oci_ecr.go, the resource is registered as
+# `spectrocloud_registry_oci` (see spectrocloud/provider.go) - there is no `_ecr` suffix on the
+# actual resource type.
 # Format: <registry_uid_or_name> - always tenant-scoped, no context suffix. Resolves against
 # both ECR-backed and generic OCI-basic-auth registries.
-# terraform import spectrocloud_registry_oci_ecr.example my-ecr-registry
-# terraform plan -generate-config-out=generated_registry_oci_ecr.tf
+# terraform import spectrocloud_registry_oci.example my-ecr-registry
+# terraform plan -generate-config-out=generated_registry_oci.tf
 # terraform apply
 import {
-  to = spectrocloud_registry_oci_ecr.example
+  to = spectrocloud_registry_oci.example
   id = "my-ecr-registry"
 }
 

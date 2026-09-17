@@ -18,12 +18,14 @@ locals {
 // Create a VM with default cloud init disk, container disk , interface and network
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
-  # Required, ForceNew. Unique within the namespace.
+  # Required, ForceNew. The cluster UID this VM belongs to.
   cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   # Optional, default "project". Allowed: "project", "tenant".
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  # Optional, default true. Mutually exclusive with `run_strategy` (see the data-volume-template
-  # example further below, which uses run_strategy = "Manual" instead).
+  # Optional. The schema's own description says "Default value is `true`", but there is no
+  # actual Default set - ExactlyOneOf with `run_strategy` below means one of the two must always
+  # be set explicitly anyway (see the data-volume-template example further below, which uses
+  # run_strategy = "Manual" instead).
   run_on_launch = true
   # Required, ForceNew.
   name = "tf-test-vm-basic-type"

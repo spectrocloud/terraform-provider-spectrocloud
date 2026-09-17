@@ -1,5 +1,10 @@
 # Example showing how to use the new storage field in dataVolumeTemplates.spec
 # This demonstrates the alternative to using the pvc field
+#
+# Intentionally named .tf1, not .tf: it re-declares the same data "spectrocloud_cluster" and
+# locals block as resource.tf in this folder, so Terraform would fail with duplicate-declaration
+# errors if both were loaded together. Copy this file's content into its own directory (renamed
+# to .tf) to actually run it, rather than renaming it in place here.
 
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
   name    = "tenant-cluster-002"

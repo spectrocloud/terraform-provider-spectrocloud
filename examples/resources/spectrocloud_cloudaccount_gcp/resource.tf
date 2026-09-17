@@ -1,4 +1,4 @@
-# Nothing on this resource is ForceNew - both attributes update in place.
+# Nothing on this resource is ForceNew - every attribute below updates in place.
 resource "spectrocloud_cloudaccount_gcp" "gcp-1" {
   # Required.
   name = "gcp-1"

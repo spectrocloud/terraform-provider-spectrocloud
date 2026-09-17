@@ -5,9 +5,16 @@
 #                       recreates the backup location under a new provider.
 #   context          - Optional, default "project". Allowed: "project", "tenant".
 #   is_default       - Optional, default false. Whether new backups use this location by default.
-#   region           - Optional. Relevant to S3/Minio.
-#   bucket_name      - Optional. Relevant to S3/Minio/GCP.
-#   ca_cert          - Optional. Relevant to S3/Minio, for a self-signed storage endpoint.
+#   region           - Optional in the schema, but a CustomizeDiff (schemaValidationForLocationProvider)
+#                       requires it (along with `s3`/`bucket_name`) whenever storage_provider is
+#                       "aws" or "minio", and forbids it entirely for "azure"/"gcp".
+#   bucket_name      - Same CustomizeDiff: required for "aws"/"minio" (with `s3`/`region`) and for
+#                       "gcp" (with `gcp_storage_config`); forbidden for "azure".
+#   ca_cert          - Same CustomizeDiff: only meaningful for "aws"/"minio"; forbidden for
+#                       "azure"/"gcp".
+# The same CustomizeDiff also forbids `azure_storage_config`/`gcp_storage_config` when
+# storage_provider is "aws"/"minio", and forbids `s3` when it's "azure"/"gcp" - each provider's
+# block below is mutually exclusive with the others in practice, not just by convention.
 # All of the above (aside from storage_provider) update in place.
 
 // S3 backup location, using static access/secret key credentials

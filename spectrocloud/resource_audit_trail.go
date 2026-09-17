@@ -162,7 +162,7 @@ func resourceAuditTrail() *schema.Resource {
 										Type:        schema.TypeBool,
 										Optional:    true,
 										Default:     true,
-										Description: "Skip TLS certificate verification when set to `true`. Default is `false`.",
+										Description: "Skip TLS certificate verification when set to `true`. Default is `true`.",
 									},
 								},
 							},

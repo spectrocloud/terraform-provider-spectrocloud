@@ -46,9 +46,10 @@ resource "spectrocloud_cluster_config_policy" "multi_schedule" {
 #   }
 # }
 
-# Import example
+# Import example. The ID must be "<policy_id_or_name>:<project|tenant>" - the context suffix is
+# required, not optional; omitting it causes the import to fail.
 # import {
 #   to = spectrocloud_cluster_config_policy.imported_policy
-#   id = "63d48062b3a0c92a6f230112"
+#   id = "63d48062b3a0c92a6f230112:project"
 # }
 

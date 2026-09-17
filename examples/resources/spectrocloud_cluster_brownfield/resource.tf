@@ -1,5 +1,8 @@
-# Basic Brownfield Cluster Registration (Day-1)
-# This example shows the minimal required fields for registering an existing Kubernetes cluster.
+# Brownfield Cluster Registration
+# This example registers an existing Kubernetes cluster and additionally exercises most of the
+# resource's optional Day-2 attributes (cluster_profile, scan_policy, backup_policy,
+# machine_pool node actions, cluster_rbac_binding) - the only truly required fields are `name`
+# and `cloud_type`.
 #
 # Day-2 mutability: nothing on this resource is marked ForceNew in the schema (Terraform will
 # always try an in-place update, never a destroy/recreate), but the provider's own docs state
@@ -9,9 +12,13 @@
 
 resource "spectrocloud_cluster_brownfield" "basic" {
   name = "my-existing-cluster"
-  # Required. Intended allowed values: aws, eks-anywhere, azure, gcp, vsphere, openshift,
-  # generic, maas - note validation for this field is currently disabled in the provider, so any
-  # string is accepted; use one of the above for a value Palette actually recognizes.
+  # Required. The schema's own description lists aws, eks-anywhere, azure, gcp, vsphere,
+  # openshift, generic, maas - but the provider's registration logic (resource_cluster_brownfield.go,
+  # resourceClusterBrownfieldImportCreate) only actually branches on aws, azure, gcp,
+  # apache-cloudstack, and generic. Any other value (including several the schema itself lists,
+  # like vsphere/maas/openshift/eks-anywhere) silently falls through to the generic import path
+  # with no warning - validation for this field is disabled, so nothing catches the mismatch at
+  # plan time. Stick to aws/azure/gcp/apache-cloudstack/generic to get the behavior you expect.
   cloud_type = "generic"
   # Optional, default "project". Allowed: "project", "tenant". Not updatable after creation.
   context = "project"

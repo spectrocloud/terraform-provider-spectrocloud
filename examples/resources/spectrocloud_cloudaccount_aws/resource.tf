@@ -13,8 +13,10 @@ resource "spectrocloud_cloudaccount_aws" "aws_secret" {
   name = "aws-account-secret"
   # Optional, default "secret". Allowed: "secret", "sts", "pod-identity".
   type = "secret"
-  # Optional, sensitive. Preferred over the deprecated `aws_access_key`, which is mutually
-  # exclusive with this field.
+  # Optional, sensitive. Preferred over the deprecated `aws_access_key`. The schema's own
+  # description calls the two mutually exclusive, but that check is currently commented out in
+  # the provider (toAwsAccount) - setting both won't error, the provider just prefers this field
+  # and silently ignores `aws_access_key`. Still best practice to set only one.
   aws_secured_access_key = var.aws_secured_access_key # or aws_access_key=<access_key>
   # Optional, sensitive. Used together with the access key above.
   aws_secret_key = var.aws_secret_key

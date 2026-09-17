@@ -15,11 +15,16 @@ Data source for looking up a user by ID or email address.
 ```terraform
 # Looks up a user by email address.
 data "spectrocloud_user" "example" {
-  # Lookup key, optional, also Computed. The schema also exposes `id` (ConflictsWith `email`),
-  # but only `email`-based lookup is actually implemented by the provider today - setting `id`
-  # alone does not resolve anything; use `email` as shown here.
+  # Lookup key, optional, also Computed, ConflictsWith `id`. Set either `email` (shown here) or
+  # `id` - both are independently implemented lookups (dataSourceUserRead tries `email` first,
+  # then falls back to `id`), so `id` alone works too if you already know the user's UID.
   email = "user@example.com"
 }
+
+# Equivalent lookup by ID instead of email:
+# data "spectrocloud_user" "by_id" {
+#   id = "64f1a2b3c4d5e6f7a8b9c0d1"
+# }
 
 # Output user details for reference
 output "user_info" {
