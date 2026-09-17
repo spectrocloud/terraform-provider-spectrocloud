@@ -32,7 +32,9 @@ For every resource:
    no context suffix at all, or a different separator entirely) - those are called out
    explicitly.
 2. The equivalent classic CLI command, as a comment: `terraform import <address> <id>`.
-3. A config-driven `import` block (Terraform >= 1.5):
+3. The config-generating command pair, as comments:
+   `terraform plan -generate-config-out=generated_<resource>.tf` followed by `terraform apply`.
+4. A config-driven `import` block (Terraform >= 1.5):
    ```hcl
    import {
      to = spectrocloud_cluster_aws.example
@@ -42,18 +44,29 @@ For every resource:
 
 This file is reference material, not a working configuration - `to` doesn't need a matching
 `resource` block for `terraform validate` to pass, which is why the whole file validates cleanly
-as-is. To actually run one of these imports:
+as-is. To actually run one of these imports, pick one of three equivalent workflows:
 
-1. Add a `resource "<type>" "<name>" { ... }` block to your own configuration matching the
-   `to` address (see `examples/resources/<type>` for a minimal starting point for that
-   resource).
-2. Either:
-   - Copy the corresponding `import` block from `import.tf` into your configuration and run
-     `terraform plan` (to preview) then `terraform apply` (to write it to state), or
-   - Run the commented `terraform import <address> <id>` command directly.
-3. After import, run `terraform plan` again - if your resource block doesn't yet match every
-   attribute Palette reports, Terraform shows a diff you'll need to reconcile before applying
-   normally.
+- **Generate the config for you (recommended if you don't have a `resource` block yet).** Copy
+  the `import` block for your resource into your configuration - no `resource` block needed -
+  then run:
+  ```shell
+  terraform plan -generate-config-out=generated_<resource>.tf
+  ```
+  This fetches the real object from Palette and writes a starting `resource "<type>" "<name>"
+  { ... }` block into `generated_<resource>.tf` for you. Review/edit it (Terraform can't always
+  infer every attribute perfectly, e.g. sensitive fields), then run `terraform apply` to write
+  the import to state.
+- **Reconcile against a config you already wrote.** If you already have a `resource` block
+  matching `to`, copy the `import` block alongside it and run plain `terraform plan` /
+  `terraform apply` (no `-generate-config-out`) - Terraform reconciles the import against your
+  existing config instead of generating a new file.
+- **Classic CLI, Terraform < 1.5.** Add a `resource "<type>" "<name>" { ... }` block yourself
+  first (see `examples/resources/<type>` for a minimal starting point), then run the commented
+  `terraform import <address> <id>` command - this only writes state, it never generates config.
+
+After any of these, run `terraform plan` again - if your resource block doesn't yet match every
+attribute Palette reports, Terraform shows a diff you'll need to reconcile before applying
+normally.
 
 ## Usage
 
