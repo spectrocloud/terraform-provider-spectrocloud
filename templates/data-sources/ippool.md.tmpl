@@ -11,11 +11,6 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_ippool" "example" {
-  name                     = "ippool-1"
-  private_cloud_gateway_id = "pcg-uid"
-}
-```
+{{ tffile "examples/Infrastructure/Private Cloud Gateway/data-source/IP Pool/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

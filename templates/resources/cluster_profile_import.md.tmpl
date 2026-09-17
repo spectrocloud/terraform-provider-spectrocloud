@@ -11,12 +11,7 @@ description: |-
 
 ## Example Usage
 
-
-```terraform
-resource "spectrocloud_cluster_profile_import" "import" {
-  import_file = "/tmp/profile_import.json"
-}
-```
+{{ tffile "examples/Cluster Profiles/resource/Import/resource.tf" }}
 
 Using `terraform import`, import the cluster profile using the `cluster_profile_name` or `id` colon separated with `context` and `version`. For example:
 

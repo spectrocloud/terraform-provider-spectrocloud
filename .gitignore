@@ -32,3 +32,4 @@ mock_server.key
 MockBuild
 mock_api_server.log
 .claude
+__pycache__/

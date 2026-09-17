@@ -117,8 +117,13 @@ resource "spectrocloud_cluster_profile" "aws-profile" {
 
 An example of a cluster profile using inline YAML.
 
-{{ tffile "examples/resources/spectrocloud_cluster_profile/resource.tf" }}
+{{ tffile "examples/Cluster Profiles/resource/resource.tf" }}
 
+### Helm Chart from a Protected OCI Registry
+
+An example of a cluster profile with a Helm chart pack sourced from an authenticated OCI registry already registered in Palette.
+
+{{ tffile "examples/Cluster Profiles/resource/Helm/resource.tf" }}
 
 ### Example of Providing Multiple Packs
 

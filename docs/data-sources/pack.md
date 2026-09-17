@@ -15,60 +15,98 @@ description: |-
 
 ## Example Usage
 
-An example of how to use this data source to retrieve a specific pack from the community registry.
-
 ~> For certain packs such as vm-migration-assistant, virtual-machine-orchestrator, vm-migration-assistant-pack, spectro-k8s-dashboard, and spectro-vm-dashboard, the `addon_type` is considered as `integration`.
 
-```hcl
+```terraform
+# Looks up a single pack in the Palette registries. There are three mutually exclusive lookup
+# modes - set attributes from exactly one of them:
+#   1. Simple lookup (shown in "example" below): name (+ optional version/cloud/registry_uid/type).
+#      If version is omitted, the latest available version is used.
+#   2. Advanced filter (shown in "filtered" below): advance_filters (+ name/registry_uid),
+#      structured filtering by pack_type/addon_type/pack_layer/environment/is_fips/pack_source.
+#   3. Raw filter string: `filters`, a "key=value AND/OR ..." expression - deprecated in favor
+#      of advance_filters; conflicts with id/cloud/name/version/registry_uid.
+# A fourth mode looks up by `id` directly; it conflicts with filters/cloud/name/version/registry_uid.
+#
+# "example" (simple lookup) flat attributes - all lookup keys, optional, also Computed:
+#   name         - Pack name (e.g., "nginx-pack", "k8s-core").
+#   version      - If omitted, the latest available version is used.
+#   cloud        - Set of cloud types to filter by; "all" is implied.
+#   registry_uid - Registry to search within.
+#   type         - Allowed: "helm", "manifest", "container", "operator-instance".
+
 # Retrieve details of a specific pack using name and version
 data "spectrocloud_pack" "example" {
-  name    = "nginx-pack" # Pack name (e.g., "nginx-pack", "k8s-core", "monitoring-stack")
-  version = "1.2.3"      # Pack version (e.g., "1.2.3", "latest", "stable")
+  name    = "nginx-pack"
+  version = "1.2.3"
+  # cloud        = ["aws"]
+  # registry_uid = "5ee9c5adc172449eeb9c30cf"
+  # type         = "helm"
 }
 
 # Retrieve a pack using advanced filters
+#
+# Flat attributes:
+#   name         - Pack name to search for.
+#   registry_uid - Unique registry identifier.
 data "spectrocloud_pack" "filtered" {
-  name = "k8sgpt-operator" # Pack name to search for
+  name = "k8sgpt-operator"
 
+  # advance_filters block (at most one), structured filtering by pack_type/addon_type/pack_layer/
+  # environment/is_fips/pack_source:
+  #   pack_type   - Allowed: "helm", "spectro", "oci", "manifest".
+  #   addon_type  - Allowed: "load balancer", "ingress", "logging", "monitoring", "security",
+  #                 "authentication", "servicemesh", "system app", "app services", "registry",
+  #                 "csi", "cni", "integration".
+  #   pack_layer  - Allowed: "kernel", "os", "k8s", "cni", "csi", "addon".
+  #   environment - Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas",
+  #                 "edge-native".
+  #   is_fips     - Boolean: true (FIPS-compliant) / false (default).
+  #   pack_source - Allowed: "spectrocloud", "community".
   advance_filters {
-    pack_type   = ["spectro"]       # Allowed: "helm", "spectro", "oci", "manifest"
-    addon_type  = ["system app"]    # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
-    pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
-    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
-    is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
-    pack_source = ["community"]      # Allowed: "spectrocloud", "community"
+    pack_type   = ["spectro"]
+    addon_type  = ["system app"]
+    pack_layer  = ["addon"]
+    environment = ["all"]
+    is_fips     = false
+    pack_source = ["community"]
   }
 
-  registry_uid = "5ee9c5adc172449eeb9c30cf" # Unique registry identifier
+  registry_uid = "5ee9c5adc172449eeb9c30cf"
 }
 
-# Output pack details
+# Output pack details (all Computed)
 output "pack_id" {
-  value = data.spectrocloud_pack.example.id # Returns the unique pack ID
+  value = data.spectrocloud_pack.example.id
 }
 
 output "pack_version" {
-  value = data.spectrocloud_pack.example.version # Returns the pack version
+  value = data.spectrocloud_pack.example.version
+}
+
+output "pack_cloud_types" {
+  value = data.spectrocloud_pack.example.cloud
+}
+
+output "pack_registry_uid" {
+  value = data.spectrocloud_pack.example.registry_uid
 }
 
 output "pack_values" {
-  value = data.spectrocloud_pack.example.values # Returns the YAML values of the pack
+  value = data.spectrocloud_pack.example.values # YAML values of the pack, as a string
 }
 ```
 
+### Deprecated: raw `filters` string
+
+The `filters` attribute is deprecated in favor of `advance_filters` shown above, but remains supported. It is a string that can contain multiple filters separated by the `AND`/`OR` operator, using the attributes returned in the `spec` object of the payload provided by the `v1/packs/search` endpoint. Refer to the Palette Pack Search API endpoint [documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for more information on the available filters.
 
 In this example, a filter is applied to retrieve a Calico CNI pack from the Palette OCI registry that is compatible with Edge clusters and has a version greater than 3.26.9.
-
--> The filter attribute is a string that can contain multiple filters separated by the `AND`, `OR` operator. You can filter for a pack by using the attributes retured in the `spec` object of the payload provided by the `v1/packs/search` endpoint.
-Refer to the Palette Pack Search API endpoint [documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for more information on the available filters.
-
-
 
 ```hcl
 data "spectrocloud_registry" "palette_registry_oci" {
   name = "Palette Registry"
 }
-
 
 data "spectrocloud_pack" "cni" {
   filters = "spec.cloudTypes=edge-nativeANDspec.layer=cniANDspec.displayName=CalicoANDspec.version>3.26.9ANDspec.registryUid=${data.spectrocloud_registry.palette_registry_oci.id}"

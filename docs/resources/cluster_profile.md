@@ -226,6 +226,9 @@ resource "spectrocloud_cluster_profile" "profile" {
     values = data.spectrocloud_pack.csi.values
   }
 
+  # pack (manifest-namespace, manifest-type pack):
+  #   uid - Left commented out below; manifest-type packs are not looked up by registry, so no
+  #         UID resolution is needed for them.
   pack {
     name = "manifest-namespace"
     type = "manifest"
@@ -250,19 +253,21 @@ resource "spectrocloud_cluster_profile" "profile" {
     uid    = "60bd99ce9c10082ed8b314c9"
     values = local.proxy_val
   }
+
   # profile_variables lets Day-2 consumers (e.g. spectrocloud_cluster's cluster_profile.variables,
   # or spectrocloud_cluster_config_template's per-cluster overrides) supply values that get
   # templated into pack manifests via `{{ .spectro.var.<name> }}`, without editing the profile
   # itself. At most one profile_variables block is allowed per profile - all variables go inside
   # its single `variable` list, not as multiple profile_variables blocks.
   profile_variables {
+    # variable (default_password):
+    #   hidden - For sensitive variables like passwords, masks the value from being
+    #            overridden/viewed at the point of use.
     variable {
       name         = "default_password"
       display_name = "Default Password"
       format       = "string"
-      # For sensitive variables like passwords, hidden = true masks the value from being
-      # overridden/viewed at the point of use.
-      hidden = true
+      hidden       = true
     }
     variable {
       name          = "default_version"
@@ -274,15 +279,16 @@ resource "spectrocloud_cluster_profile" "profile" {
       required      = true
       immutable     = false
     }
+    # variable (type_list):
+    #   input_type - "dropdown" requires at least one options block; default_value must match
+    #                one of the option labels below.
     variable {
       default_value = "test2"
       display_name  = "Type List"
       format        = "string"
-      # input_type = "dropdown" requires at least one options block; default_value must match
-      # one of the option labels below.
-      input_type = "dropdown"
-      name       = "type_list"
-      required   = false
+      input_type    = "dropdown"
+      name          = "type_list"
+      required      = false
       options {
         description = "test 1 description"
         label       = "test1"
@@ -309,6 +315,47 @@ resource "spectrocloud_cluster_profile" "profile" {
 }
 ```
 
+### Helm Chart from a Protected OCI Registry
+
+An example of a cluster profile with a Helm chart pack sourced from an authenticated OCI registry already registered in Palette.
+
+```terraform
+# This example shows a Helm chart pack sourced from a "protected" (authenticated) OCI registry -
+# one that has already been registered in Palette with credentials, as opposed to a public,
+# unauthenticated OCI registry. The registry itself must already exist in Palette; this
+# configuration only looks it up by name and uses it in the profile's pack.
+#
+# Day-2 mutability: on spectrocloud_cluster_profile, `cloud` and `type` are ForceNew - changing
+# either recreates the profile. `pack` (including this Helm pack) updates in place.
+
+data "spectrocloud_registry_oci" "registry1" {
+  name = "my-protected-oci-registry"
+}
+
+resource "spectrocloud_cluster_profile" "profile_resource" {
+  cloud       = "eks"
+  description = "addon-profile-1"
+  name        = "addon-profile-1"
+  type        = "add-on"
+
+  # pack:
+  #   uid - Left unset here. Since name, tag, and registry_uid are all provided, the provider
+  #         resolves the pack's UID internally rather than requiring it to be looked up separately.
+  pack {
+    name         = "kubevious-test"
+    type         = "helm"
+    registry_uid = data.spectrocloud_registry_oci.registry1.id
+    tag          = "0.8.15"
+    values       = <<-EOT
+      pack:
+        namespace: "helm-test-chart"
+        spectrocloud.com/install-priority: "230"
+        releaseNameOverride:
+          test-chart-service: test-chart-service-name
+    EOT
+  }
+}
+```
 
 ### Example of Providing Multiple Packs
 
