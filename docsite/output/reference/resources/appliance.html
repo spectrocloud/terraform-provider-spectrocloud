@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appliance · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / Appliance</div>
+    <h1>Appliance</h1>
+<p>A resource for creating and managing appliances for Edge Native cluster provisioning.</p>
+<h2>Example Usage</h2>
+<pre><code class="language-terraform">resource &quot;spectrocloud_appliance&quot; &quot;appliance&quot; {
+  uid       = &quot;test-dec9&quot;
+  arch_type = &quot;amd64&quot;
+  tags = {
+    &quot;name&quot; = &quot;appliance_name&quot;
+  }
+  wait = true
+}</code></pre>
+<h2>Import</h2>
+<p>Appliances can be imported using the appliance_UID or appliance_name. This is a project-level resource.</p>
+<pre><code class="language-bash">terraform import spectrocloud_appliance.example &lt;appliance_uid&gt;/&lt;appliance_name&gt;</code></pre>
+<p>Where <code>&lt;appliance_uid&gt;</code> is the appliance UID.</p>
+<p>The import will automatically populate all configuration fields from the Spectro Cloud API, including the UID, tags, and tunnel configuration settings. The <code>wait</code> field will be set to <code>false</code> by default for imported appliances. After import, you can run <code>terraform plan</code> to see the current configuration and make any necessary adjustments.</p>
+<p><strong>Note</strong>: Since this is a project-level resource, ensure your provider is configured with appropriate project-level credentials and access.</p>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>uid</code> (String) The unique identifier (UID) for the appliance. Note: This field is required and must be unique across all appliances in the tenant.</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>arch_type</code> (String) Architecture type of the machine pool. Allowed values are <code>amd64</code> and <code>arm64</code>. Default is <code>amd64</code>.</li>
+<li><code>pairing_key</code> (String) The pairing key used for appliance pairing.</li>
+<li><code>remote_shell</code> (String) Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured credentials. See https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/.</li>
+<li><code>tags</code> (Map of String) A set of key-value pairs that can be used to organize and categorize the appliance.</li>
+<li><code>temporary_shell_credentials</code> (String) Enable the creation of a temporary user on the edge host with sudo privileges for SSH access from Palette. These credentials will be embedded in the SSH connection string for auto login, and the temporary user is deleted upon deactivation.</li>
+<li><code>timeouts</code> (Block, Optional) (see <a href="#nestedblock--timeouts">below for nested schema</a>)</li>
+<li><code>wait</code> (Boolean) If set to <code>true</code>, the resource creation will wait for the appliance provisioning process to complete before returning. Defaults to <code>false</code>.</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--timeouts&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>timeouts</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>create</code> (String)</li>
+<li><code>delete</code> (String)</li>
+<li><code>update</code> (String)</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

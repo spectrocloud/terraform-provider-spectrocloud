@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspace · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / Workspace</div>
+    <h1>Workspace</h1>
+<p>Resource for managing workspaces in Spectro Cloud.</p>
+<h2>Example Usage</h2>
+<pre><code class="language-terraform">data &quot;spectrocloud_cluster&quot; &quot;cluster1&quot; {
+  name = &quot;vsphere-picard-2&quot;
+}
+
+resource &quot;spectrocloud_workspace&quot; &quot;workspace&quot; {
+  name = &quot;wsp-tf&quot;
+
+  clusters {
+    uid = data.spectrocloud_cluster.cluster1.id
+  }
+
+  cluster_rbac_binding {
+    type = &quot;ClusterRoleBinding&quot;
+
+    role = {
+      kind = &quot;ClusterRole&quot;
+      name = &quot;testrole3&quot;
+    }
+    subjects {
+      type = &quot;User&quot;
+      name = &quot;testRoleUser4&quot;
+    }
+    subjects {
+      type = &quot;Group&quot;
+      name = &quot;testRoleGroup4&quot;
+    }
+    subjects {
+      type      = &quot;ServiceAccount&quot;
+      name      = &quot;testrolesubject3&quot;
+      namespace = &quot;testrolenamespace&quot;
+    }
+  }
+
+  cluster_rbac_binding {
+    type      = &quot;RoleBinding&quot;
+    namespace = &quot;test5ns&quot;
+    role = {
+      kind = &quot;Role&quot;
+      name = &quot;testrolefromns3&quot;
+    }
+    subjects {
+      type = &quot;User&quot;
+      name = &quot;testUserRoleFromNS3&quot;
+    }
+    subjects {
+      type = &quot;Group&quot;
+      name = &quot;testGroupFromNS3&quot;
+    }
+    subjects {
+      type      = &quot;ServiceAccount&quot;
+      name      = &quot;testrolesubject3&quot;
+      namespace = &quot;testrolenamespace&quot;
+    }
+  }
+
+  namespaces {
+    name = &quot;test5ns&quot;
+    resource_allocation = {
+      cpu_cores  = &quot;2&quot;
+      memory_MiB = &quot;2048&quot;
+    }
+
+    images_blacklist = [&quot;1&quot;, &quot;2&quot;, &quot;3&quot;]
+  }
+
+  backup_policy {
+    schedule                  = &quot;0 0 * * SUN&quot;
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = &quot;prod-backup&quot;
+    expiry_in_hour            = 7200
+    include_disks             = false
+    include_cluster_resources = true
+
+    //namespaces = [&quot;test5ns&quot;]
+    include_all_clusters = true
+    cluster_uids         = [data.spectrocloud_cluster.cluster1.id]
+  }
+
+}
+
+data &quot;spectrocloud_backup_storage_location&quot; &quot;bsl&quot; {
+  name = &quot;backups-nikolay&quot;
+}</code></pre>
+
+<pre><code class="language-hcl"># import existing user example
+import {
+  to = spectrocloud_workspace.test_user
+  id = &quot;{userUID}&quot;
+}
+
+# To generate TF configuration.
+terraform plan -generate-config-out=test_workspace.tf</code></pre>
+
+<pre><code class="language-bash">terraform import spectrocloud_workspace.test_workspace {workspaceUID/workspace_name}</code></pre>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>clusters</code> (Block Set, Min: 1) (see <a href="#nestedblock--clusters">below for nested schema</a>)</li>
+<li><code>name</code> (String) Name of the workspace.</li>
+<li><code>namespaces</code> (Block Set, Min: 1) The namespaces for the cluster. (see <a href="#nestedblock--namespaces">below for nested schema</a>)</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>backup_policy</code> (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see <a href="#nestedblock--backup_policy">below for nested schema</a>)</li>
+<li><code>cluster_rbac_binding</code> (Block List) The RBAC binding for the cluster. (see <a href="#nestedblock--cluster_rbac_binding">below for nested schema</a>)</li>
+<li><code>description</code> (String) Description of the workspace.</li>
+<li><code>tags</code> (Set of String) Set of tag strings in the form <code>key:value</code> applied to the workspace.</li>
+<li><code>workspace_quota</code> (Block List, Max: 1) Workspace quota default limits assigned to the namespace. (see <a href="#nestedblock--workspace_quota">below for nested schema</a>)</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--clusters&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>clusters</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>uid</code> (String) UID of the cluster attached to this workspace.</li>
+</ul>
+<p>Read-Only:</p>
+<ul>
+<li><code>cluster_name</code> (String)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--namespaces&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>namespaces</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>name</code> (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.</li>
+<li><code>resource_allocation</code> (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: <code>cpu_cores</code>, <code>memory_MiB</code>, <code>gpu</code>, and <code>gpu_provider</code>. Any other field names will not be honored by the system. For example, <code>{cpu_cores: &#x27;2&#x27;, memory_MiB: &#x27;2048&#x27;, gpu: &#x27;1&#x27;, gpu_provider: &#x27;nvidia&#x27;}</code></li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>cluster_resource_allocations</code> (Block List, Max: 1) (see <a href="#nestedblock--namespaces--cluster_resource_allocations">below for nested schema</a>)</li>
+<li><code>images_blacklist</code> (List of String) List of images to disallow for the namespace. For example, <code>[&#x27;nginx:latest&#x27;, &#x27;redis:latest&#x27;]</code></li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--namespaces--cluster_resource_allocations&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>namespaces.cluster_resource_allocations</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>resource_allocation</code> (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: <code>cpu_cores</code>, <code>memory_MiB</code>, <code>gpu</code>. Any other field names will not be honored by the system. For example, <code>{cpu_cores: &#x27;2&#x27;, memory_MiB: &#x27;2048&#x27;, gpu: &#x27;1&#x27;}</code>. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.</li>
+<li><code>uid</code> (String) UID of the cluster for this namespace-specific resource allocation.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--backup_policy&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>backup_policy</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>backup_location_id</code> (String) The ID of the backup location to use for the backup.</li>
+<li><code>expiry_in_hour</code> (Number) The number of hours after which the backup will be deleted. For example, if the expiry is set to 24, the backup will be deleted after 24 hours.</li>
+<li><code>prefix</code> (String) Prefix for the backup name. The backup name will be of the format &lt;prefix&gt;-&lt;cluster-name&gt;-&lt;timestamp&gt;.</li>
+<li><code>schedule</code> (String) The schedule for the backup. The schedule is specified in cron format. For example, to run the backup every day at 1:00 AM, the schedule should be set to <code>0 1 <em> </em> *</code>.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>cluster_uids</code> (Set of String) The list of cluster UIDs to include in the backup. If <code>include_all_clusters</code> is set to <code>true</code>, then all clusters will be included.</li>
+<li><code>include_all_clusters</code> (Boolean) Whether to include all clusters in the backup. If set to false, only the clusters specified in <code>cluster_uids</code> will be included.</li>
+<li><code>include_cluster_resources</code> (Boolean) Indicates whether to include cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.6, the include_cluster_resources attribute will be deprecated, and a new attribute, include_cluster_resources_mode, will be introduced.)</li>
+<li><code>include_cluster_resources_mode</code> (String) Specifies whether to include the cluster resources in the backup. Supported values are <code>always</code>, <code>never</code>, and <code>auto</code>.</li>
+<li><code>include_disks</code> (Boolean) Whether to include the disks in the backup. If set to false, only the cluster configuration will be backed up.</li>
+<li><code>namespaces</code> (Set of String) The list of Kubernetes namespaces to include in the backup. If not specified, all namespaces will be included.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cluster_rbac_binding&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cluster_rbac_binding</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>type</code> (String) The type of the RBAC binding. Can be one of the following values: <code>RoleBinding</code>, or <code>ClusterRoleBinding</code>.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>namespace</code> (String) The Kubernetes namespace of the RBAC binding. Required if &#x27;type&#x27; is set to &#x27;RoleBinding&#x27;.</li>
+<li><code>role</code> (Map of String) The role of the RBAC binding. Required if &#x27;type&#x27; is set to &#x27;RoleBinding&#x27;. Must include &#x27;name&#x27; and &#x27;kind&#x27; fields.</li>
+<li><code>subjects</code> (Block List) (see <a href="#nestedblock--cluster_rbac_binding--subjects">below for nested schema</a>)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cluster_rbac_binding--subjects&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cluster_rbac_binding.subjects</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>name</code> (String) The name of the subject. Required if &#x27;type&#x27; is set to &#x27;User&#x27; or &#x27;Group&#x27;.</li>
+<li><code>type</code> (String) The type of the subject. Can be one of the following values: <code>User</code>, <code>Group</code>, or <code>ServiceAccount</code>.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>namespace</code> (String) The Kubernetes namespace of the subject. Required if &#x27;type&#x27; is set to &#x27;ServiceAccount&#x27;.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--workspace_quota&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>workspace_quota</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>cpu</code> (Number) CPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.</li>
+<li><code>gpu</code> (Number) GPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.</li>
+<li><code>memory</code> (Number) Memory in Mib that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

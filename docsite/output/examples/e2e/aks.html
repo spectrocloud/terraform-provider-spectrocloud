@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AKS · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="active">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/e2e/index.html">E2E</a> / AKS</div>
+    <h1>AKS</h1>
+<h2>Configuration Files</h2>
+<div class="file-label">data_account.tf</div><pre><code class="language-hcl">data &quot;spectrocloud_cloudaccount_azure&quot; &quot;aks_account&quot; {
+  name = var.cluster_cloud_account_name
+}</code></pre>
+<div class="file-label">data_packs.tf</div><pre><code class="language-hcl">locals {
+  falco_version      = &quot;1.16.3&quot;
+  prometheus_version = &quot;30.0.3&quot;
+  fluentbit_version  = &quot;1.3.5&quot;
+}
+
+data &quot;spectrocloud_registry&quot; &quot;registry&quot; {
+  name = &quot;Public Repo&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;csi&quot; {
+  name         = &quot;csi-azure&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = &quot;1.0.0&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;cni&quot; {
+  name         = &quot;cni-kubenet&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = &quot;1.0.0&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;k8s&quot; {
+  name         = &quot;kubernetes-aks&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = &quot;1.23&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;ubuntu&quot; {
+  name         = &quot;ubuntu-aks&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = &quot;18.04&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;istio&quot; {
+  name         = &quot;istio&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = &quot;1.6.2&quot;
+}
+
+data &quot;spectrocloud_pack&quot; &quot;falco&quot; {
+  name         = &quot;falco&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = local.falco_version
+}
+
+data &quot;spectrocloud_pack&quot; &quot;prometheus-operator&quot; {
+  name         = &quot;prometheus-operator&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = local.prometheus_version
+}
+
+data &quot;spectrocloud_pack&quot; &quot;fluentbit&quot; {
+  name         = &quot;fluentbit&quot;
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = local.fluentbit_version
+}</code></pre>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;Spectro Cloud Endpoint&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Spectro Cloud API key&quot;
+}
+
+variable &quot;sc_project_name&quot; {
+  description = &quot;Spectro Cloud Project (e.g: Default)&quot;
+  default     = &quot;Default&quot;
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.sc_project_name
+}</code></pre>
+<div class="file-label">resource_cluster.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_aks&quot; &quot;aks&quot; {
+  name             = var.cluster1_name
+  tags             = [&quot;owner:dmitry&quot;]
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.aks_account.id
+
+  cloud_config {
+    subscription_id             = var.subscription_id
+    resource_group              = var.resource_group
+    ssh_key                     = var.ssh_key
+    region                      = var.region
+    override_cluster_api_config = &lt;&lt;-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
+  }
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
+  }
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.addon_profile.id
+  }
+
+  /*  backup_policy {
+    schedule                  = &quot;0 0 * * SUN&quot;
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = &quot;demo001-dmitry-backup&quot;
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  } */
+
+  scan_policy {
+    configuration_scan_schedule = &quot;0 0 * * SUN&quot;
+    penetration_scan_schedule   = &quot;0 0 * * SUN&quot;
+    conformance_scan_schedule   = &quot;0 0 1 * *&quot;
+  }
+
+  machine_pool {
+    name                 = &quot;system&quot;
+    count                = 1
+    instance_type        = &quot;Standard_D2s_v3&quot;
+    disk_size_gb         = 50
+    is_system_node_pool  = true
+    storage_account_type = &quot;Premium_LRS&quot;
+  }
+
+  machine_pool {
+    name                 = &quot;application&quot;
+    count                = 1
+    instance_type        = &quot;Standard_D2s_v3&quot;
+    disk_size_gb         = 50
+    is_system_node_pool  = false
+    storage_account_type = &quot;Premium_LRS&quot;
+  }
+
+}
+
+resource &quot;spectrocloud_cluster_aks&quot; &quot;aks2&quot; {
+  name             = var.cluster2_name
+  tags             = [&quot;owner:dmitry&quot;]
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.aks_account.id
+
+  cloud_config {
+    subscription_id             = var.subscription_id
+    resource_group              = var.resource_group
+    ssh_key                     = var.ssh_key
+    region                      = var.region
+    override_cluster_api_config = &lt;&lt;-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
+  }
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
+  }
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.addon_profile.id
+  }
+
+  /*  backup_policy {
+    schedule                  = &quot;0 0 * * SUN&quot;
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = &quot;demo001-dmitry-backup&quot;
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  } */
+
+  scan_policy {
+    configuration_scan_schedule = &quot;0 0 * * SUN&quot;
+    penetration_scan_schedule   = &quot;0 0 * * SUN&quot;
+    conformance_scan_schedule   = &quot;0 0 1 * *&quot;
+  }
+
+  machine_pool {
+    name                 = &quot;system&quot;
+    count                = 1
+    instance_type        = &quot;Standard_D2s_v3&quot;
+    disk_size_gb         = 50
+    is_system_node_pool  = true
+    storage_account_type = &quot;Premium_LRS&quot;
+  }
+
+  machine_pool {
+    name                 = &quot;application&quot;
+    count                = 1
+    instance_type        = &quot;Standard_D2s_v3&quot;
+    disk_size_gb         = 50
+    is_system_node_pool  = false
+    storage_account_type = &quot;Premium_LRS&quot;
+  }
+
+}</code></pre>
+<div class="file-label">resource_profile.tf</div><pre><code class="language-hcl">locals {
+  proxy_val = &lt;&lt;-EOT
+        manifests:
+          spectro-proxy:
+            namespace: &quot;cluster-{{ .spectro.system.cluster.uid }}&quot;
+
+            server: &quot;{{ .spectro.system.reverseproxy.server }}&quot;
+
+            # Cluster UID - DO NOT CHANGE (new3)
+            clusterUid: &quot;{{ .spectro.system.cluster.uid }}&quot;
+            subdomain: &quot;cluster-{{ .spectro.system.cluster.uid }}&quot;
+  EOT
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;infra_profile&quot; {
+  name        = &quot;aks-infra&quot;
+  description = &quot;Infra Cluster Profile&quot;
+  tags        = [&quot;owner:dmitry&quot;]
+  cloud       = &quot;aks&quot;
+  type        = &quot;cluster&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.ubuntu.name
+    tag    = &quot;LTS__18.4.x&quot;
+    uid    = data.spectrocloud_pack.ubuntu.id
+    values = &quot;foo: 1&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.k8s.name
+    tag    = &quot;1.23.5&quot;
+    uid    = data.spectrocloud_pack.k8s.id
+    values = data.spectrocloud_pack.k8s.values
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.cni.name
+    tag    = &quot;1.0.0&quot;
+    uid    = data.spectrocloud_pack.cni.id
+    values = data.spectrocloud_pack.cni.values
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.csi.name
+    tag    = &quot;1.0.0&quot;
+    uid    = data.spectrocloud_pack.csi.id
+    values = data.spectrocloud_pack.csi.values
+  }
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;addon_profile&quot; {
+  name        = &quot;application-standard&quot;
+  description = &quot;Application Cluster Profile&quot;
+  tags        = [&quot;owner:dmitry&quot;]
+  cloud       = &quot;all&quot;
+  type        = &quot;add-on&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.istio.name
+    tag    = &quot;1.6.2&quot;
+    uid    = data.spectrocloud_pack.istio.id
+    values = data.spectrocloud_pack.istio.values
+  }
+
+  pack {
+    name         = data.spectrocloud_pack.falco.name
+    tag          = local.falco_version
+    uid          = data.spectrocloud_pack.falco.id
+    values       = data.spectrocloud_pack.falco.values
+    registry_uid = data.spectrocloud_registry.registry.id
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.prometheus-operator.name
+    tag    = local.prometheus_version
+    uid    = data.spectrocloud_pack.prometheus-operator.id
+    values = replace(data.spectrocloud_pack.prometheus-operator.values, &quot;adminPassword: &quot;, &quot;adminPassword: admin-pr0mEtheus&quot;)
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.fluentbit.name
+    tag    = local.fluentbit_version
+    uid    = data.spectrocloud_pack.fluentbit.id
+    values = data.spectrocloud_pack.fluentbit.values
+  }
+
+  pack {
+    name = &quot;manifest-namespace&quot;
+    type = &quot;manifest&quot;
+    manifest {
+      name    = &quot;manifest-namespace&quot;
+      content = &lt;&lt;-EOT
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          labels:
+            app: wordpress
+            app3: wordpress786
+          name: wordpress
+      EOT
+    }
+  }
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl">##################################################################################
+# Spectro Cloud credentials
+##################################################################################
+sc_host         = &quot;{Enter Spectro Cloud API Host}&quot; #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = &quot;{Enter Spectro Cloud API Key}&quot;
+sc_project_name = &quot;{Enter Spectro Cloud Project Name}&quot; #e.g: Default</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl">variable &quot;cluster_cloud_account_name&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;backup_storage_location_name&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;cluster1_name&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;cluster2_name&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;subscription_id&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;ssh_key&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;region&quot; {
+  type    = string
+  default = &quot;&quot;
+}
+
+variable &quot;resource_group&quot; {
+  type    = string
+  default = &quot;&quot;
+}</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e/aks">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

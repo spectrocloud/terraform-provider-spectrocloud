@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Sources · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / Data Sources</div>
+    <h1>Data Sources</h1>
+<ul class="card-grid"><li><a href="appliance.html">Appliance</a><p>Provides details about a single appliance used for Edge Native cluster provisioning.</p></li>
+<li><a href="appliances.html">Appliances</a><p>Provides details about a set of appliances used for Edge Native cluster provisioning. Various attributes could be used to search for appliances like tags, status, health, and architecture.</p></li>
+<li><a href="application_profile.html">Application Profile</a><p>Use this data source to get the details of an existing application profile.</p></li>
+<li><a href="backup_storage_location.html">Backup Storage Location</a><p>Data source for looking up a backup storage location by ID or name.</p></li>
+<li><a href="cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a><p>Data source for looking up an Apache CloudStack cloud account by ID or name.</p></li>
+<li><a href="cloudaccount_aws.html">Cloudaccount AWS</a><p>A data source for retrieving information about an AWS cloud account registered in Palette.</p></li>
+<li><a href="cloudaccount_azure.html">Cloudaccount Azure</a><p>A data source for retrieving information about an Azure cloud account registered in Palette.</p></li>
+<li><a href="cloudaccount_custom.html">Cloudaccount Custom</a><p>Data source for looking up a custom cloud account by ID or name.</p></li>
+<li><a href="cloudaccount_gcp.html">Cloudaccount GCP</a><p>A data source for retrieving information about a GCP cloud account registered in Palette.</p></li>
+<li><a href="cloudaccount_maas.html">Cloudaccount MAAS</a><p>Data source for looking up a MaaS cloud account by ID or name.</p></li>
+<li><a href="cloudaccount_vsphere.html">Cloudaccount VSPHERE</a><p>Data source for looking up a vSphere cloud account by ID or name.</p></li>
+<li><a href="cluster.html">Cluster</a><p>Data source for looking up a cluster by name and retrieving connection details.</p></li>
+<li><a href="cluster_config_policy.html">Cluster Config Policy</a><p>Data source for retrieving information about a cluster config policy (maintenance policy).</p></li>
+<li><a href="cluster_config_template.html">Cluster Config Template</a><p>Data source for retrieving information about a cluster config template. Tech Preview: This data source is in tech preview and may undergo changes.</p></li>
+<li><a href="cluster_group.html">Cluster Group</a><p>Data source for looking up a cluster group by name within a given context.</p></li>
+<li><a href="cluster_profile.html">Cluster Profile</a><p>Data source for looking up a cluster profile by ID or name.</p></li>
+<li><a href="filter.html">Filter</a><p>Data source for looking up filter definitions by name.</p></li>
+<li><a href="ippool.html">IPPOOL</a><p>Data source for looking up a private cloud gateway IP pool by name.</p></li>
+<li><a href="macros.html">Macros</a><p>Use this data source to get the ID of a macros resource for use with terraform import.</p></li>
+<li><a href="pack.html">Pack</a><p>This data resource provides the ability to search for a pack in the Palette registries. It supports more advanced search criteria than the pack_simple data source.</p></li>
+<li><a href="pack_simple.html">Pack Simple</a><p>This data resource provides a simpler user experience for searching for a pack in Palette registries.</p></li>
+<li><a href="permission.html">Permission</a><p>Data source for looking up permissions by name and scope.</p></li>
+<li><a href="private_cloud_gateway.html">Private Cloud Gateway</a><p>A data resource to get the ID or name of Private Cloud Gateway.</p></li>
+<li><a href="privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a><p>Data source for looking up private cloud gateway DNS mappings.</p></li>
+<li><a href="project.html">Project</a><p>Data source for looking up a Spectro Cloud project by name.</p></li>
+<li><a href="registration_token.html">Registration Token</a><p>Data source for looking up a registration token by name or UID.</p></li>
+<li><a href="registry.html">Registry</a><p>Data source for looking up an OCI, Helm, or Spectro registry by name.</p></li>
+<li><a href="registry_helm.html">Registry Helm</a><p>Data source for looking up a Helm registry by name.</p></li>
+<li><a href="registry_oci.html">Registry Oci</a><p>Data source for looking up an OCI registry by name.</p></li>
+<li><a href="registry_pack.html">Registry Pack</a><p>Data source for looking up a Spectro pack registry by name.</p></li>
+<li><a href="role.html">Role</a><p>Data source for looking up a Spectro Cloud role by ID or name.</p></li>
+<li><a href="ssh_key.html">SSH Key</a><p>The SSH key data source allows you to retrieve information about SSH keys in Palette.</p></li>
+<li><a href="team.html">Team</a><p>Data source for looking up a team by ID or name.</p></li>
+<li><a href="user.html">User</a><p>Data source for looking up a user by ID or email address.</p></li>
+<li><a href="workspace.html">Workspace</a><p>Data source for looking up a Spectro Cloud workspace by name.</p></li></ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

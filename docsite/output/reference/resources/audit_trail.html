@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit Trail · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / Audit Trail</div>
+    <h1>Audit Trail</h1>
+<p>Resource for managing tenant audit trail data sinks (CloudWatch or Splunk) in Spectro Cloud.</p>
+<p>Audit trails forward Palette tenant audit logs to AWS CloudWatch or Splunk HEC. Each tenant supports at most one CloudWatch audit trail and one Splunk audit trail. Both sink types can be configured on the same tenant at the same time.</p>
+<p>CloudWatch audit trails are managed via <code>POST /v1/tenants/{tenantUID}/assets/dataSinks</code>. CloudWatch credentials and Splunk HEC settings are validated against Palette before create and update, matching the cloud account and tenant settings UI flow.</p>
+<h2>Example Usage</h2>
+<h3>CloudWatch with access keys</h3>
+<p>This example mirrors the tenant settings UI payload: log group <code>dev-hubble-audits</code> in <code>us-east-1</code> with secret credentials. Omit <code>stream</code> to write to the log group without a dedicated log stream.</p>
+<pre><code class="language-hcl">resource &quot;spectrocloud_audit_trail&quot; &quot;cloudwatch&quot; {
+  name = &quot;rag&quot;
+  type = &quot;cloudwatch&quot;
+
+  cloudwatch {
+    group  = &quot;dev-hubble-audits&quot;
+    region = &quot;us-east-1&quot;
+
+    credential_type = &quot;secret&quot;
+    access_key      = var.aws_access_key
+    secret_key      = var.aws_secret_key
+    partition       = &quot;aws&quot;
+  }
+}</code></pre>
+<h3>CloudWatch with STS</h3>
+<pre><code class="language-hcl">resource &quot;spectrocloud_audit_trail&quot; &quot;cloudwatch_sts&quot; {
+  name = &quot;rag-sts&quot;
+  type = &quot;cloudwatch&quot;
+
+  cloudwatch {
+    group  = &quot;dev-hubble-audits&quot;
+    region = &quot;us-east-1&quot;
+
+    credential_type = &quot;sts&quot;
+    arn             = var.aws_sts_role_arn
+    external_id     = var.aws_external_id
+    partition       = &quot;aws&quot;
+  }
+}</code></pre>
+<h3>Splunk HEC</h3>
+<pre><code class="language-hcl">resource &quot;spectrocloud_audit_trail&quot; &quot;splunk&quot; {
+  name = &quot;test-tf&quot;
+  type = &quot;splunk&quot;
+
+  splunk {
+    hec_url = &quot;https://http-inputs-example.splunkcloud.com:443&quot;
+    token   = var.splunk_hec_token
+    index   = &quot;main&quot;
+    source  = &quot;palette&quot;
+
+    tls_config {
+      insecure_skip_verify = false
+    }
+  }
+}</code></pre>
+<h2>Import</h2>
+<p>Import an audit trail using its Palette UID:</p>
+<pre><code class="language-console">terraform import spectrocloud_audit_trail.example &lt;uid&gt;</code></pre>
+<p>The provider detects whether the UID belongs to a Splunk or CloudWatch audit trail.</p>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>name</code> (String) Human-readable name for the audit trail.</li>
+<li><code>type</code> (String) Audit trail sink type. Allowed values are <code>cloudwatch</code> or <code>splunk</code>.</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>cloudwatch</code> (Block List, Max: 1) CloudWatch audit trail configuration. Required when <code>type</code> is <code>cloudwatch</code>. (see <a href="#nestedblock--cloudwatch">below for nested schema</a>)</li>
+<li><code>splunk</code> (Block List, Max: 1) Splunk HEC audit trail configuration. Required when <code>type</code> is <code>splunk</code>. (see <a href="#nestedblock--splunk">below for nested schema</a>)</li>
+<li><code>timeouts</code> (Block, Optional) (see <a href="#nestedblock--timeouts">below for nested schema</a>)</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cloudwatch&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cloudwatch</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>group</code> (String) CloudWatch log group name.</li>
+<li><code>region</code> (String) AWS region for CloudWatch.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>access_key</code> (String, Sensitive) AWS access key. Required when <code>credential_type</code> is <code>secret</code>.</li>
+<li><code>arn</code> (String) IAM role ARN. Required when <code>credential_type</code> is <code>sts</code>.</li>
+<li><code>credential_type</code> (String) AWS credential type. Allowed values are <code>secret</code> or <code>sts</code>. Default is <code>secret</code>.</li>
+<li><code>external_id</code> (String, Sensitive) External ID for STS role assumption. Used with <code>credential_type</code> <code>sts</code>.</li>
+<li><code>partition</code> (String) AWS partition. Allowed values are <code>aws</code> or <code>aws-us-gov</code>. Default is <code>aws</code>.</li>
+<li><code>secret_key</code> (String, Sensitive) AWS secret key. Required when <code>credential_type</code> is <code>secret</code>.</li>
+<li><code>stream</code> (String) Optional CloudWatch log stream name.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--splunk&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>splunk</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>hec_url</code> (String) Splunk HTTP Event Collector (HEC) URL.</li>
+<li><code>token</code> (String, Sensitive) Splunk HEC token.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>index</code> (String) Optional Splunk index. Uses the token default when empty.</li>
+<li><code>source</code> (String) Optional Splunk source. Uses the token default when empty.</li>
+<li><code>tls_config</code> (Block List, Max: 1) Optional TLS configuration for Splunk HEC. (see <a href="#nestedblock--splunk--tls_config">below for nested schema</a>)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--splunk--tls_config&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>splunk.tls_config</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>ca_cert_base64</code> (String) Base64-encoded CA certificate for self-signed Splunk instances.</li>
+<li><code>insecure_skip_verify</code> (Boolean) Skip TLS certificate verification when set to <code>true</code>. Default is <code>false</code>.</li>
+</ul>
+<p>Read-Only:</p>
+<ul>
+<li><code>tls_verification</code> (Boolean) Whether TLS certificate verification is enabled. Computed as the inverse of <code>insecure_skip_verify</code>.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--timeouts&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>timeouts</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>create</code> (String)</li>
+<li><code>delete</code> (String)</li>
+<li><code>update</code> (String)</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

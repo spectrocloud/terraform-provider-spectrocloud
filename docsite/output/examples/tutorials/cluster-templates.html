@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster Templates · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="active">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/tutorials/index.html">Tutorials</a> / Cluster Templates</div>
+    <h1>Cluster Templates</h1>
+<p>End-to-end example accompanying the Spectro Cloud tutorial <a href="https://docs.spectrocloud.com/tutorials/clusters/cluster-templates/standardize-clusters-with-cluster-templates-terraform/">Standardize Clusters with Cluster Templates using Terraform</a>.</p>
+<p>This example shows how to standardize and later roll out an upgrade across a fleet of clusters using a <code>spectrocloud_cluster_config_template</code>, rather than managing each cluster&#x27;s profile version individually. It provisions, per enabled cloud (AWS and/or Azure):</p>
+<p>attaches the maintenance policy</p>
+<p><code>app_replicas</code> profile variable to a different value (1 vs. 2)</p>
+<ul>
+<li>A maintenance policy (<code>spectrocloud_cluster_config_policy</code>) defining a weekly upgrade window</li>
+<li>A cluster profile (v1.0.0: OS, Kubernetes, CNI, CSI, plus the Hello Universe sample app)</li>
+<li>A cluster template (<code>spectrocloud_cluster_config_template</code>) that pins a cluster profile version and</li>
+<li>Two clusters — <code>dev</code> and <code>prod</code> — both built from the same template, but each overriding the</li>
+</ul>
+<h2>The Day-2 workflow this demonstrates</h2>
+<p><code>false</code>, <code>terraform apply</code> creates the template pointing at profile v1.0.0, and both the <code>dev</code> and <code>prod</code> clusters.</p>
+<p>profile v1.1.0, which adds the Kubecost add-on — the template still points at v1.0.0, so existing clusters are unaffected.</p>
+<p>now points at v1.1.0. This alone does not change already-running clusters — it changes what new clusters deployed from the template will use, and prepares the template for an explicit rollout.</p>
+<p><code>2026-05-12T14:30:00Z</code>) and re-apply. This immediately triggers an upgrade of every cluster launched from the template — both <code>dev</code> and <code>prod</code> — to the template&#x27;s current profile version. Change this timestamp to any new value to re-trigger a later upgrade.</p>
+<ol>
+<li><strong>Initial deploy:</strong> with <code>create_new_profile_version</code> and <code>update_template_profile_version</code> both</li>
+<li><strong>Add a new profile version:</strong> set <code>create_new_profile_version = true</code> and re-apply. This creates</li>
+<li><strong>Roll the template forward:</strong> set <code>update_template_profile_version = true</code> and re-apply. The template</li>
+<li><strong>Trigger the upgrade:</strong> set <code>upgrade_now_timestamp</code> to the current RFC3339 timestamp (for example</li>
+</ol>
+<p>The maintenance policy&#x27;s weekly schedule governs <em>routine</em> upgrade windows; <code>upgrade_now</code> is an explicit override that upgrades immediately regardless of that schedule.</p>
+<h2>Prerequisites</h2>
+<p>You will need the following before getting started:</p>
+<p><code>sc_api_key</code> variable).</p>
+<ol>
+<li>A Palette API key, exported as the <code>SPECTROCLOUD_APIKEY</code> environment variable (or supplied via the</li>
+<li>A cloud account already registered in your Palette project settings for each cloud you enable.</li>
+<li>For AWS: an existing EC2 key pair in the region you deploy to.</li>
+<li>Terraform 1.9 or later.</li>
+</ol>
+<h2>Instructions</h2>
+<p>Clone this repository to a local directory, and change directory to <code>examples/tutorials/cluster-templates</code>. Proceed with the following:</p>
+<p>file <code>terraform.tfvars</code>.</p>
+<p>values relevant to those clouds.</p>
+<p>policy, template, and both <code>dev</code>/<code>prod</code> clusters at profile v1.0.0.</p>
+<ol>
+<li>From the current directory, copy the template variable file <code>terraform.template.tfvars</code> to a new</li>
+<li>Set the <code>deploy-aws</code> and/or <code>deploy-azure</code> toggle(s), and fill in the placeholder (<code>REPLACE ME</code>)</li>
+<li>Initialize and run terraform: <code>terraform init &amp;&amp; terraform apply</code>. This deploys the maintenance</li>
+<li>Walk through the Day-2 workflow above by editing <code>terraform.tfvars</code> and re-applying at each step.</li>
+</ol>
+<h2>Clean up</h2>
+<p>Run the destroy operation:</p>
+<pre><code class="language-shell">terraform destroy</code></pre>
+<h2>Configuration Files</h2>
+<div class="file-label">cluster_profiles.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_profile&quot; &quot;aws_profile&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name        = &quot;tf-cluster-template-profile-aws&quot;
+  description = &quot;Cluster profile for the cluster templates tutorial&quot;
+  cloud       = &quot;aws&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.aws_ubuntu.name
+    tag    = data.spectrocloud_pack.aws_ubuntu.version
+    uid    = data.spectrocloud_pack.aws_ubuntu.id
+    values = data.spectrocloud_pack.aws_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_k8s.name
+    tag    = data.spectrocloud_pack.aws_k8s.version
+    uid    = data.spectrocloud_pack.aws_k8s.id
+    values = data.spectrocloud_pack.aws_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_cni.name
+    tag    = data.spectrocloud_pack.aws_cni.version
+    uid    = data.spectrocloud_pack.aws_cni.id
+    values = data.spectrocloud_pack.aws_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_csi.name
+    tag    = data.spectrocloud_pack.aws_csi.version
+    uid    = data.spectrocloud_pack.aws_csi.id
+    values = data.spectrocloud_pack.aws_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-hello-universe.yaml&quot;, {
+      port = var.app_port
+    })
+    type = &quot;oci&quot;
+  }
+
+  profile_variables {
+    variable {
+      name          = &quot;app_replicas&quot;
+      display_name  = &quot;Hello Universe Replicas&quot;
+      format        = &quot;number&quot;
+      description   = &quot;Number of replicas for the hello-universe workload&quot;
+      default_value = &quot;1&quot;
+      required      = true
+    }
+  }
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;azure_profile&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name        = &quot;tf-cluster-template-profile-azure&quot;
+  description = &quot;Cluster profile for the cluster templates tutorial&quot;
+  cloud       = &quot;azure&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.azure_ubuntu.name
+    tag    = data.spectrocloud_pack.azure_ubuntu.version
+    uid    = data.spectrocloud_pack.azure_ubuntu.id
+    values = data.spectrocloud_pack.azure_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_k8s.name
+    tag    = data.spectrocloud_pack.azure_k8s.version
+    uid    = data.spectrocloud_pack.azure_k8s.id
+    values = data.spectrocloud_pack.azure_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_cni.name
+    tag    = data.spectrocloud_pack.azure_cni.version
+    uid    = data.spectrocloud_pack.azure_cni.id
+    values = data.spectrocloud_pack.azure_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_csi.name
+    tag    = data.spectrocloud_pack.azure_csi.version
+    uid    = data.spectrocloud_pack.azure_csi.id
+    values = data.spectrocloud_pack.azure_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-hello-universe.yaml&quot;, {
+      port = var.app_port
+    })
+    type = &quot;oci&quot;
+  }
+
+  profile_variables {
+    variable {
+      name          = &quot;app_replicas&quot;
+      display_name  = &quot;Hello Universe Replicas&quot;
+      format        = &quot;number&quot;
+      description   = &quot;Number of replicas for the hello-universe workload&quot;
+      default_value = &quot;1&quot;
+      required      = true
+    }
+  }
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;aws_profile_v110&quot; {
+  count = (var.deploy-aws &amp;&amp; var.create_new_profile_version) ? 1 : 0
+
+  name        = &quot;tf-cluster-template-profile-aws&quot;
+  description = &quot;Cluster profile for the cluster templates tutorial&quot;
+  cloud       = &quot;aws&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.aws_ubuntu.name
+    tag    = data.spectrocloud_pack.aws_ubuntu.version
+    uid    = data.spectrocloud_pack.aws_ubuntu.id
+    values = data.spectrocloud_pack.aws_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_k8s.name
+    tag    = data.spectrocloud_pack.aws_k8s.version
+    uid    = data.spectrocloud_pack.aws_k8s.id
+    values = data.spectrocloud_pack.aws_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_cni.name
+    tag    = data.spectrocloud_pack.aws_cni.version
+    uid    = data.spectrocloud_pack.aws_cni.id
+    values = data.spectrocloud_pack.aws_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_csi.name
+    tag    = data.spectrocloud_pack.aws_csi.version
+    uid    = data.spectrocloud_pack.aws_csi.id
+    values = data.spectrocloud_pack.aws_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-hello-universe.yaml&quot;, {
+      port = var.app_port
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.kubecost[0].name
+    tag  = data.spectrocloud_pack.kubecost[0].version
+    uid  = data.spectrocloud_pack.kubecost[0].id
+    type = &quot;oci&quot;
+  }
+
+  profile_variables {
+    variable {
+      name          = &quot;app_replicas&quot;
+      display_name  = &quot;Hello Universe Replicas&quot;
+      format        = &quot;number&quot;
+      description   = &quot;Number of replicas for the hello-universe workload&quot;
+      default_value = &quot;1&quot;
+      required      = true
+    }
+  }
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;azure_profile_v110&quot; {
+  count = (var.deploy-azure &amp;&amp; var.create_new_profile_version) ? 1 : 0
+
+  name        = &quot;tf-cluster-template-profile-azure&quot;
+  description = &quot;Cluster profile for the cluster templates tutorial&quot;
+  cloud       = &quot;azure&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.azure_ubuntu.name
+    tag    = data.spectrocloud_pack.azure_ubuntu.version
+    uid    = data.spectrocloud_pack.azure_ubuntu.id
+    values = data.spectrocloud_pack.azure_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_k8s.name
+    tag    = data.spectrocloud_pack.azure_k8s.version
+    uid    = data.spectrocloud_pack.azure_k8s.id
+    values = data.spectrocloud_pack.azure_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_cni.name
+    tag    = data.spectrocloud_pack.azure_cni.version
+    uid    = data.spectrocloud_pack.azure_cni.id
+    values = data.spectrocloud_pack.azure_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_csi.name
+    tag    = data.spectrocloud_pack.azure_csi.version
+    uid    = data.spectrocloud_pack.azure_csi.id
+    values = data.spectrocloud_pack.azure_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-hello-universe.yaml&quot;, {
+      port = var.app_port
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.kubecost[0].name
+    tag  = data.spectrocloud_pack.kubecost[0].version
+    uid  = data.spectrocloud_pack.kubecost[0].id
+    type = &quot;oci&quot;
+  }
+
+  profile_variables {
+    variable {
+      name          = &quot;app_replicas&quot;
+      display_name  = &quot;Hello Universe Replicas&quot;
+      format        = &quot;number&quot;
+      description   = &quot;Number of replicas for the hello-universe workload&quot;
+      default_value = &quot;1&quot;
+      required      = true
+    }
+  }
+}</code></pre>
+<div class="file-label">cluster_templates.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_config_template&quot; &quot;aws_template&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name       = &quot;tf-cluster-template-aws&quot;
+  cloud_type = &quot;aws&quot;
+  context    = &quot;project&quot;
+
+  cluster_profile {
+    id = (var.create_new_profile_version &amp;&amp; var.update_template_profile_version) ? spectrocloud_cluster_profile.aws_profile_v110[0].id : spectrocloud_cluster_profile.aws_profile[0].id
+  }
+
+  policy {
+    id   = spectrocloud_cluster_config_policy.maintenance.id
+    kind = &quot;maintenance&quot;
+  }
+
+  upgrade_now = var.upgrade_now_timestamp != &quot;&quot; ? var.upgrade_now_timestamp : null
+}
+
+resource &quot;spectrocloud_cluster_config_template&quot; &quot;azure_template&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name       = &quot;tf-cluster-template-azure&quot;
+  cloud_type = &quot;azure&quot;
+  context    = &quot;project&quot;
+
+  cluster_profile {
+    id = (var.create_new_profile_version &amp;&amp; var.update_template_profile_version) ? spectrocloud_cluster_profile.azure_profile_v110[0].id : spectrocloud_cluster_profile.azure_profile[0].id
+  }
+
+  policy {
+    id   = spectrocloud_cluster_config_policy.maintenance.id
+    kind = &quot;maintenance&quot;
+  }
+
+  upgrade_now = var.upgrade_now_timestamp != &quot;&quot; ? var.upgrade_now_timestamp : null
+}</code></pre>
+<div class="file-label">clusters.tf</div><pre><code class="language-hcl">#############
+# AWS Cluster
+#############
+
+resource &quot;spectrocloud_cluster_aws&quot; &quot;dev_cluster&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name             = &quot;tf-dev-cluster&quot;
+  cluster_timezone = &quot;UTC&quot;
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account[0].id
+
+  cloud_config {
+    region       = var.aws-region
+    ssh_key_name = var.aws-key-pair-name
+  }
+
+  cluster_template {
+    id = spectrocloud_cluster_config_template.aws_template[0].id
+
+    cluster_profile {
+      id = spectrocloud_cluster_profile.aws_profile[0].id
+      variables = {
+        &quot;app_replicas&quot; = &quot;1&quot;
+      }
+    }
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.aws_control_plane_nodes.count
+    instance_type           = var.aws_control_plane_nodes.instance_type
+    disk_size_gb            = var.aws_control_plane_nodes.disk_size_gb
+    azs                     = var.aws_control_plane_nodes.availability_zones
+  }
+
+  machine_pool {
+    name          = &quot;worker-pool&quot;
+    count         = var.aws_worker_nodes.count
+    instance_type = var.aws_worker_nodes.instance_type
+    disk_size_gb  = var.aws_worker_nodes.disk_size_gb
+    azs           = var.aws_worker_nodes.availability_zones
+  }
+
+  timeouts {
+    create = &quot;60m&quot;
+    delete = &quot;60m&quot;
+  }
+}
+
+##################
+# AWS Prod Cluster
+##################
+
+resource &quot;spectrocloud_cluster_aws&quot; &quot;prod_cluster&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name             = &quot;tf-prod-cluster&quot;
+  cluster_timezone = &quot;UTC&quot;
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account[0].id
+
+  cloud_config {
+    region       = var.aws-region
+    ssh_key_name = var.aws-key-pair-name
+  }
+
+  cluster_template {
+    id = spectrocloud_cluster_config_template.aws_template[0].id
+
+    cluster_profile {
+      id = spectrocloud_cluster_profile.aws_profile[0].id
+      variables = {
+        &quot;app_replicas&quot; = &quot;2&quot;
+      }
+    }
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.aws_control_plane_nodes.count
+    instance_type           = var.aws_control_plane_nodes.instance_type
+    disk_size_gb            = var.aws_control_plane_nodes.disk_size_gb
+    azs                     = var.aws_control_plane_nodes.availability_zones
+  }
+
+  machine_pool {
+    name          = &quot;worker-pool&quot;
+    count         = var.aws_worker_nodes.count
+    instance_type = var.aws_worker_nodes.instance_type
+    disk_size_gb  = var.aws_worker_nodes.disk_size_gb
+    azs           = var.aws_worker_nodes.availability_zones
+  }
+
+  timeouts {
+    create = &quot;60m&quot;
+    delete = &quot;60m&quot;
+  }
+}
+
+###############
+# Azure Cluster
+###############
+
+resource &quot;spectrocloud_cluster_azure&quot; &quot;dev_cluster&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name             = &quot;tf-dev-cluster-azure&quot;
+  cluster_timezone = &quot;UTC&quot;
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account[0].id
+
+  cloud_config {
+    subscription_id = var.azure_subscription_id
+    resource_group  = var.azure_resource_group
+    region          = var.azure-region
+    ssh_key         = tls_private_key.tutorial_ssh_key_azure[0].public_key_openssh
+  }
+
+  cluster_template {
+    id = spectrocloud_cluster_config_template.azure_template[0].id
+
+    cluster_profile {
+      id = spectrocloud_cluster_profile.azure_profile[0].id
+      variables = {
+        &quot;app_replicas&quot; = &quot;1&quot;
+      }
+    }
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.azure_control_plane_nodes.count
+    instance_type           = var.azure_control_plane_nodes.instance_type
+    azs                     = var.azure-use-azs ? var.azure_control_plane_nodes.azs : [&quot;&quot;]
+    is_system_node_pool     = var.azure_control_plane_nodes.is_system_node_pool
+    disk {
+      size_gb = var.azure_control_plane_nodes.disk_size_gb
+      type    = &quot;Standard_LRS&quot;
+    }
+  }
+
+  machine_pool {
+    name                = &quot;worker-pool&quot;
+    count               = var.azure_worker_nodes.count
+    instance_type       = var.azure_worker_nodes.instance_type
+    azs                 = var.azure-use-azs ? var.azure_worker_nodes.azs : [&quot;&quot;]
+    is_system_node_pool = var.azure_worker_nodes.is_system_node_pool
+  }
+
+  timeouts {
+    create = &quot;60m&quot;
+    delete = &quot;60m&quot;
+  }
+}
+
+####################
+# Azure Prod Cluster
+####################
+
+resource &quot;spectrocloud_cluster_azure&quot; &quot;prod_cluster&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name             = &quot;tf-prod-cluster-azure&quot;
+  cluster_timezone = &quot;UTC&quot;
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account[0].id
+
+  cloud_config {
+    subscription_id = var.azure_subscription_id
+    resource_group  = var.azure_resource_group
+    region          = var.azure-region
+    ssh_key         = tls_private_key.tutorial_ssh_key_azure[0].public_key_openssh
+  }
+
+  cluster_template {
+    id = spectrocloud_cluster_config_template.azure_template[0].id
+
+    cluster_profile {
+      id = spectrocloud_cluster_profile.azure_profile[0].id
+      variables = {
+        &quot;app_replicas&quot; = &quot;2&quot;
+      }
+    }
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.azure_control_plane_nodes.count
+    instance_type           = var.azure_control_plane_nodes.instance_type
+    azs                     = var.azure-use-azs ? var.azure_control_plane_nodes.azs : [&quot;&quot;]
+    is_system_node_pool     = var.azure_control_plane_nodes.is_system_node_pool
+    disk {
+      size_gb = var.azure_control_plane_nodes.disk_size_gb
+      type    = &quot;Standard_LRS&quot;
+    }
+  }
+
+  machine_pool {
+    name                = &quot;worker-pool&quot;
+    count               = var.azure_worker_nodes.count
+    instance_type       = var.azure_worker_nodes.instance_type
+    azs                 = var.azure-use-azs ? var.azure_worker_nodes.azs : [&quot;&quot;]
+    is_system_node_pool = var.azure_worker_nodes.is_system_node_pool
+  }
+
+  timeouts {
+    create = &quot;60m&quot;
+    delete = &quot;60m&quot;
+  }
+}</code></pre>
+<div class="file-label">data.tf</div><pre><code class="language-hcl">########################################
+# Data resources for the cluster profile
+########################################
+
+data &quot;spectrocloud_registry&quot; &quot;public_registry&quot; {
+  name = &quot;Public Repo&quot;
+}
+
+data &quot;spectrocloud_registry&quot; &quot;community_registry&quot; {
+  name = &quot;Palette Community Registry&quot;
+}
+
+#############
+# AWS
+#############
+
+data &quot;spectrocloud_cloudaccount_aws&quot; &quot;account&quot; {
+  count = var.deploy-aws ? 1 : 0
+  name  = var.aws-cloud-account-name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_ubuntu&quot; {
+  name         = &quot;ubuntu-aws&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.35.2&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_cni&quot; {
+  name         = &quot;cni-calico&quot;
+  version      = &quot;3.31.4&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_csi&quot; {
+  name         = &quot;csi-aws-ebs&quot;
+  version      = &quot;1.59.0&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+#############
+# Azure
+#############
+
+data &quot;spectrocloud_cloudaccount_azure&quot; &quot;account&quot; {
+  count = var.deploy-azure ? 1 : 0
+  name  = var.azure-cloud-account-name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_ubuntu&quot; {
+  name         = &quot;ubuntu-azure&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.35.2&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_cni&quot; {
+  name         = &quot;cni-calico-azure&quot;
+  version      = &quot;3.31.4&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_csi&quot; {
+  name         = &quot;csi-azure&quot;
+  version      = &quot;1.34.2&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+#####################
+# Hello Universe Pack
+#####################
+
+data &quot;spectrocloud_pack&quot; &quot;hellouniverse&quot; {
+  name         = &quot;hello-universe&quot;
+  version      = &quot;1.3.0&quot;
+  registry_uid = data.spectrocloud_registry.community_registry.id
+}
+
+###########
+# Kubecost
+###########
+
+data &quot;spectrocloud_pack&quot; &quot;kubecost&quot; {
+  count        = var.create_new_profile_version ? 1 : 0
+  name         = &quot;cost-analyzer&quot;
+  version      = &quot;1.103.3&quot;
+  registry_uid = data.spectrocloud_registry.community_registry.id
+}</code></pre>
+<div class="file-label">maintenance_policy.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_config_policy&quot; &quot;maintenance&quot; {
+  name    = &quot;tf-maintenance-policy&quot;
+  context = &quot;project&quot;
+
+  schedules {
+    name         = &quot;weekly-sunday&quot;
+    start_cron   = &quot;0 0 * * SUN&quot;
+    duration_hrs = 4
+  }
+}</code></pre>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.29.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+
+    tls = {
+      source  = &quot;hashicorp/tls&quot;
+      version = &quot;4.0.4&quot;
+    }
+  }
+
+  required_version = &quot;&gt;= 1.9&quot;
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;The Palette API endpoint to connect to.&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Your Palette API key. Can also be set via the SPECTROCLOUD_APIKEY environment variable instead of this variable.&quot;
+  default     = null
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.palette-project
+}</code></pre>
+<div class="file-label">ssh-key.tf</div><pre><code class="language-hcl">###############
+# Azure SSH Key
+###############
+
+resource &quot;tls_private_key&quot; &quot;tutorial_ssh_key_azure&quot; {
+  count     = var.deploy-azure ? 1 : 0
+  algorithm = &quot;RSA&quot;
+  rsa_bits  = &quot;4096&quot;
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl">#####################
+# Palette Settings
+#####################
+palette-project = &quot;Default&quot; # The name of your project in Palette.
+
+##############################
+# Hello Universe Configuration
+##############################
+app_port = 8080 # The cluster port number on which the service will listen for incoming traffic.
+
+create_new_profile_version = false # Set to true to create cluster profile version 1.1.0 with Kubecost.
+
+update_template_profile_version = false # Set to true after profile v1.1.0 is created to update the cluster template.
+
+upgrade_now_timestamp = &quot;&quot; # Set to the current RFC3339 timestamp (for example, &quot;2026-05-12T14:30:00Z&quot;) to trigger an immediate upgrade of all clusters launched from the template. Change the value each time you want to re-trigger an upgrade.
+
+###########################
+# AWS Deployment Settings
+############################
+deploy-aws = false # Set to true to deploy to AWS.
+
+aws-cloud-account-name = &quot;REPLACE ME&quot;
+aws-region             = &quot;REPLACE ME&quot;
+aws-key-pair-name      = &quot;REPLACE ME&quot;
+
+aws_control_plane_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = true
+  instance_type      = &quot;m4.2xlarge&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;]
+}
+
+aws_worker_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = false
+  instance_type      = &quot;m4.2xlarge&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;]
+}
+
+###########################
+# Azure Deployment Settings
+############################
+deploy-azure = false # Set to true to deploy to Azure.
+
+azure-cloud-account-name = &quot;REPLACE ME&quot;
+azure_subscription_id    = &quot;REPLACE ME&quot;
+azure_resource_group     = &quot;REPLACE ME&quot;
+azure-use-azs            = false
+azure-region             = &quot;REPLACE ME&quot;
+
+azure_control_plane_nodes = {
+  count               = &quot;1&quot;
+  control_plane       = true
+  instance_type       = &quot;Standard_D4s_v5&quot;
+  disk_size_gb        = &quot;60&quot;
+  azs                 = [&quot;REPLACE ME&quot;]
+  is_system_node_pool = false
+}
+
+azure_worker_nodes = {
+  count               = &quot;1&quot;
+  control_plane       = false
+  instance_type       = &quot;Standard_D4s_v5&quot;
+  disk_size_gb        = &quot;60&quot;
+  azs                 = [&quot;REPLACE ME&quot;]
+  is_system_node_pool = false
+}</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl">#########
+# Palette
+#########
+
+variable &quot;palette-project&quot; {
+  description = &quot;Palette project name&quot;
+  type        = string
+
+  validation {
+    condition     = var.palette-project != &quot;&quot;
+    error_message = &quot;Provide the correct Palette project.&quot;
+  }
+}
+
+#####################
+# Hello Universe
+#####################
+
+variable &quot;app_port&quot; {
+  type        = number
+  description = &quot;The cluster port number on which the service will listen for incoming traffic.&quot;
+}
+
+variable &quot;create_new_profile_version&quot; {
+  type        = bool
+  description = &quot;Create cluster profile version 1.1.0 with Kubecost added. Set to true after the initial clusters are deployed.&quot;
+  default     = false
+}
+
+variable &quot;update_template_profile_version&quot; {
+  type        = bool
+  description = &quot;Update the cluster template to reference cluster profile version 1.1.0. Requires create_new_profile_version to be true and already applied.&quot;
+  default     = false
+}
+
+variable &quot;upgrade_now_timestamp&quot; {
+  type        = string
+  description = &quot;RFC3339 timestamp that triggers an immediate upgrade on all template clusters when changed. Set a new timestamp to re-trigger the upgrade. Leave empty to skip.&quot;
+  default     = &quot;&quot;
+}
+
+#######
+# AWS
+#######
+
+variable &quot;aws-cloud-account-name&quot; {
+  type        = string
+  description = &quot;The name of your AWS account as assigned in Palette.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-cloud-account-name != &quot;REPLACE ME&quot; &amp;&amp; var.aws-cloud-account-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS cloud account name.&quot;
+  }
+}
+
+variable &quot;deploy-aws&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on AWS.&quot;
+}
+
+variable &quot;aws-region&quot; {
+  type        = string
+  description = &quot;AWS region.&quot;
+  default     = &quot;us-east-1&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-region != &quot;REPLACE ME&quot; &amp;&amp; var.aws-region != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS region.&quot;
+  }
+}
+
+variable &quot;aws-key-pair-name&quot; {
+  type        = string
+  description = &quot;The name of the AWS key pair to use for SSH access to the cluster.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-key-pair-name != &quot;REPLACE ME&quot; &amp;&amp; var.aws-key-pair-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS SSH key pair name.&quot;
+  }
+}
+
+variable &quot;aws_control_plane_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = true
+    instance_type      = &quot;m4.2xlarge&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-east-1a&quot;]
+  }
+  description = &quot;AWS control plane nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? length(var.aws_control_plane_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.aws_control_plane_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+
+variable &quot;aws_worker_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = false
+    instance_type      = &quot;m4.2xlarge&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-east-1a&quot;]
+  }
+  description = &quot;AWS worker nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? length(var.aws_worker_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.aws_worker_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+
+#########
+# Azure
+#########
+
+variable &quot;azure-cloud-account-name&quot; {
+  type        = string
+  description = &quot;The name of your Azure account as assigned in Palette.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure-cloud-account-name != &quot;REPLACE ME&quot; &amp;&amp; var.azure-cloud-account-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure cloud account name.&quot;
+  }
+}
+
+variable &quot;deploy-azure&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on Azure.&quot;
+}
+
+variable &quot;azure_subscription_id&quot; {
+  type        = string
+  description = &quot;Azure subscription ID.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure_subscription_id != &quot;REPLACE ME&quot; &amp;&amp; var.azure_subscription_id != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure subscription ID.&quot;
+  }
+}
+
+variable &quot;azure_resource_group&quot; {
+  type        = string
+  description = &quot;Azure resource group.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure_resource_group != &quot;REPLACE ME&quot; &amp;&amp; var.azure_resource_group != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure resource group name.&quot;
+  }
+}
+
+variable &quot;azure-use-azs&quot; {
+  type        = bool
+  description = &quot;A flag for configuring whether to use Azure Availability Zones. Check if your Azure region supports availability zones by reviewing the [Azure Regions and Availability Zones](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support) resource.&quot;
+}
+
+variable &quot;azure-region&quot; {
+  type        = string
+  description = &quot;Azure region.&quot;
+  default     = &quot;eastus&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure-region != &quot;REPLACE ME&quot; &amp;&amp; var.azure-region != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure region name.&quot;
+  }
+}
+
+variable &quot;azure_control_plane_nodes&quot; {
+  type = object({
+    count               = string
+    control_plane       = bool
+    instance_type       = string
+    disk_size_gb        = string
+    azs                 = list(string)
+    is_system_node_pool = bool
+  })
+  default = {
+    count               = &quot;1&quot;
+    control_plane       = true
+    instance_type       = &quot;Standard_D4s_v5&quot;
+    disk_size_gb        = &quot;60&quot;
+    azs                 = [&quot;1&quot;]
+    is_system_node_pool = false
+  }
+  description = &quot;Azure control plane nodes configuration.&quot;
+}
+
+variable &quot;azure_worker_nodes&quot; {
+  type = object({
+    count               = string
+    control_plane       = bool
+    instance_type       = string
+    disk_size_gb        = string
+    azs                 = list(string)
+    is_system_node_pool = bool
+  })
+  default = {
+    count               = &quot;1&quot;
+    control_plane       = false
+    instance_type       = &quot;Standard_D4s_v5&quot;
+    disk_size_gb        = &quot;60&quot;
+    azs                 = [&quot;1&quot;]
+    is_system_node_pool = false
+  }
+  description = &quot;Azure worker nodes configuration.&quot;
+}</code></pre>
+<div class="file-label">manifests/values-hello-universe.yaml</div><pre><code class="language-yaml">pack:
+  content:
+    images:
+      - image: ghcr.io/spectrocloud/hello-universe:1.3.0
+
+manifests:
+  hello-universe:
+    images:
+      hellouniverse: ghcr.io/spectrocloud/hello-universe:1.3.0
+    apiEnabled: false
+    namespace: hello-universe
+    port: ${port}
+    replicas: &quot;{{.spectro.var.app_replicas}}&quot;</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/tutorials/cluster-templates">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

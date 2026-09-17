@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge Native · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="active">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/e2e/index.html">E2E</a> / Edge Native</div>
+    <h1>Edge Native</h1>
+<p>End-to-end example of provisioning a new Edge Native cluster with all of its dependencies. This terraform configuration will provision the following resources on Spectro Cloud:</p>
+<ul>
+<li>Edge Native Cluster Profile</li>
+<li>Edge Native Cluster</li>
+</ul>
+<h2>Instructions:</h2>
+<p>Clone this repository to a local directory, and then change directory to <code>examples/e2e/edge-native</code>. Proceed with the following:</p>
+<p><a href="https://docs.spectrocloud.com/appliances">Edge Native Appliance</a>.</p>
+<ol>
+<li>Follow the Spectro Cloud documentation to create appropriate appliances:</li>
+<li>From the current directory, copy the template variable file <code>terraform.template.tfvars</code> to a new file <code>terraform.tfvars</code>.</li>
+<li>Specify and update all the placeholder values in the <code>terraform.tfvars</code> file.</li>
+<li>Initialize and run terraform: <code>terraform init &amp;&amp; terraform apply</code>.</li>
+<li>Wait for the cluster creation to finish.</li>
+</ol>
+<p>Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly.</p>
+<p>Export the kubeconfig and check cluster pods:</p>
+<pre><code class="language-shell">export KUBECONFIG=kubeconfig_ne-2
+kubectl get pod -A</code></pre>
+<h2>Clean up:</h2>
+<p>Run the destroy operation:</p>
+<pre><code class="language-shell">terraform destroy</code></pre>
+<h2>Configuration Files</h2>
+<div class="file-label">kubectl.tf</div><pre><code class="language-hcl">resource &quot;local_file&quot; &quot;kubeconfig&quot; {
+  content              = spectrocloud_cluster_edge_native.cluster.kubeconfig
+  filename             = &quot;kubeconfig_ne-2&quot;
+  file_permission      = &quot;0644&quot;
+  directory_permission = &quot;0755&quot;
+  #  sensitive_content = true
+}</code></pre>
+<div class="file-label">locals.tf</div><pre><code class="language-hcl">locals {
+  cluster_kubeconfig = spectrocloud_cluster_edge_native.cluster.kubeconfig
+}</code></pre>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;Spectro Cloud Endpoint&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Spectro Cloud API key&quot;
+  default     = &quot;&quot;
+}
+
+variable &quot;sc_project_name&quot; {
+  description = &quot;Spectro Cloud Project (e.g: Default)&quot;
+  default     = &quot;Default&quot;
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.sc_project_name
+  trace        = true
+}</code></pre>
+<div class="file-label">resource_appliances.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_appliance&quot; &quot;appliance0&quot; {
+  uid       = &quot;edgev2-nik-0&quot;
+  arch_type = &quot;amd64&quot;
+  wait      = true
+}
+
+resource &quot;spectrocloud_appliance&quot; &quot;appliance1&quot; {
+  uid       = &quot;edgev2-nik-1&quot;
+  arch_type = &quot;arm64&quot;
+  wait      = true
+}</code></pre>
+<div class="file-label">resource_cluster.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_edge_native&quot; &quot;cluster&quot; {
+  name            = &quot;edge-native-example&quot;
+  skip_completion = true
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  cloud_config {
+    ssh_keys           = [&quot;spectro2022&quot;, &quot;spectro2023&quot;]
+    vip                = &quot;100.0.0.1&quot;
+    overlay_cidr_range = &quot;100.12.22.11/12&quot;
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;cp-pool&quot;
+    arch_type               = &quot;amd64&quot;
+
+    edge_host {
+      host_uid  = spectrocloud_appliance.appliance0.uid
+      static_ip = &quot;126.10.10.23&quot;
+    }
+
+  }
+
+  machine_pool {
+    name = &quot;worker-pool&quot;
+    # optional: &quot;enabled&quot; to skip OS/K8s upgrade (N-3 skew)
+    skip_k8s_upgrade = &quot;disabled&quot;
+
+    edge_host {
+      host_uid  = spectrocloud_appliance.appliance1.uid
+      static_ip = &quot;136.10.10.24&quot;
+    }
+  }
+
+}</code></pre>
+<div class="file-label">resource_clusterprofile.tf</div><pre><code class="language-hcl">data &quot;spectrocloud_cluster_profile&quot; &quot;profile&quot; {
+  name = &quot;edge-native-infra&quot;
+}
+
+output &quot;same&quot; {
+  value = data.spectrocloud_cluster_profile.profile
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl"># Spectro Cloud credentials
+sc_host         = &quot;{Enter Spectro Cloud API Host}&quot; #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = &quot;{Enter Spectro Cloud API Key}&quot;
+sc_project_name = &quot;{Enter Spectro Cloud Project Name}&quot; #e.g: Default</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl"># Cluster
+variable &quot;cluster_ssh_key_name&quot; {
+  default = &quot;spectro2020&quot;
+}
+
+#variable &quot;cp_appliance_name&quot; {}
+
+#variable &quot;worker_appliance_name&quot; {}</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e/edge-native">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

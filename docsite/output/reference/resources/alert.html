@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alert · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / Alert</div>
+    <h1>Alert</h1>
+<p>Resource for managing project-level alert channels in Spectro Cloud.</p>
+<h2>Example Usage</h2>
+<p>You can set up a maximum of two alerts for cluster health per project. A webhook can be configured in the HTTP component, and for email. You can add a target email recipient or enable alerts for all users in the corresponding project.</p>
+<pre><code class="language-terraform">resource &quot;spectrocloud_alert&quot; &quot;alert_email&quot; {
+  project         = &quot;Default&quot;
+  is_active       = true
+  component       = &quot;ClusterHealth&quot;
+  type            = &quot;email&quot;
+  identifiers     = [&quot;abc@spectrocloud.com&quot;, &quot;cba@spectrocloud.com&quot;]
+  alert_all_users = true
+}
+
+resource &quot;spectrocloud_alert&quot; &quot;alert_http&quot; {
+  project   = &quot;Default&quot;
+  is_active = true
+  component = &quot;ClusterHealth&quot;
+  http {
+    method = &quot;POST&quot;
+    url    = &quot;https://openhook.com/put/notify&quot;
+    body   = &quot;{ \&quot;text\&quot;: \&quot;message\&quot; }&quot;
+    headers = {
+      tag    = &quot;Health&quot;
+      source = &quot;spectrocloud&quot;
+    }
+  }
+  type            = &quot;http&quot;
+  alert_all_users = true
+}</code></pre>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>component</code> (String) The component of the system that the alert is associated with. Currently, <code>ClusterHealth</code> is the only supported value.</li>
+<li><code>is_active</code> (Boolean) Indicates whether the alert is active. Set to <code>true</code> to activate the alert, or <code>false</code> to deactivate it.</li>
+<li><code>project</code> (String) The project to which the alert belongs to.</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>alert_all_users</code> (Boolean) If set to <code>true</code>, the alert will be sent to all users. If <code>false</code>, it will target specific users or identifiers.</li>
+<li><code>created_by</code> (String) The user who created the alert.</li>
+<li><code>http</code> (Block List) The configuration block for HTTP-based alerts. This is used when the <code>type</code> is set to <code>http</code>. (see <a href="#nestedblock--http">below for nested schema</a>)</li>
+<li><code>identifiers</code> (Set of String) A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.</li>
+<li><code>status</code> (Block List) A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly. (see <a href="#nestedblock--status">below for nested schema</a>)</li>
+<li><code>timeouts</code> (Block, Optional) (see <a href="#nestedblock--timeouts">below for nested schema</a>)</li>
+<li><code>type</code> (String) The type of alert mechanism to use. Can be <code>email</code> for email alerts, <code>http</code> for HTTP webhooks, or empty string to auto-detect based on provided configuration.</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--http&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>http</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>body</code> (String) The payload to include in the HTTP request body when the alert is triggered.</li>
+<li><code>method</code> (String) The HTTP method to use for the alert. Supported values are <code>POST</code>, <code>GET</code>, and <code>PUT</code>.</li>
+<li><code>url</code> (String) The target URL to send the HTTP request to when the alert is triggered.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>headers</code> (Map of String) Optional HTTP headers to include in the request. Each header should be specified as a key-value pair.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--status&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>status</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>is_succeeded</code> (Boolean) Whether the latest alert delivery operation succeeded.</li>
+<li><code>message</code> (String) Status message from the latest alert delivery operation.</li>
+<li><code>time</code> (String) Timestamp of the latest alert delivery status update.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--timeouts&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>timeouts</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>create</code> (String)</li>
+<li><code>delete</code> (String)</li>
+<li><code>update</code> (String)</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

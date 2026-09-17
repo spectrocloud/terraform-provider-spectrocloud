@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VSPHERE · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="active">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/import/index.html">Import</a> / VSPHERE</div>
+    <h1>VSPHERE</h1>
+<h2>Configuration Files</h2>
+<div class="file-label">apply-manifest.tf</div><pre><code class="language-hcl">resource &quot;null_resource&quot; &quot;kubectl_apply&quot; {
+  //  triggers = {
+  //    k8s_yaml_contents = filemd5(&quot;/Users/rishi/work/git_clones/terraform-provider-spectrocloud/.local/nginx.yaml&quot;)
+  //  }
+
+  provisioner &quot;local-exec&quot; {
+    command = spectrocloud_cluster_import.cluster.cluster_import_manifest_url
+  }
+}</code></pre>
+<div class="file-label">import_manifest.tf</div><pre><code class="language-hcl">resource &quot;local_file&quot; &quot;import_manifest1&quot; {
+  content              = local.cluster_import_manifest
+  filename             = &quot;import_manifest_aws.yaml&quot;
+  file_permission      = &quot;0644&quot;
+  directory_permission = &quot;0755&quot;
+}</code></pre>
+<div class="file-label">locals.tf</div><pre><code class="language-hcl">locals {
+  cluster_import_manifest_url = spectrocloud_cluster_import.cluster.cluster_import_manifest_url
+  cluster_import_manifest     = spectrocloud_cluster_import.cluster.cluster_import_manifest
+}</code></pre>
+<div class="file-label">outputs.tf</div><pre><code class="language-hcl">output &quot;cluster_id&quot; {
+  value = spectrocloud_cluster_import.cluster.id
+}
+
+output &quot;cluster_import_manifest_url&quot; {
+  value = local.cluster_import_manifest_url
+}
+
+output &quot;cluster_import_manifest&quot; {
+  value = local.cluster_import_manifest
+}</code></pre>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;Spectro Cloud Endpoint&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Spectro Cloud API key&quot;
+}
+
+variable &quot;sc_project_name&quot; {
+  description = &quot;Spectro Cloud Project (e.g: Default)&quot;
+  default     = &quot;Default&quot;
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.sc_project_name
+}</code></pre>
+<div class="file-label">resource_cluster.tf</div><pre><code class="language-hcl">resource &quot;spectrocloud_cluster_import&quot; &quot;cluster&quot; {
+  name  = &quot;vmware-import-tf-11&quot;
+  cloud = &quot;vmware&quot;
+  tags  = [&quot;dev&quot;, &quot;department:devops&quot;, &quot;owner:bob&quot;]
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
+
+  /*  pack {
+     name   = &quot;k8s-dashboard&quot;
+     tag    = &quot;2.1.x&quot;
+     values = &lt;&lt;-EOT
+        manifests:
+          k8s-dashboard:
+
+            #Namespace to install kubernetes-dashboard
+            namespace: &quot;kubernetes-dashboard&quot;
+
+            #The ClusterRole to assign for kubernetes-dashboard. By default, a ready-only cluster role is provisioned
+            clusterRole: &quot;k8s-dashboard-readonly&quot;
+
+            #Self-Signed Certificate duration in hours
+            certDuration: 9000h
+
+            #Self-Signed Certificate renewal in hours
+            certRenewal: 720h     #30d
+
+            #The service type for dashboard. Supported values are ClusterIP / LoadBalancer / NodePort
+            serviceType: ClusterIP
+
+            #Flag to enable skip login option on the dashboard login page
+            skipLogin: false
+
+            #Ingress config
+            ingress:
+              enabled: false
+     EOT
+  }*/
+}</code></pre>
+<div class="file-label">resource_clusterprofile.tf</div><pre><code class="language-hcl"># If looking up a cluster profile instead of creating a new one
+# data &quot;spectrocloud_cluster_profile&quot; &quot;profile&quot; {
+#   # id = &lt;uid&gt;
+#   name = var.cluster_cluster_profile_name
+# }
+
+data &quot;spectrocloud_pack&quot; &quot;k8s_dashboard&quot; {
+  name    = &quot;k8s-dashboard&quot;
+  version = &quot;2.1.0&quot;
+}
+
+resource &quot;spectrocloud_cluster_profile&quot; &quot;profile&quot; {
+  name        = &quot;cloud-addon-12&quot;
+  description = &quot;add-on cp&quot;
+  cloud       = &quot;vsphere&quot;
+  type        = &quot;add-on&quot;
+
+  pack {
+    name   = &quot;k8s-dashboard&quot;
+    tag    = &quot;2.1.x&quot;
+    uid    = data.spectrocloud_pack.k8s_dashboard.id
+    values = &lt;&lt;-EOT
+      manifests:
+        k8s-dashboard:
+
+          #Namespace to install kubernetes-dashboard
+          namespace: &quot;kubernetes-dashboard&quot;
+
+          #The ClusterRole to assign for kubernetes-dashboard. By default, a ready-only cluster role is provisioned
+          clusterRole: &quot;k8s-dashboard-readonly&quot;
+
+          #Self-Signed Certificate duration in hours
+          certDuration: 9000h
+
+          #Self-Signed Certificate renewal in hours
+          certRenewal: 720h     #30d
+
+          #The service type for dashboard. Supported values are ClusterIP / LoadBalancer / NodePort
+          serviceType: ClusterIP
+
+          #Flag to enable skip login option on the dashboard login page
+          skipLogin: false
+
+          #Ingress config
+          ingress:
+            enabled: false
+    EOT
+  }
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl"># Spectro Cloud credentials
+sc_host         = &quot;{Enter Spectro Cloud API Host}&quot; #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = &quot;{Enter Spectro Cloud API Key}&quot;
+sc_project_name = &quot;{Enter Spectro Cloud Project Name}&quot; #e.g: Default
+
+# enter kubeconfig path of cluster which is to be imported
+kubeconfig_path = &quot;{enter Kubeconfig path}&quot;</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl">variable &quot;kubeconfig_path&quot; {}</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/import/vsphere">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

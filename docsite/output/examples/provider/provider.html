@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="active">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/provider/index.html">Provider</a> / Provider</div>
+    <h1>Provider</h1>
+<h2>Configuration Files</h2>
+<div class="file-label">provider.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host         # Spectro Cloud endpoint (defaults to api.spectrocloud.com)
+  api_key      = var.sc_api_key      # API key (or specify with SPECTROCLOUD_APIKEY env var)
+  project_name = var.sc_project_name # Project name (e.g: Default)
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl">##################################################################################
+# Spectro Cloud credentials
+##################################################################################
+sc_host         = &quot;{Enter Spectro Cloud API Host}&quot; #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = &quot;{Enter Spectro Cloud API Key}&quot;
+sc_project_name = &quot;{Enter Spectro Cloud Project Name}&quot; #e.g: Default</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/provider/provider">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

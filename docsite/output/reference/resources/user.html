@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / User</div>
+    <h1>User</h1>
+<p>Create and manage projects in Palette.</p>
+<p>You can learn more about managing users in Palette by reviewing the <a href="https://docs.spectrocloud.com/user-management/">Users</a> guide.</p>
+<h2>Example Usage</h2>
+<p>An example of creating a user resource with assigned teams and custom roles in Palette.</p>
+<pre><code class="language-hcl">resource &quot;spectrocloud_user&quot; &quot;user-test&quot;{
+  first_name = &quot;tf&quot;
+  last_name = &quot;test&quot;
+  email = &quot;test-tf@spectrocloud.com&quot;
+  team_ids  = [data.spectrocloud_team.team2.id]
+  project_role {
+    project_id = data.spectrocloud_project.default.id
+    role_ids =  [for r in data.spectrocloud_role.app_roles : r.id]
+  }
+  project_role {
+    project_id = data.spectrocloud_project.ranjith.id
+    role_ids = [for r in data.spectrocloud_role.app_roles : r.id]
+  }
+
+  tenant_role = [for t in data.spectrocloud_role.tenant_roles : t.id]
+
+  workspace_role {
+    project_id = data.spectrocloud_project.default.id
+    workspace {
+      id = data.spectrocloud_workspace.workspace.id
+      role_ids = [for w in data.spectrocloud_role.workspace_roles : w.id]
+    }
+    workspace {
+      id = data.spectrocloud_workspace.workspace2.id
+      role_ids = [&quot;66fbea622947f81fc26983e6&quot;]
+    }
+  }
+
+  resource_role {
+    project_ids = [data.spectrocloud_project.default.id, data.spectrocloud_project.ranjith.id]
+    filter_ids = [data.spectrocloud_filter.filter.id]
+    role_ids = [for r in data.spectrocloud_role.resource_roles : r.id]
+  }
+
+  resource_role {
+    project_ids = [data.spectrocloud_project.ranjith.id]
+    filter_ids = [data.spectrocloud_filter.filter.id]
+    role_ids = [for re in data.spectrocloud_role.resource_roles_editor : re.id]
+  }
+
+}</code></pre>
+<p>The example below demonstrates how to create an user with only assigned teams.</p>
+<pre><code class="language-hcl">resource &quot;spectrocloud_user&quot; &quot;user-test&quot;{
+  first_name = &quot;tf&quot;
+  last_name = &quot;test&quot;
+  email = &quot;test-tf@spectrocloud.com&quot;
+  team_ids  = [data.spectrocloud_team.team2.id]
+}</code></pre>
+<h3>Importing existing user states</h3>
+<pre><code class="language-terraform">import {
+  to = spectrocloud_user.test_user
+  id = &quot;{userUID}&quot;
+}</code></pre>
+
+<pre><code class="language-console">terraform plan -generate-config-out=test_user.tf
+terraform import spectrocloud_user.test_user {userUID}/{email_id}</code></pre>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>email</code> (String) The email of the user.</li>
+<li><code>first_name</code> (String) The first name of the user.</li>
+<li><code>last_name</code> (String) The last name of the user.</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>project_role</code> (Block Set) List of project roles to be associated with the user. (see <a href="#nestedblock--project_role">below for nested schema</a>)</li>
+<li><code>resource_role</code> (Block Set) (see <a href="#nestedblock--resource_role">below for nested schema</a>)</li>
+<li><code>team_ids</code> (List of String) The team id&#x27;s assigned to the user.</li>
+<li><code>tenant_role</code> (Set of String) List of tenant role ids to be associated with the user.</li>
+<li><code>timeouts</code> (Block, Optional) (see <a href="#nestedblock--timeouts">below for nested schema</a>)</li>
+<li><code>workspace_role</code> (Block Set) List of workspace roles to be associated with the user. (see <a href="#nestedblock--workspace_role">below for nested schema</a>)</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--project_role&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>project_role</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>project_id</code> (String) Project id to be associated with the user.</li>
+<li><code>role_ids</code> (Set of String) List of project role ids to be associated with the user.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--resource_role&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>resource_role</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>filter_ids</code> (Set of String) List of filter ids.</li>
+<li><code>project_ids</code> (Set of String) Project id&#x27;s to be associated with the user.</li>
+<li><code>role_ids</code> (Set of String) List of resource role ids to be associated with the user.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--timeouts&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>timeouts</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>create</code> (String)</li>
+<li><code>delete</code> (String)</li>
+<li><code>update</code> (String)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--workspace_role&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>workspace_role</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>project_id</code> (String) Project id to be associated with the user.</li>
+<li><code>workspace</code> (Block Set, Min: 1) List of workspace roles to be associated with the user. (see <a href="#nestedblock--workspace_role--workspace">below for nested schema</a>)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--workspace_role--workspace&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>workspace_role.workspace</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>id</code> (String) Workspace id to be associated with the user.</li>
+<li><code>role_ids</code> (Set of String) List of workspace role ids to be associated with the user.</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPPOOL · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="active">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/e2e/index.html">E2E</a> / IPPOOL</div>
+    <h1>IPPOOL</h1>
+<h2>Configuration Files</h2>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.11.0&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;Spectro Cloud Endpoint&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Spectro Cloud API key&quot;
+}
+
+variable &quot;sc_project_name&quot; {
+  description = &quot;Spectro Cloud Project (e.g: Default)&quot;
+  default     = &quot;Default&quot;
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.sc_project_name
+}</code></pre>
+<div class="file-label">resource_ippool.tf</div><pre><code class="language-hcl">data &quot;spectrocloud_cloudaccount_vsphere&quot; &quot;account&quot; {
+  name = var.shared_vmware_cloud_account_name
+}
+
+# If creating a new cloud account, use this:
+#
+# resource &quot;spectrocloud_cloudaccount_vsphere&quot; &quot;account&quot; {
+#   name                 = &quot;vsphere-picard-2&quot;
+#   private_cloud_gateway_id      = var.private_cloud_gateway_id
+#   vsphere_vcenter               = &quot;&lt;....&gt;&quot;
+#   vsphere_username              = &quot;&lt;....&gt;&quot;
+#   vsphere_password              = &quot;&lt;....&gt;&quot;
+#   vsphere_ignore_insecure_error = true
+# }</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl"># Spectro Cloud credentials
+sc_host         = &quot;{Enter Spectro Cloud API Host}&quot; #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = &quot;{Enter Spectro Cloud API Key}&quot;
+sc_project_name = &quot;{Enter Spectro Cloud Project Name}&quot; #e.g: Default
+
+# Cloud Account lookup by name
+# See README.md for instructions how to obtain this name
+shared_vmware_cloud_account_name = &quot;{enter Spectro Cloud VMware Cloud Account name}&quot;
+
+# SSH public key to inject into all K8s nodes
+# Insert your public key between the EOT markers
+# The public key starts with &quot;ssh-rsa ....&quot;
+cluster_ssh_public_key = &lt;&lt;-EOT
+  {enter SSH Public Key}
+EOT
+
+# For DHCP, the search domain
+cluster_network_search = &quot;{enter DHCP Search domain}&quot; #e.g spectrocloud.local
+
+# VMware cluster placement properties
+# All fields except _vsphere\_resource\_pool_ are required fields
+vsphere_datacenter = &quot;{enter vSphere Datacenter}&quot;
+vsphere_folder     = &quot;{enter vSphere Folder}&quot;
+
+vsphere_cluster       = &quot;{enter vSphere ESX Cluster}&quot;
+vsphere_resource_pool = &quot;{enter vSphere Resource Pool}&quot; # Leave &quot;&quot; blank for Cluster Resource pool
+vsphere_datastore     = &quot;{enter vSphere Datastore}&quot;
+vsphere_network       = &quot;{enter vSphere Network}&quot;</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl">variable &quot;shared_vmware_cloud_account_name&quot; {}
+
+variable &quot;cluster_ssh_public_key&quot; {}
+variable &quot;cluster_network_search&quot; {}
+
+variable &quot;vsphere_datacenter&quot; {}
+variable &quot;vsphere_folder&quot; {}
+
+variable &quot;vsphere_cluster&quot; {}
+variable &quot;vsphere_resource_pool&quot; {}
+variable &quot;vsphere_datastore&quot; {}
+variable &quot;vsphere_network&quot; {}</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e/ippool">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

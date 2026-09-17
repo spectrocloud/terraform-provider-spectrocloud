@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pack · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/data-sources/index.html">Data Sources</a> / Pack</div>
+    <h1>Pack</h1>
+<p>This data resource provides the ability to search for a pack in the Palette registries. It supports more advanced search criteria than the pack_simple data source.</p>
+<p>~&gt; The existing <code>filters</code> attribute will be deprecated, and a new <code>pack_filters</code> attribute will be introduced for advanced search functionality.</p>
+<h2>Example Usage</h2>
+<p>An example of how to use this data source to retrieve a specific pack from the community registry.</p>
+<p>~&gt; For certain packs such as vm-migration-assistant, virtual-machine-orchestrator, vm-migration-assistant-pack, spectro-k8s-dashboard, and spectro-vm-dashboard, the <code>addon_type</code> is considered as <code>integration</code>.</p>
+<pre><code class="language-hcl"># Retrieve details of a specific pack using name and version
+data &quot;spectrocloud_pack&quot; &quot;example&quot; {
+  name    = &quot;nginx-pack&quot; # Pack name (e.g., &quot;nginx-pack&quot;, &quot;k8s-core&quot;, &quot;monitoring-stack&quot;)
+  version = &quot;1.2.3&quot;      # Pack version (e.g., &quot;1.2.3&quot;, &quot;latest&quot;, &quot;stable&quot;)
+}
+
+# Retrieve a pack using advanced filters
+data &quot;spectrocloud_pack&quot; &quot;filtered&quot; {
+  name = &quot;k8sgpt-operator&quot; # Pack name to search for
+
+  advance_filters {
+    pack_type   = [&quot;spectro&quot;]       # Allowed: &quot;helm&quot;, &quot;spectro&quot;, &quot;oci&quot;, &quot;manifest&quot;
+    addon_type  = [&quot;system app&quot;]    # Allowed: &quot;load balancer&quot;, &quot;ingress&quot;, &quot;logging&quot;, &quot;monitoring&quot;, &quot;security&quot;, &quot;authentication&quot;, &quot;servicemesh&quot;, &quot;system app&quot;, &quot;app services&quot;, &quot;registry&quot;, &quot;csi&quot;, &quot;cni&quot;, &quot;integration&quot;
+    pack_layer  = [&quot;addon&quot;]         # Allowed: &quot;kernel&quot;, &quot;os&quot;, &quot;k8s&quot;, &quot;cni&quot;, &quot;csi&quot;, &quot;addon&quot;
+    environment = [&quot;all&quot;]           # Allowed: &quot;all&quot;, &quot;aws&quot;, &quot;eks&quot;, &quot;azure&quot;, &quot;aks&quot;, &quot;gcp&quot;, &quot;gke&quot;, &quot;vsphere&quot;, &quot;maas&quot;, &quot;edge-native&quot;
+    is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
+    pack_source = [&quot;community&quot;]      # Allowed: &quot;spectrocloud&quot;, &quot;community&quot;
+  }
+
+  registry_uid = &quot;5ee9c5adc172449eeb9c30cf&quot; # Unique registry identifier
+}
+
+# Output pack details
+output &quot;pack_id&quot; {
+  value = data.spectrocloud_pack.example.id # Returns the unique pack ID
+}
+
+output &quot;pack_version&quot; {
+  value = data.spectrocloud_pack.example.version # Returns the pack version
+}
+
+output &quot;pack_values&quot; {
+  value = data.spectrocloud_pack.example.values # Returns the YAML values of the pack
+}</code></pre>
+<p>In this example, a filter is applied to retrieve a Calico CNI pack from the Palette OCI registry that is compatible with Edge clusters and has a version greater than 3.26.9.</p>
+<p>-&gt; The filter attribute is a string that can contain multiple filters separated by the <code>AND</code>, <code>OR</code> operator. You can filter for a pack by using the attributes retured in the <code>spec</code> object of the payload provided by the <code>v1/packs/search</code> endpoint. Refer to the Palette Pack Search API endpoint <a href="https://docs.spectrocloud.com/api/v1/v-1-packs-search/">documentation</a> for more information on the available filters.</p>
+<pre><code class="language-hcl">data &quot;spectrocloud_registry&quot; &quot;palette_registry_oci&quot; {
+  name = &quot;Palette Registry&quot;
+}
+
+
+data &quot;spectrocloud_pack&quot; &quot;cni&quot; {
+  filters = &quot;spec.cloudTypes=edge-nativeANDspec.layer=cniANDspec.displayName=CalicoANDspec.version&gt;3.26.9ANDspec.registryUid=${data.spectrocloud_registry.palette_registry_oci.id}&quot;
+}</code></pre>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Optional</h3>
+<ul>
+<li><code>advance_filters</code> (Block List, Max: 1) A set of advanced filters to refine the selection of packs. These filters allow users to specify criteria such as pack type, add-on type, pack layer, and environment. (see <a href="#nestedblock--advance_filters">below for nested schema</a>)</li>
+<li><code>cloud</code> (Set of String) Set of cloud type strings used to filter results. If not provided, all cloud types are returned.</li>
+<li><code>filters</code> (String) Filters to apply when searching for a pack. This is a string of the form &#x27;key1=value1&#x27; with &#x27;AND&#x27;, &#x27;OR<code> operators. Refer to the Palette API <a href="https://docs.spectrocloud.com/api/v1/v-1-packs-search/">pack search API endpoint documentation</a> for filter examples. The filter attribute will be deprecated soon; use </code>advance_filter` instead.</li>
+<li><code>id</code> (String) The UID of the pack returned.</li>
+<li><code>name</code> (String) The name of the pack to search for.</li>
+<li><code>registry_uid</code> (String) The unique identifier (UID) of the registry where the pack is located. Specify <code>registry_uid</code> to search within a specific registry.</li>
+<li><code>type</code> (String) The type of pack to search for. Supported values are <code>helm</code>, <code>manifest</code>, <code>container</code>, <code>operator-instance</code>.</li>
+<li><code>version</code> (String) Specify the version of the pack to search for. If not set, the latest available version from the specified registry will be used.</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>values</code> (String) The YAML values of the pack returned as string.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--advance_filters&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>advance_filters</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>addon_type</code> (Set of String) Set of add-on type strings to filter by. Allowed values are <code>load balancer</code>, <code>ingress</code>, <code>logging</code>, <code>monitoring</code>, <code>security</code>, <code>authentication</code>, <code>servicemesh</code>, <code>system app</code>, <code>app services</code>, <code>registry</code>, and <code>integration</code>. If not specified, all options are included. For <code>storage</code> and <code>network</code>, set <code>pack_layer</code> to <code>csi</code> or <code>cni</code> respectively.</li>
+<li><code>environment</code> (Set of String) Defines the environment where the pack will be deployed. Options include <code>all</code>, <code>aws</code>, <code>eks</code>, <code>azure</code>, <code>aks</code>, <code>gcp</code>, <code>gke</code>, <code>vsphere</code>, <code>maas</code> and <code>edge-native</code>. If not specified, all options will be set by default.</li>
+<li><code>is_fips</code> (Boolean) Indicates whether the pack is FIPS-compliant. If <code>true</code>, only FIPS-compliant components will be used.</li>
+<li><code>pack_layer</code> (Set of String) Indicates the pack layer, such as <code>kernel</code>, <code>os</code>, <code>k8s</code>, <code>cni</code>, <code>csi</code>, or <code>addon</code>. If not specified, all options will be set by default.</li>
+<li><code>pack_source</code> (Set of String) Specify the source of the pack. Allowed values are <code>spectrocloud</code> and <code>community</code>. If not specified, all options will be set by default.</li>
+<li><code>pack_type</code> (Set of String) Specify the type of pack. Allowed values are <code>helm</code>, <code>spectro</code>, <code>oci</code>, and <code>manifest</code>. If not specified, all options will be set by default.</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,1772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting Started Multicloud · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="active">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/tutorials/index.html">Tutorials</a> / Getting Started Multicloud</div>
+    <h1>Getting Started Multicloud</h1>
+<p>End-to-end example accompanying the Spectro Cloud Getting Started tutorials: <a href="https://docs.spectrocloud.com/tutorials/getting-started/palette/aws/deploy-manage-k8s-cluster-tf/">Cluster Management with Terraform</a> (the same Terraform pattern is used across the AWS, Azure, GCP, and VMware variants of this tutorial under Getting Started → Palette).</p>
+<p>This single Terraform configuration can deploy a Kubernetes cluster to any combination of AWS, Azure, GCP, and VMware vSphere, each with a cluster profile that includes the &quot;Hello Universe&quot; sample application and an optional Kubecost add-on. It will provision, per enabled cloud:</p>
+<ul>
+<li>A Cluster Profile (OS, Kubernetes, CNI, CSI layers, plus Hello Universe and optionally Kubecost)</li>
+<li>A Kubernetes Cluster on that cloud</li>
+</ul>
+<h2>Choosing which cloud(s) to deploy to</h2>
+<p>The Terraform code has four main toggle variables, each independent — enable as many as you want, as long as you provide the required values for each:</p>
+<p>| Variable | Provider | Description | Default | |---|---|---|---| | <code>deploy-aws</code> | AWS | Enable to deploy a cluster to AWS. | <code>false</code> | | <code>deploy-azure</code> | Azure | Enable to deploy a cluster to Azure. | <code>false</code> | | <code>deploy-gcp</code> | GCP | Enable to deploy a cluster to GCP. | <code>false</code> | | <code>deploy-vmware</code> | VMware vSphere | Enable to deploy a cluster to VMware vSphere. | <code>false</code> |</p>
+<p>Each cloud also has a matching <code>deploy-&lt;cloud&gt;-kubecost</code> toggle that, when enabled, adds the Kubecost add-on pack to that cloud&#x27;s cluster profile (deployed as profile version <code>1.1.0</code> instead of <code>1.0.0</code>).</p>
+<p>VMware additionally supports static IP placement via <code>deploy-vmware-static</code> (see the PCG-related variables in <code>terraform.template.tfvars</code> if you enable it).</p>
+<h2>Prerequisites</h2>
+<p>You will need the following before getting started:</p>
+<p><code>sc_api_key</code> variable).</p>
+<p><a href="https://docs.spectrocloud.com/getting-started/?getting_started=vmware#yourfirstvmwarecluster">Spectro Cloud VMware Cluster</a> — and its cloud account name.</p>
+<ol>
+<li>A Palette API key, exported as the <code>SPECTROCLOUD_APIKEY</code> environment variable (or supplied via the</li>
+<li>A cloud account already registered in your Palette project settings for each cloud you enable.</li>
+<li>For AWS: an existing EC2 key pair in the region you deploy to.</li>
+<li>For VMware: a Private Cloud Gateway (PCG) already installed — see</li>
+<li>Terraform 1.9 or later.</li>
+</ol>
+<h2>Instructions</h2>
+<p>Clone this repository to a local directory, and change directory to <code>examples/tutorials/getting-started-multicloud</code>. Proceed with the following:</p>
+<p>file <code>terraform.tfvars</code>.</p>
+<p>(<code>REPLACE ME</code>) values relevant to those clouds. Values for clouds you leave disabled don&#x27;t need to be filled in.</p>
+<ol>
+<li>From the current directory, copy the template variable file <code>terraform.template.tfvars</code> to a new</li>
+<li>Set the <code>deploy-*</code> toggle(s) for the cloud(s) you want, and fill in all the placeholder</li>
+<li>Initialize and run terraform: <code>terraform init &amp;&amp; terraform apply</code>.</li>
+<li>Wait for the cluster creation to finish.</li>
+</ol>
+<p>Once a cluster is provisioned, its Hello Universe application becomes reachable through the cluster&#x27;s load balancer — see the <code>advisory</code> output for a note on DNS propagation timing. For VMware deployments without a supplied SSH key, see the <code>ssh_key_location</code> / <code>ssh_connection_command</code> outputs for how to access the nodes.</p>
+<h2>Clean up</h2>
+<p>Run the destroy operation:</p>
+<pre><code class="language-shell">terraform destroy</code></pre>
+<h2>Configuration Files</h2>
+<div class="file-label">cluster_profiles.tf</div><pre><code class="language-hcl">############################
+# AWS Cluster Profile v1.0.0
+############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;aws-profile&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name        = &quot;tf-aws-profile&quot;
+  description = &quot;A basic cluster profile for AWS&quot;
+  tags        = concat(var.tags, [&quot;env:aws&quot;])
+  cloud       = &quot;aws&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.aws_ubuntu.name
+    tag    = data.spectrocloud_pack.aws_ubuntu.version
+    uid    = data.spectrocloud_pack.aws_ubuntu.id
+    values = data.spectrocloud_pack.aws_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_k8s.name
+    tag    = data.spectrocloud_pack.aws_k8s.version
+    uid    = data.spectrocloud_pack.aws_k8s.id
+    values = data.spectrocloud_pack.aws_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_cni.name
+    tag    = data.spectrocloud_pack.aws_cni.version
+    uid    = data.spectrocloud_pack.aws_cni.id
+    values = data.spectrocloud_pack.aws_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_csi.name
+    tag    = data.spectrocloud_pack.aws_csi.version
+    uid    = data.spectrocloud_pack.aws_csi.id
+    values = data.spectrocloud_pack.aws_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+}
+
+############################
+# AWS Cluster Profile v1.1.0
+############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;aws-profile-kubecost&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name        = &quot;tf-aws-profile&quot;
+  description = &quot;A basic cluster profile for AWS with Kubecost&quot;
+  tags        = concat(var.tags, [&quot;env:aws&quot;])
+  cloud       = &quot;aws&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.aws_ubuntu.name
+    tag    = data.spectrocloud_pack.aws_ubuntu.version
+    uid    = data.spectrocloud_pack.aws_ubuntu.id
+    values = data.spectrocloud_pack.aws_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_k8s.name
+    tag    = data.spectrocloud_pack.aws_k8s.version
+    uid    = data.spectrocloud_pack.aws_k8s.id
+    values = data.spectrocloud_pack.aws_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_cni.name
+    tag    = data.spectrocloud_pack.aws_cni.version
+    uid    = data.spectrocloud_pack.aws_cni.id
+    values = data.spectrocloud_pack.aws_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_csi.name
+    tag    = data.spectrocloud_pack.aws_csi.version
+    uid    = data.spectrocloud_pack.aws_csi.id
+    values = data.spectrocloud_pack.aws_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.kubecost.name
+    tag    = data.spectrocloud_pack.kubecost.version
+    uid    = data.spectrocloud_pack.kubecost.id
+    values = data.spectrocloud_pack.kubecost.values
+    type   = &quot;oci&quot;
+  }
+}
+
+##############################
+# Azure Cluster Profile v1.0.0
+##############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;azure-profile&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name        = &quot;tf-azure-profile&quot;
+  description = &quot;A basic cluster profile for Azure&quot;
+  tags        = concat(var.tags, [&quot;env:azure&quot;])
+  cloud       = &quot;azure&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.azure_ubuntu.name
+    tag    = data.spectrocloud_pack.azure_ubuntu.version
+    uid    = data.spectrocloud_pack.azure_ubuntu.id
+    values = data.spectrocloud_pack.azure_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_k8s.name
+    tag    = data.spectrocloud_pack.azure_k8s.version
+    uid    = data.spectrocloud_pack.azure_k8s.id
+    values = data.spectrocloud_pack.azure_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_cni.name
+    tag    = data.spectrocloud_pack.azure_cni.version
+    uid    = data.spectrocloud_pack.azure_cni.id
+    values = data.spectrocloud_pack.azure_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_csi.name
+    tag    = data.spectrocloud_pack.azure_csi.version
+    uid    = data.spectrocloud_pack.azure_csi.id
+    values = data.spectrocloud_pack.azure_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+}
+
+##############################
+# Azure Cluster Profile v1.1.0
+##############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;azure-profile-kubecost&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name        = &quot;tf-azure-profile&quot;
+  description = &quot;A basic cluster profile for Azure with Kubecost&quot;
+  tags        = concat(var.tags, [&quot;env:azure&quot;])
+  cloud       = &quot;azure&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.azure_ubuntu.name
+    tag    = data.spectrocloud_pack.azure_ubuntu.version
+    uid    = data.spectrocloud_pack.azure_ubuntu.id
+    values = data.spectrocloud_pack.azure_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_k8s.name
+    tag    = data.spectrocloud_pack.azure_k8s.version
+    uid    = data.spectrocloud_pack.azure_k8s.id
+    values = data.spectrocloud_pack.azure_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_cni.name
+    tag    = data.spectrocloud_pack.azure_cni.version
+    uid    = data.spectrocloud_pack.azure_cni.id
+    values = data.spectrocloud_pack.azure_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.azure_csi.name
+    tag    = data.spectrocloud_pack.azure_csi.version
+    uid    = data.spectrocloud_pack.azure_csi.id
+    values = data.spectrocloud_pack.azure_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.kubecost.name
+    tag    = data.spectrocloud_pack.kubecost.version
+    uid    = data.spectrocloud_pack.kubecost.id
+    values = data.spectrocloud_pack.kubecost.values
+    type   = &quot;oci&quot;
+  }
+}
+
+
+############################
+# GCP Cluster Profile v1.0.0
+############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;gcp-profile&quot; {
+  count = var.deploy-gcp ? 1 : 0
+
+  name        = &quot;tf-gcp-profile&quot;
+  description = &quot;A basic cluster profile for GCP&quot;
+  tags        = concat(var.tags, [&quot;env:GCP&quot;])
+  cloud       = &quot;gcp&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_ubuntu.name
+    tag    = data.spectrocloud_pack.gcp_ubuntu.version
+    uid    = data.spectrocloud_pack.gcp_ubuntu.id
+    values = data.spectrocloud_pack.gcp_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_k8s.name
+    tag    = data.spectrocloud_pack.gcp_k8s.version
+    uid    = data.spectrocloud_pack.gcp_k8s.id
+    values = data.spectrocloud_pack.gcp_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_cni.name
+    tag    = data.spectrocloud_pack.gcp_cni.version
+    uid    = data.spectrocloud_pack.gcp_cni.id
+    values = data.spectrocloud_pack.gcp_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_csi.name
+    tag    = data.spectrocloud_pack.gcp_csi.version
+    uid    = data.spectrocloud_pack.gcp_csi.id
+    values = data.spectrocloud_pack.gcp_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+}
+
+############################
+# GCP Cluster Profile v1.1.0
+############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;gcp-profile-kubecost&quot; {
+  count = var.deploy-gcp ? 1 : 0
+
+  name        = &quot;tf-gcp-profile&quot;
+  description = &quot;A basic cluster profile for GCP with Kubecost&quot;
+  tags        = concat(var.tags, [&quot;env:GCP&quot;])
+  cloud       = &quot;gcp&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_ubuntu.name
+    tag    = data.spectrocloud_pack.gcp_ubuntu.version
+    uid    = data.spectrocloud_pack.gcp_ubuntu.id
+    values = data.spectrocloud_pack.gcp_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_k8s.name
+    tag    = data.spectrocloud_pack.gcp_k8s.version
+    uid    = data.spectrocloud_pack.gcp_k8s.id
+    values = data.spectrocloud_pack.gcp_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_cni.name
+    tag    = data.spectrocloud_pack.gcp_cni.version
+    uid    = data.spectrocloud_pack.gcp_cni.id
+    values = data.spectrocloud_pack.gcp_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.gcp_csi.name
+    tag    = data.spectrocloud_pack.gcp_csi.version
+    uid    = data.spectrocloud_pack.gcp_csi.id
+    values = data.spectrocloud_pack.gcp_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.kubecost.name
+    tag    = data.spectrocloud_pack.kubecost.version
+    uid    = data.spectrocloud_pack.kubecost.id
+    values = data.spectrocloud_pack.kubecost.values
+    type   = &quot;oci&quot;
+  }
+}
+
+################################
+# VMware Cluster Profile v.1.0.0
+################################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;vmware-profile&quot; {
+  count = var.deploy-vmware ? 1 : 0
+
+  name        = &quot;tf-vmware-profile&quot;
+  description = &quot;A basic cluster profile for VMware&quot;
+  tags        = concat(var.tags, [&quot;env:VMware&quot;])
+  cloud       = &quot;vsphere&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.0.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_ubuntu.name
+    tag    = data.spectrocloud_pack.vmware_ubuntu.version
+    uid    = data.spectrocloud_pack.vmware_ubuntu.id
+    values = data.spectrocloud_pack.vmware_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_k8s.name
+    tag    = data.spectrocloud_pack.vmware_k8s.version
+    uid    = data.spectrocloud_pack.vmware_k8s.id
+    values = data.spectrocloud_pack.vmware_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_cni.name
+    tag    = data.spectrocloud_pack.vmware_cni.version
+    uid    = data.spectrocloud_pack.vmware_cni.id
+    values = data.spectrocloud_pack.vmware_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_csi.name
+    tag    = data.spectrocloud_pack.vmware_csi.version
+    uid    = data.spectrocloud_pack.vmware_csi.id
+    values = data.spectrocloud_pack.vmware_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_metallb.name
+    tag    = data.spectrocloud_pack.vmware_metallb.version
+    uid    = data.spectrocloud_pack.vmware_metallb.id
+    values = replace(data.spectrocloud_pack.vmware_metallb.values, &quot;192.168.10.0/24&quot;, var.metallb_ip)
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+}
+
+###############################
+# VMware Cluster Profile v1.1.0
+###############################
+resource &quot;spectrocloud_cluster_profile&quot; &quot;vmware-profile-kubecost&quot; {
+  count = var.deploy-vmware ? 1 : 0
+
+  name        = &quot;tf-vmware-profile&quot;
+  description = &quot;A basic cluster profile for VMware with Kubecost&quot;
+  tags        = concat(var.tags, [&quot;env:VMware&quot;])
+  cloud       = &quot;vsphere&quot;
+  type        = &quot;cluster&quot;
+  version     = &quot;1.1.0&quot;
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_ubuntu.name
+    tag    = data.spectrocloud_pack.vmware_ubuntu.version
+    uid    = data.spectrocloud_pack.vmware_ubuntu.id
+    values = data.spectrocloud_pack.vmware_ubuntu.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_k8s.name
+    tag    = data.spectrocloud_pack.vmware_k8s.version
+    uid    = data.spectrocloud_pack.vmware_k8s.id
+    values = data.spectrocloud_pack.vmware_k8s.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_cni.name
+    tag    = data.spectrocloud_pack.vmware_cni.version
+    uid    = data.spectrocloud_pack.vmware_cni.id
+    values = data.spectrocloud_pack.vmware_cni.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_csi.name
+    tag    = data.spectrocloud_pack.vmware_csi.version
+    uid    = data.spectrocloud_pack.vmware_csi.id
+    values = data.spectrocloud_pack.vmware_csi.values
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.vmware_metallb.name
+    tag    = data.spectrocloud_pack.vmware_metallb.version
+    uid    = data.spectrocloud_pack.vmware_metallb.id
+    values = replace(data.spectrocloud_pack.vmware_metallb.values, &quot;192.168.10.0/24&quot;, var.metallb_ip)
+    type   = &quot;spectro&quot;
+  }
+
+  pack {
+    name = data.spectrocloud_pack.hellouniverse.name
+    tag  = data.spectrocloud_pack.hellouniverse.version
+    uid  = data.spectrocloud_pack.hellouniverse.id
+    values = templatefile(&quot;manifests/values-3tier.yaml&quot;, {
+      namespace   = var.app_namespace,
+      port        = var.app_port,
+      replicas    = var.replicas_number,
+      db_password = base64encode(var.db_password),
+      auth_token  = base64encode(var.auth_token)
+    })
+    type = &quot;oci&quot;
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.kubecost.name
+    tag    = data.spectrocloud_pack.kubecost.version
+    uid    = data.spectrocloud_pack.kubecost.id
+    values = data.spectrocloud_pack.kubecost.values
+    type   = &quot;oci&quot;
+  }
+}</code></pre>
+<div class="file-label">clusters.tf</div><pre><code class="language-hcl">#############
+# AWS Cluster
+#############
+resource &quot;spectrocloud_cluster_aws&quot; &quot;aws-cluster&quot; {
+  count = var.deploy-aws ? 1 : 0
+
+  name             = &quot;aws-cluster&quot;
+  tags             = concat(var.tags, [&quot;env:aws&quot;])
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account[0].id
+
+  cloud_config {
+    region       = var.aws-region
+    ssh_key_name = var.aws-key-pair-name
+  }
+
+  cluster_profile {
+    id = var.deploy-aws &amp;&amp; var.deploy-aws-kubecost ? resource.spectrocloud_cluster_profile.aws-profile-kubecost[0].id : resource.spectrocloud_cluster_profile.aws-profile[0].id
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.aws_control_plane_nodes.count
+    instance_type           = var.aws_control_plane_nodes.instance_type
+    disk_size_gb            = var.aws_control_plane_nodes.disk_size_gb
+    azs                     = var.aws_control_plane_nodes.availability_zones
+  }
+
+  machine_pool {
+    name          = &quot;worker-pool&quot;
+    count         = var.aws_worker_nodes.count
+    instance_type = var.aws_worker_nodes.instance_type
+    disk_size_gb  = var.aws_worker_nodes.disk_size_gb
+    azs           = var.aws_worker_nodes.availability_zones
+  }
+
+  timeouts {
+    create = &quot;45m&quot;
+    delete = &quot;45m&quot;
+  }
+}
+###############
+# Azure Cluster
+###############
+resource &quot;spectrocloud_cluster_azure&quot; &quot;azure-cluster&quot; {
+  count = var.deploy-azure ? 1 : 0
+
+  name             = &quot;azure-cluster&quot;
+  tags             = concat(var.tags, [&quot;env:azure&quot;])
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account[0].id
+
+  cloud_config {
+    subscription_id = var.azure_subscription_id
+    resource_group  = var.azure_resource_group
+    region          = var.azure-region
+    ssh_key         = tls_private_key.tutorial_ssh_key_azure[0].public_key_openssh
+  }
+
+  cluster_profile {
+    id = var.deploy-azure &amp;&amp; var.deploy-azure-kubecost ? resource.spectrocloud_cluster_profile.azure-profile-kubecost[0].id : resource.spectrocloud_cluster_profile.azure-profile[0].id
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.azure_control_plane_nodes.count
+    instance_type           = var.azure_control_plane_nodes.instance_type
+    azs                     = var.azure-use-azs ? var.azure_control_plane_nodes.azs : [&quot;&quot;]
+    is_system_node_pool     = var.azure_control_plane_nodes.is_system_node_pool
+    disk {
+      size_gb = var.azure_control_plane_nodes.disk_size_gb
+      type    = &quot;Standard_LRS&quot;
+    }
+  }
+
+  machine_pool {
+    name                = &quot;worker-basic&quot;
+    count               = var.azure_worker_nodes.count
+    instance_type       = var.azure_worker_nodes.instance_type
+    azs                 = var.azure-use-azs ? var.azure_worker_nodes.azs : [&quot;&quot;]
+    is_system_node_pool = var.azure_worker_nodes.is_system_node_pool
+  }
+
+  timeouts {
+    create = &quot;45m&quot;
+    delete = &quot;45m&quot;
+  }
+}
+
+#############
+# GCP Cluster
+#############
+resource &quot;spectrocloud_cluster_gcp&quot; &quot;gcp-cluster&quot; {
+  count = var.deploy-gcp ? 1 : 0
+
+  name             = &quot;gcp-cluster&quot;
+  tags             = concat(var.tags, [&quot;env:gcp&quot;])
+  cloud_account_id = data.spectrocloud_cloudaccount_gcp.account[0].id
+
+  cloud_config {
+    project = var.gcp_project_name
+    region  = var.gcp-region
+  }
+
+  cluster_profile {
+    id = var.deploy-gcp &amp;&amp; var.deploy-gcp-kubecost ? resource.spectrocloud_cluster_profile.gcp-profile-kubecost[0].id : resource.spectrocloud_cluster_profile.gcp-profile[0].id
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = &quot;control-plane-pool&quot;
+    count                   = var.gcp_control_plane_nodes.count
+    instance_type           = var.gcp_control_plane_nodes.instance_type
+    disk_size_gb            = var.gcp_control_plane_nodes.disk_size_gb
+    azs                     = var.gcp_control_plane_nodes.availability_zones
+  }
+
+  machine_pool {
+    name          = &quot;worker-pool&quot;
+    count         = var.gcp_worker_nodes.count
+    instance_type = var.gcp_worker_nodes.instance_type
+    disk_size_gb  = var.gcp_worker_nodes.disk_size_gb
+    azs           = var.gcp_worker_nodes.availability_zones
+  }
+
+  timeouts {
+    create = &quot;45m&quot;
+    delete = &quot;45m&quot;
+  }
+}
+
+################
+# VMware Cluster
+################
+
+resource &quot;spectrocloud_cluster_vsphere&quot; &quot;vmware-cluster&quot; {
+  count = var.deploy-vmware ? 1 : 0
+
+  name             = &quot;vmware-cluster&quot;
+  tags             = concat(var.tags, [&quot;env:vmware&quot;])
+  cloud_account_id = data.spectrocloud_cloudaccount_vsphere.account[0].id
+
+  cloud_config {
+    ssh_keys              = [local.ssh_public_key]
+    datacenter            = var.datacenter_name
+    folder                = var.folder_name
+    static_ip             = var.deploy-vmware-static # If true, the cluster will use static IP placement. If false, the cluster will use DDNS.
+    network_search_domain = var.search_domain
+  }
+
+  cluster_profile {
+    id = var.deploy-vmware &amp;&amp; var.deploy-vmware-kubecost ? resource.spectrocloud_cluster_profile.vmware-profile-kubecost[0].id : resource.spectrocloud_cluster_profile.vmware-profile[0].id
+  }
+
+  scan_policy {
+    configuration_scan_schedule = &quot;0 0 * * SUN&quot;
+    penetration_scan_schedule   = &quot;0 0 * * SUN&quot;
+    conformance_scan_schedule   = &quot;0 0 1 * *&quot;
+  }
+
+  machine_pool {
+    name                    = &quot;control-plane-pool&quot;
+    count                   = 1
+    control_plane           = true
+    control_plane_as_worker = true
+
+    instance_type {
+      cpu          = 4
+      disk_size_gb = 60
+      memory_mb    = 8000
+    }
+
+    placement {
+      cluster       = var.vsphere_cluster
+      datastore     = var.datastore_name
+      network       = var.network_name
+      resource_pool = var.resource_pool_name
+      # Required for static IP placement.
+      static_ip_pool_id = var.deploy-vmware-static ? resource.spectrocloud_privatecloudgateway_ippool.ippool[0].id : null
+    }
+
+  }
+
+  machine_pool {
+    name          = &quot;worker-pool&quot;
+    count         = 1
+    control_plane = false
+
+    instance_type {
+      cpu          = 4
+      disk_size_gb = 60
+      memory_mb    = 8000
+    }
+
+    placement {
+      cluster       = var.vsphere_cluster
+      datastore     = var.datastore_name
+      network       = var.network_name
+      resource_pool = var.resource_pool_name
+      # Required for static IP placement.
+      static_ip_pool_id = var.deploy-vmware-static ? resource.spectrocloud_privatecloudgateway_ippool.ippool[0].id : null
+    }
+  }
+
+}</code></pre>
+<div class="file-label">data.tf</div><pre><code class="language-hcl">########################################
+# Data resources for the cluster profile
+########################################
+data &quot;spectrocloud_registry&quot; &quot;public_registry&quot; {
+  name = &quot;Public Repo&quot;
+}
+
+data &quot;spectrocloud_registry&quot; &quot;community_registry&quot; {
+  name = &quot;Palette Community Registry&quot;
+}
+
+#############
+# AWS
+#############
+
+data &quot;spectrocloud_cloudaccount_aws&quot; &quot;account&quot; {
+  count = var.deploy-aws ? 1 : 0
+  name  = var.aws-cloud-account-name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_csi&quot; {
+  name         = &quot;csi-aws-ebs&quot;
+  version      = &quot;1.53.0&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_cni&quot; {
+  name         = &quot;cni-calico&quot;
+  version      = &quot;3.30.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.32.10&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;aws_ubuntu&quot; {
+  name         = &quot;ubuntu-aws&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+#############
+# Azure
+#############
+data &quot;spectrocloud_cloudaccount_azure&quot; &quot;account&quot; {
+  count = var.deploy-azure ? 1 : 0
+  name  = var.azure-cloud-account-name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_csi&quot; {
+  name         = &quot;csi-azure&quot;
+  version      = &quot;1.32.0&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_cni&quot; {
+  name         = &quot;cni-calico-azure&quot;
+  version      = &quot;3.29.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.32.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;azure_ubuntu&quot; {
+  name         = &quot;ubuntu-azure&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+#############
+# GCP
+#############
+data &quot;spectrocloud_cloudaccount_gcp&quot; &quot;account&quot; {
+  count = var.deploy-gcp ? 1 : 0
+  name  = var.gcp-cloud-account-name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;gcp_csi&quot; {
+  name         = &quot;csi-gcp-driver&quot;
+  version      = &quot;1.15.4&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;gcp_cni&quot; {
+  name         = &quot;cni-calico&quot;
+  version      = &quot;3.29.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;gcp_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.32.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;gcp_ubuntu&quot; {
+  name         = &quot;ubuntu-gcp&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+#############
+# VMware
+#############
+
+data &quot;spectrocloud_cloudaccount_vsphere&quot; &quot;account&quot; {
+  count = var.deploy-vmware ? 1 : 0
+  name  = var.pcg_name
+}
+
+data &quot;spectrocloud_pack&quot; &quot;vmware_ubuntu&quot; {
+  name         = &quot;ubuntu-vsphere&quot;
+  version      = &quot;22.04&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;vmware_k8s&quot; {
+  name         = &quot;kubernetes&quot;
+  version      = &quot;1.32.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;vmware_cni&quot; {
+  name         = &quot;cni-calico&quot;
+  version      = &quot;3.29.3&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;vmware_csi&quot; {
+  name         = &quot;csi-vsphere-csi&quot;
+  version      = &quot;3.3.1&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data &quot;spectrocloud_pack&quot; &quot;vmware_metallb&quot; {
+  name         = &quot;lb-metallb-helm&quot;
+  version      = &quot;0.14.9&quot;
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+# Required for static IP placement
+data &quot;spectrocloud_private_cloud_gateway&quot; &quot;pcg&quot; {
+  count = var.deploy-vmware-static ? 1 : 0
+  name  = var.pcg_name
+}
+
+#####################
+# Hello Universe Pack
+#####################
+
+data &quot;spectrocloud_pack&quot; &quot;hellouniverse&quot; {
+  name         = &quot;hello-universe&quot;
+  version      = &quot;1.2.0&quot;
+  registry_uid = data.spectrocloud_registry.community_registry.id
+}
+
+#####################
+# Kubecost Pack
+#####################
+
+data &quot;spectrocloud_pack&quot; &quot;kubecost&quot; {
+  name         = &quot;cost-analyzer&quot;
+  version      = &quot;1.103.3&quot;
+  registry_uid = data.spectrocloud_registry.community_registry.id
+}</code></pre>
+<div class="file-label">ippool.tf</div><pre><code class="language-hcl"># Required for static IP placement.
+resource &quot;spectrocloud_privatecloudgateway_ippool&quot; &quot;ippool&quot; {
+  count                    = var.deploy-vmware-static ? 1 : 0
+  gateway                  = var.network_gateway
+  name                     = &quot;vsphere-vmware-ippool&quot;
+  network_type             = &quot;range&quot;
+  prefix                   = var.network_prefix
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg[0].id
+  ip_start_range           = var.ip_range_start
+  ip_end_range             = var.ip_range_end
+  nameserver_addresses     = var.nameserver_addr
+}</code></pre>
+<div class="file-label">outputs.tf</div><pre><code class="language-hcl">output &quot;advisory&quot; {
+  value = &lt;&lt;-EOT
+    It takes between one to three minutes for DNS to properly resolve the public load balancer URL.
+    We recommend waiting a few minutes before clicking on the service URL to prevent the browser from caching an unresolved DNS request.
+  EOT
+}
+
+#######################
+# VMware SSH Key Output
+#######################
+
+output &quot;ssh_key_location&quot; {
+  description = &quot;Location of the generated private SSH key file.&quot;
+  value       = length(tls_private_key.tutorial_ssh_key) &gt; 0 &amp;&amp; var.deploy-vmware == true ? &quot;This is the location of the generated private SSH key file: ${local_sensitive_file.private_key_file[0].filename}.&quot; : null
+}
+
+output &quot;ssh_public_key_location&quot; {
+  description = &quot;Location of the generated public SSH key file.&quot;
+  value       = length(tls_private_key.tutorial_ssh_key) &gt; 0 &amp;&amp; var.deploy-vmware == true ? &quot;This is the location of the generated public SSH key file: ${local_file.public_key_file[0].filename}.&quot; : null
+}
+
+output &quot;ssh_connection_command&quot; {
+  description = &quot;Command to use the generated private SSH key to access the nodes.&quot;
+  value       = length(tls_private_key.tutorial_ssh_key) &gt; 0 &amp;&amp; var.deploy-vmware == true ? &quot;To access your nodes, use the following command, replacing &lt;username&gt; with the username and &lt;hostname&gt; with the IP address of your node:  ssh -i ${local_sensitive_file.private_key_file[0].filename} &lt;username&gt;@&lt;hostname&gt;&quot; : null
+}
+
+output &quot;ssh_connection_command_user&quot; {
+  description = &quot;Command to use the user&#x27;s private SSH key to access the nodes.&quot;
+  value       = var.ssh_key != &quot;&quot; &amp;&amp; var.deploy-vmware == true ? &quot;To access your nodes, use the following command, replacing &lt;username&gt; with the username and &lt;hostname&gt; with the IP address of your node:  ssh -i ${var.ssh_key_private} &lt;username&gt;@&lt;hostname&gt;&quot; : null
+}</code></pre>
+<div class="file-label">providers.tf</div><pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.20.6&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+
+    tls = {
+      source  = &quot;hashicorp/tls&quot;
+      version = &quot;4.0.4&quot;
+    }
+
+    vsphere = {
+      source  = &quot;hashicorp/vsphere&quot;
+      version = &quot;&gt;= 2.6.1&quot;
+    }
+
+    local = {
+      source  = &quot;hashicorp/local&quot;
+      version = &quot;2.4.1&quot;
+    }
+  }
+
+  required_version = &quot;&gt;= 1.9&quot;
+}
+
+variable &quot;sc_host&quot; {
+  description = &quot;The Palette API endpoint to connect to.&quot;
+  default     = &quot;api.spectrocloud.com&quot;
+}
+
+variable &quot;sc_api_key&quot; {
+  description = &quot;Your Palette API key. Can also be set via the SPECTROCLOUD_APIKEY environment variable instead of this variable.&quot;
+  default     = null
+}
+
+provider &quot;spectrocloud&quot; {
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.palette-project
+}</code></pre>
+<div class="file-label">ssh-key.tf</div><pre><code class="language-hcl">###############
+# Azure SSH Key
+###############
+
+resource &quot;tls_private_key&quot; &quot;tutorial_ssh_key_azure&quot; {
+  count     = var.deploy-azure ? 1 : 0
+  algorithm = &quot;RSA&quot;
+  rsa_bits  = &quot;4096&quot;
+}
+
+################
+# VMware SSH Key
+################
+
+resource &quot;tls_private_key&quot; &quot;tutorial_ssh_key&quot; {
+  count     = var.ssh_key == &quot;&quot; &amp;&amp; var.ssh_key_private == &quot;&quot; &amp;&amp; var.deploy-vmware == true ? 1 : 0
+  algorithm = &quot;RSA&quot;
+  rsa_bits  = &quot;4096&quot;
+}
+
+locals {
+  ssh_public_key = var.ssh_key != &quot;&quot; ? var.ssh_key : length(tls_private_key.tutorial_ssh_key) &gt; 0 ? tls_private_key.tutorial_ssh_key[0].public_key_openssh : null
+}
+
+resource &quot;local_sensitive_file&quot; &quot;private_key_file&quot; {
+  count           = length(tls_private_key.tutorial_ssh_key) &gt; 0 ? 1 : 0
+  content         = tls_private_key.tutorial_ssh_key[0].private_key_openssh
+  filename        = &quot;${path.module}/tutorial_ssh_key&quot;
+  file_permission = &quot;0600&quot;
+}
+
+resource &quot;local_file&quot; &quot;public_key_file&quot; {
+  count    = length(tls_private_key.tutorial_ssh_key) &gt; 0 ? 1 : 0
+  content  = tls_private_key.tutorial_ssh_key[0].public_key_openssh
+  filename = &quot;${path.module}/tutorial_ssh_key.pub&quot;
+}</code></pre>
+<div class="file-label">terraform.template.tfvars</div><pre><code class="language-hcl">#####################
+# Palette Settings
+#####################
+palette-project = &quot;Default&quot; # The name of your project in Palette.
+
+##############################
+# Hello Universe Configuration
+##############################
+app_namespace   = &quot;hello-universe&quot; # The namespace in which the application will be deployed.
+app_port        = 8080             # The cluster port number on which the service will listen for incoming traffic.
+replicas_number = 1                # The number of pods to be created.
+db_password     = &quot;REPLACE ME&quot;     # The database password to connect to the API database.
+auth_token      = &quot;REPLACE ME&quot;     # The auth token for the API connection.
+
+###########################
+# AWS Deployment Settings
+############################
+deploy-aws          = false # Set to true to deploy to AWS.
+deploy-aws-kubecost = false # Set to true to deploy to AWS and include Kubecost to your cluster profile.
+
+aws-cloud-account-name = &quot;REPLACE ME&quot;
+aws-region             = &quot;REPLACE ME&quot;
+aws-key-pair-name      = &quot;REPLACE ME&quot;
+
+aws_control_plane_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = true
+  instance_type      = &quot;m4.2xlarge&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;] # If you want to deploy to multiple AZs, add them here. Example: [&quot;us-east-1a&quot;, &quot;us-east-1b&quot;].
+}
+
+aws_worker_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = false
+  instance_type      = &quot;m4.2xlarge&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;] # If you want to deploy to multiple AZs, add them here. Example: [&quot;us-east-1a&quot;, &quot;us-east-1b&quot;].
+}
+
+###########################
+# Azure Deployment Settings
+############################
+deploy-azure          = false # Set to true to deploy to Azure.
+deploy-azure-kubecost = false # Set to true to deploy to Azure and include Kubecost to your cluster profile.
+azure-use-azs         = true  # Set to false when you deploy to a region without AZs.
+
+azure-cloud-account-name = &quot;REPLACE ME&quot;
+azure-region             = &quot;REPLACE ME&quot;
+azure_subscription_id    = &quot;REPLACE ME&quot;
+azure_resource_group     = &quot;REPLACE ME&quot;
+
+
+azure_control_plane_nodes = {
+  count               = &quot;1&quot;
+  control_plane       = true
+  instance_type       = &quot;Standard_D4s_v3&quot;
+  disk_size_gb        = &quot;60&quot;
+  azs                 = [&quot;1&quot;] # If you want to deploy to multiple AZs, add them here.
+  is_system_node_pool = false
+}
+
+azure_worker_nodes = {
+  count               = &quot;1&quot;
+  control_plane       = false
+  instance_type       = &quot;Standard_D4s_v3&quot;
+  disk_size_gb        = &quot;60&quot;
+  azs                 = [&quot;1&quot;] # If you want to deploy to multiple AZs, add them here.
+  is_system_node_pool = false
+}
+
+###########################
+# GCP Deployment Settings
+############################
+deploy-gcp          = false # Set to true to deploy to GCP.
+deploy-gcp-kubecost = false # Set to true to deploy to GCP and include Kubecost to your cluster profile.
+
+gcp-cloud-account-name = &quot;REPLACE ME&quot;
+gcp-region             = &quot;REPLACE ME&quot;
+gcp_project_name       = &quot;REPLACE ME&quot;
+
+gcp_control_plane_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = true
+  instance_type      = &quot;n2-standard-4&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;] # If you want to deploy to multiple AZs, add them here. Example: [&quot;us-central1-a&quot;, &quot;us-central1-b&quot;].
+}
+
+gcp_worker_nodes = {
+  count              = &quot;1&quot;
+  control_plane      = false
+  instance_type      = &quot;n2-standard-4&quot;
+  disk_size_gb       = &quot;60&quot;
+  availability_zones = [&quot;REPLACE ME&quot;] # If you want to deploy to multiple AZs, add them here. Example: [&quot;us-central1-a&quot;, &quot;us-central1-b&quot;].
+}
+
+############################
+# VMware Deployment Settings
+############################
+deploy-vmware          = false # Set to true to deploy to VMware.
+deploy-vmware-kubecost = false # Set to true to deploy to VMware and include Kubecost to your cluster profile.
+
+metallb_ip         = &quot;REPLACE ME&quot; # Provide a range of IP addresses for your Metallb load balancer. This range must be included in the PCG&#x27;s static IP pool range if using static IP placement.
+pcg_name           = &quot;REPLACE ME&quot; # Provide the name of the PCG that will be used to deploy the Palette cluster.
+datacenter_name    = &quot;REPLACE ME&quot; # Provide the name of the datacenter in vSphere.
+folder_name        = &quot;REPLACE ME&quot; # Provide the name of the folder in vSphere.
+search_domain      = &quot;REPLACE ME&quot; # Provide the name of the network search domain.
+vsphere_cluster    = &quot;REPLACE ME&quot; # Provide the cluster name for the machine pool as it appears in vSphere.
+datastore_name     = &quot;REPLACE ME&quot; # Provide the datastore name for the machine pool as it appears in vSphere.
+network_name       = &quot;REPLACE ME&quot; # Provide the network name for the machine pool as it appears in vSphere.
+resource_pool_name = &quot;REPLACE ME&quot; # Provide the resource pool name for the machine pool as it appears in vSphere.
+ssh_key            = &quot;&quot;           # Provide the path to your public SSH key. If not provided, a new key pair will be created.
+ssh_key_private    = &quot;&quot;           # Provide the path to your private SSH key. If not provided, a new key pair will be created.
+
+# Static IP Pool Variables - Required for static IP placement only.
+deploy-vmware-static = false          # Set to true to deploy to VMware using static IP placement.
+network_gateway      = &quot;REPLACE ME&quot;   # Provide the IP address of the vSphere network gateway.
+network_prefix       = 0              # Provide the prefix of your vSphere network. Valid values are network CIDR subnet masks from the range 0-32. Example: 18.
+ip_range_start       = &quot;REPLACE ME&quot;   # Provide the first IP address of your PCG IP pool range.
+ip_range_end         = &quot;REPLACE ME&quot;   # Provide the second IP address of your PCG IP pool range.
+nameserver_addr      = [&quot;REPLACE ME&quot;] # Provide a comma-separated list of DNS name server IP addresses.</code></pre>
+<div class="file-label">variables.tf</div><pre><code class="language-hcl">#########
+# Palette
+#########
+
+variable &quot;palette-project&quot; {
+  type        = string
+  description = &quot;The name of your project in Palette.&quot;
+
+  validation {
+    condition     = var.palette-project != &quot;&quot;
+    error_message = &quot;Provide the correct Palette project.&quot;
+  }
+
+}
+
+#######
+# AWS
+#######
+variable &quot;aws-cloud-account-name&quot; {
+  type        = string
+  description = &quot;The name of your AWS account as assigned in Palette.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-cloud-account-name != &quot;REPLACE ME&quot; &amp;&amp; var.aws-cloud-account-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS cloud account name.&quot;
+  }
+}
+
+variable &quot;deploy-aws&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on AWS.&quot;
+}
+
+variable &quot;deploy-aws-kubecost&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on AWS with Kubecost.&quot;
+}
+
+variable &quot;aws-region&quot; {
+  type        = string
+  description = &quot;AWS region&quot;
+  default     = &quot;us-east-1&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-region != &quot;REPLACE ME&quot; &amp;&amp; var.aws-region != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS region.&quot;
+  }
+}
+
+variable &quot;aws-key-pair-name&quot; {
+  type        = string
+  description = &quot;The name of the AWS key pair to use for SSH access to the cluster.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? var.aws-key-pair-name != &quot;REPLACE ME&quot; &amp;&amp; var.aws-key-pair-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct AWS SSH key pair name.&quot;
+  }
+}
+
+variable &quot;aws_control_plane_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = true
+    instance_type      = &quot;m4.2xlarge&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-east-1a&quot;]
+  }
+  description = &quot;AWS control plane nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? length(var.aws_control_plane_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.aws_control_plane_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+variable &quot;aws_worker_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = false
+    instance_type      = &quot;m4.2xlarge&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-east-1a&quot;]
+  }
+  description = &quot;AWS worker nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-aws ? length(var.aws_worker_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.aws_worker_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+
+#######
+# Azure
+#######
+variable &quot;azure-cloud-account-name&quot; {
+  type        = string
+  description = &quot;The name of your Azure account as assigned in Palette.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure-cloud-account-name != &quot;REPLACE ME&quot; &amp;&amp; var.azure-cloud-account-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure cloud account name.&quot;
+  }
+}
+
+variable &quot;deploy-azure&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on Azure.&quot;
+}
+
+variable &quot;deploy-azure-kubecost&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on Azure with Kubecost.&quot;
+}
+
+variable &quot;azure_subscription_id&quot; {
+  type        = string
+  description = &quot;Azure subscription ID.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure_subscription_id != &quot;REPLACE ME&quot; &amp;&amp; var.azure_subscription_id != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure subscription ID.&quot;
+  }
+}
+
+variable &quot;azure_resource_group&quot; {
+  type        = string
+  description = &quot;Azure resource group.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure_resource_group != &quot;REPLACE ME&quot; &amp;&amp; var.azure_resource_group != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure resource group name.&quot;
+  }
+}
+
+variable &quot;azure-use-azs&quot; {
+  type        = bool
+  description = &quot;A flag for configuring whether to use Azure Availability Zones. Check if your Azure region supports availability zones by reviewing the [Azure Regions and Availability Zones](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support) resource.&quot;
+}
+
+variable &quot;azure-region&quot; {
+  type        = string
+  description = &quot;Azure region.&quot;
+  default     = &quot;eastus&quot;
+
+  validation {
+    condition     = var.deploy-azure ? var.azure-region != &quot;REPLACE ME&quot; &amp;&amp; var.azure-region != &quot;&quot; : true
+    error_message = &quot;Provide the correct Azure region name.&quot;
+  }
+}
+
+variable &quot;azure_control_plane_nodes&quot; {
+  type = object({
+    count               = string
+    control_plane       = bool
+    instance_type       = string
+    disk_size_gb        = string
+    azs                 = list(string)
+    is_system_node_pool = bool
+  })
+  default = {
+    count               = &quot;1&quot;
+    control_plane       = true
+    instance_type       = &quot;Standard_A8_v2&quot;
+    disk_size_gb        = &quot;60&quot;
+    azs                 = [&quot;1&quot;]
+    is_system_node_pool = false
+  }
+  description = &quot;Azure control plane nodes configuration.&quot;
+}
+
+variable &quot;azure_worker_nodes&quot; {
+  type = object({
+    count               = string
+    control_plane       = bool
+    instance_type       = string
+    disk_size_gb        = string
+    azs                 = list(string)
+    is_system_node_pool = bool
+  })
+  default = {
+    count               = &quot;1&quot;
+    control_plane       = false
+    instance_type       = &quot;Standard_A8_v2&quot;
+    disk_size_gb        = &quot;60&quot;
+    azs                 = [&quot;1&quot;]
+    is_system_node_pool = false
+  }
+  description = &quot;Azure worker nodes configuration.&quot;
+}
+
+#######
+# GCP
+#######
+variable &quot;gcp-cloud-account-name&quot; {
+  type        = string
+  description = &quot;The name of your GCP account as assigned in Palette.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-gcp ? var.gcp-cloud-account-name != &quot;REPLACE ME&quot; &amp;&amp; var.gcp-cloud-account-name != &quot;&quot; : true
+    error_message = &quot;Provide the correct GCP cloud account name.&quot;
+  }
+}
+
+variable &quot;gcp_project_name&quot; {
+  type        = string
+  description = &quot;The name of your GCP project.&quot;
+  default     = &quot;&quot;
+
+  validation {
+    condition     = var.deploy-gcp ? var.gcp_project_name != &quot;REPLACE ME&quot; &amp;&amp; var.gcp_project_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct GCP project name.&quot;
+  }
+}
+
+variable &quot;deploy-gcp&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on GCP.&quot;
+}
+
+variable &quot;deploy-gcp-kubecost&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on GCP with Kubecost.&quot;
+}
+
+variable &quot;gcp-region&quot; {
+  type        = string
+  description = &quot;GCP region&quot;
+  default     = &quot;us-central1&quot;
+
+  validation {
+    condition     = var.deploy-gcp ? var.gcp-region != &quot;REPLACE ME&quot; &amp;&amp; var.gcp-region != &quot;&quot; : true
+    error_message = &quot;Provide the correct GCP region.&quot;
+  }
+}
+
+variable &quot;gcp_control_plane_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = true
+    instance_type      = &quot;n1-standard-4&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-central1-a&quot;]
+  }
+  description = &quot;GCP control plane nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-gcp ? length(var.gcp_control_plane_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.gcp_control_plane_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+
+variable &quot;gcp_worker_nodes&quot; {
+  type = object({
+    count              = string
+    control_plane      = bool
+    instance_type      = string
+    disk_size_gb       = string
+    availability_zones = list(string)
+  })
+  default = {
+    count              = &quot;1&quot;
+    control_plane      = false
+    instance_type      = &quot;n1-standard-4&quot;
+    disk_size_gb       = &quot;60&quot;
+    availability_zones = [&quot;us-central1-a&quot;]
+  }
+  description = &quot;GCP worker nodes configuration.&quot;
+
+  validation {
+    condition     = var.deploy-gcp ? length(var.gcp_worker_nodes.availability_zones) &gt; 0 &amp;&amp; !contains(var.gcp_worker_nodes.availability_zones, &quot;REPLACE ME&quot;) : true
+    error_message = &quot;The availability_zones parameter must be set correctly&quot;
+  }
+}
+
+variable &quot;tags&quot; {
+  type        = list(string)
+  description = &quot;The default tags to apply to Palette resources.&quot;
+  default = [
+    &quot;spectro-cloud-education&quot;,
+    &quot;app:hello-universe&quot;,
+    &quot;spectrocloud:tutorials&quot;,
+    &quot;terraform_managed:true&quot;,
+    &quot;tutorial:getting-started-terraform&quot;
+  ]
+}
+
+
+########
+# VMware
+########
+
+variable &quot;deploy-vmware&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on VMware.&quot;
+}
+
+variable &quot;deploy-vmware-kubecost&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on VMware with Kubecost.&quot;
+}
+
+variable &quot;metallb_ip&quot; {
+  type        = string
+  description = &quot;The IP address range for your MetalLB load balancer.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.metallb_ip != &quot;REPLACE ME&quot; &amp;&amp; var.metallb_ip != &quot;&quot; : true
+    error_message = &quot;Provide the correct MetalLB IP.&quot;
+  }
+}
+
+variable &quot;ssh_key&quot; {
+  type        = string
+  description = &quot;The path to the public key that will be added to the cluster nodes. If not provided, a new key pair will be generated.&quot;
+
+  validation {
+    condition     = var.ssh_key == &quot;&quot; ? true : fileexists(var.ssh_key)
+    error_message = &quot;The provided SSH key file does not exist. Please, provide a valid path.&quot;
+  }
+}
+
+variable &quot;ssh_key_private&quot; {
+  type        = string
+  description = &quot;The path to the private key that will be used to access the cluster nodes. If not provided, a new key pair will be generated.&quot;
+
+  validation {
+    condition     = var.ssh_key_private == &quot;&quot; ? true : fileexists(var.ssh_key_private)
+    error_message = &quot;The provided SSH key file does not exist. Please, provide a valid path.&quot;
+  }
+}
+
+variable &quot;datacenter_name&quot; {
+  type        = string
+  description = &quot;The name of the datacenter in vSphere.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.datacenter_name != &quot;REPLACE ME&quot; &amp;&amp; var.datacenter_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere datacenter name.&quot;
+  }
+}
+
+variable &quot;folder_name&quot; {
+  type        = string
+  description = &quot;The name of the folder in vSphere.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.folder_name != &quot;REPLACE ME&quot; &amp;&amp; var.folder_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere folder name.&quot;
+  }
+}
+
+variable &quot;search_domain&quot; {
+  type        = string
+  description = &quot;The name of network search domain.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.search_domain != &quot;REPLACE ME&quot; &amp;&amp; var.search_domain != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere search domain.&quot;
+  }
+}
+
+# Input resources for the cluster - Placement
+variable &quot;vsphere_cluster&quot; {
+  type        = string
+  description = &quot;The name of your vSphere cluster.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.vsphere_cluster != &quot;REPLACE ME&quot; &amp;&amp; var.vsphere_cluster != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere cluster name.&quot;
+  }
+}
+
+variable &quot;datastore_name&quot; {
+  type        = string
+  description = &quot;The name of the vSphere datastore.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.datastore_name != &quot;REPLACE ME&quot; &amp;&amp; var.datastore_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere datastore name.&quot;
+  }
+}
+
+variable &quot;network_name&quot; {
+  type        = string
+  description = &quot;The name of the vSphere network.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.network_name != &quot;REPLACE ME&quot; &amp;&amp; var.network_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere network name.&quot;
+  }
+}
+
+variable &quot;resource_pool_name&quot; {
+  type        = string
+  description = &quot;The name of the vSphere resource pool.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.resource_pool_name != &quot;REPLACE ME&quot; &amp;&amp; var.resource_pool_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere resource pool name.&quot;
+  }
+}
+
+variable &quot;pcg_name&quot; {
+  type        = string
+  description = &quot;The name of the PCG that will be used to deploy the cluster.&quot;
+
+  validation {
+    condition     = var.deploy-vmware ? var.pcg_name != &quot;REPLACE ME&quot; &amp;&amp; var.pcg_name != &quot;&quot; : true
+    error_message = &quot;Provide the correct VMware vSphere PCG name.&quot;
+  }
+}
+
+# Input resources for the Static IP Pool (required for static IP placement only)
+variable &quot;deploy-vmware-static&quot; {
+  type        = bool
+  description = &quot;A flag for enabling a deployment on VMware using static IP placement.&quot;
+}
+
+variable &quot;network_gateway&quot; {
+  type        = string
+  description = &quot;The IP address of the vSphere network gateway.&quot;
+}
+
+variable &quot;network_prefix&quot; {
+  type        = number
+  description = &quot;The prefix of your vSphere network. Valid values are network CIDR subnet masks from the range 0-32. Example: 18.&quot;
+}
+
+variable &quot;ip_range_start&quot; {
+  type        = string
+  description = &quot;The first IP address of your PCG IP pool range.&quot;
+}
+
+variable &quot;ip_range_end&quot; {
+  type        = string
+  description = &quot;The last IP address of your PCG IP pool range.&quot;
+}
+
+variable &quot;nameserver_addr&quot; {
+  type        = set(string)
+  description = &quot;A comma-separated list of DNS nameserver IP addresses of your network.&quot;
+}
+
+
+##############################
+# Hello Universe App Variables
+##############################
+variable &quot;app_namespace&quot; {
+  type        = string
+  description = &quot;The namespace in which the application will be deployed.&quot;
+}
+
+variable &quot;app_port&quot; {
+  type        = number
+  description = &quot;The cluster port number on which the service will listen for incoming traffic.&quot;
+}
+
+variable &quot;replicas_number&quot; {
+  type        = number
+  description = &quot;The number of pods to be created.&quot;
+}
+
+variable &quot;db_password&quot; {
+  type        = string
+  description = &quot;The base64 encoded database password to connect to the API database.&quot;
+  sensitive   = true
+
+  validation {
+    condition     = var.deploy-aws || var.deploy-azure || var.deploy-gcp || var.deploy-vmware ? var.db_password != &quot;REPLACE ME&quot; &amp;&amp; var.db_password != &quot;&quot; : true
+    error_message = &quot;Provide the correct database password.&quot;
+  }
+}
+
+variable &quot;auth_token&quot; {
+  type        = string
+  description = &quot;The base64 encoded auth token for the API connection.&quot;
+  sensitive   = true
+
+  validation {
+    condition     = var.deploy-aws || var.deploy-azure || var.deploy-gcp || var.deploy-vmware ? var.auth_token != &quot;REPLACE ME&quot; &amp;&amp; var.auth_token != &quot;&quot; : true
+    error_message = &quot;Provide the correct authentication token.&quot;
+  }
+}</code></pre>
+<div class="file-label">manifests/values-3tier.yaml</div><pre><code class="language-yaml"># Copyright (c) Spectro Cloud
+# SPDX-License-Identifier: Apache-2.0
+
+pack:
+  content:
+    images:
+      - image: ghcr.io/spectrocloud/hello-universe:1.2.0
+
+manifests:
+  hello-universe:
+    images:
+      hellouniverse: ghcr.io/spectrocloud/hello-universe:1.2.0-proxy
+      hellouniverseapi: ghcr.io/spectrocloud/hello-universe-api:1.1.0
+      hellouniversedb: ghcr.io/spectrocloud/hello-universe-db:1.1.0
+    apiEnabled: true
+    namespace: ${namespace}
+    port: ${port}
+    replicas: ${replicas}
+    dbPassword: ${db_password} # Add base64 encoded password
+    authToken: ${auth_token} # Add base64 encoded token
+    ui:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: ui
+    api:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: api
+    postgres:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: postgres</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/tutorials/getting-started-multicloud">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

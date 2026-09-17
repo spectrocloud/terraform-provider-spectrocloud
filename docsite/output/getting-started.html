@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting Started · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-rel-root="">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="index.html" class="">Home</a>
+<a href="getting-started.html" class="active">Getting Started</a>
+<a href="examples/index.html" class="">Examples</a>
+<a href="reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  
+  <main class="content">
+    <div class="breadcrumb"><a href="index.html">Home</a> / Getting Started</div>
+    <h1>Getting Started</h1>
+<h2>Pre-requisites</h2>
+<ul>
+  <li>A Spectro Cloud account (<a href="https://www.spectrocloud.com/free-trial/">sign up for a free trial</a>)</li>
+  <li>Terraform 0.13+</li>
+  <li>kubectl 1.16+ (for interacting with provisioned clusters)</li>
+</ul>
+<h2>Configure the provider</h2>
+<p>Create a <code>providers.tf</code> file:</p>
+<pre><code class="language-hcl">terraform {
+  required_providers {
+    spectrocloud = {
+      source  = "spectrocloud/spectrocloud"
+      version = "&gt;= 0.1"
+    }
+  }
+}
+
+provider "spectrocloud" {
+  host    = var.sc_host
+  api_key = var.sc_api_key
+}</code></pre>
+<p>Populate <code>sc_host</code> and <code>sc_api_key</code> (an
+<a href="https://docs.spectrocloud.com/user-management/authentication/api-key/create-api-key">API key</a>)
+via a <code>terraform.tfvars</code> file, or use environment variables instead:</p>
+<pre><code class="language-shell">export SPECTROCLOUD_HOST=api.spectrocloud.com
+export SPECTROCLOUD_APIKEY=5b7aad.........</code></pre>
+<p>Then:</p>
+<pre><code class="language-shell">terraform init &amp;&amp; terraform apply</code></pre>
+<h2>Next steps</h2>
+<ul>
+  <li>Browse <a href="examples/index.html">Examples</a> for full working configurations by use case.</li>
+  <li>See the <a href="reference/index.html">Reference</a> for every resource and data source the provider supports.</li>
+  <li>Full provider configuration details (environment variables, feature flags, import) are documented on the
+      <a href="https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs">Terraform Registry page</a>.</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="search-index.js"></script>
+<script src="assets/search.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluster Group · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="">Examples</a>
+<a href="../../reference/index.html" class="active">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Resources</h3><ul><li><a href="../resources/addon_deployment.html">Addon Deployment</a></li>
+<li><a href="../resources/alert.html">Alert</a></li>
+<li><a href="../resources/appliance.html">Appliance</a></li>
+<li><a href="../resources/application.html">Application</a></li>
+<li><a href="../resources/application_profile.html">Application Profile</a></li>
+<li><a href="../resources/audit_trail.html">Audit Trail</a></li>
+<li><a href="../resources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../resources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../resources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../resources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../resources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../resources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../resources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../resources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../resources/cluster_aks.html">Cluster AKS</a></li>
+<li><a href="../resources/cluster_apache_cloudstack.html">Cluster Apache Cloudstack</a></li>
+<li><a href="../resources/cluster_aws.html">Cluster AWS</a></li>
+<li><a href="../resources/cluster_azure.html">Cluster Azure</a></li>
+<li><a href="../resources/cluster_brownfield.html">Cluster Brownfield</a></li>
+<li><a href="../resources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../resources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../resources/cluster_custom_cloud.html">Cluster Custom Cloud</a></li>
+<li><a href="../resources/cluster_edge_native.html">Cluster Edge Native</a></li>
+<li><a href="../resources/cluster_edge_vsphere.html">Cluster Edge VSPHERE</a></li>
+<li><a href="../resources/cluster_eks.html">Cluster EKS</a></li>
+<li><a href="../resources/cluster_gcp.html">Cluster GCP</a></li>
+<li><a href="../resources/cluster_gke.html">Cluster GKE</a></li>
+<li><a href="../resources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../resources/cluster_maas.html">Cluster MAAS</a></li>
+<li><a href="../resources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../resources/cluster_profile_import.html">Cluster Profile Import</a></li>
+<li><a href="../resources/cluster_vsphere.html">Cluster VSPHERE</a></li>
+<li><a href="../resources/datavolume.html">Datavolume</a></li>
+<li><a href="../resources/developer_setting.html">Developer Setting</a></li>
+<li><a href="../resources/filter.html">Filter</a></li>
+<li><a href="../resources/macros.html">Macros</a></li>
+<li><a href="../resources/password_policy.html">Password Policy</a></li>
+<li><a href="../resources/platform_setting.html">Platform Setting</a></li>
+<li><a href="../resources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../resources/privatecloudgateway_ippool.html">Privatecloudgateway IPPOOL</a></li>
+<li><a href="../resources/project.html">Project</a></li>
+<li><a href="../resources/registration_token.html">Registration Token</a></li>
+<li><a href="../resources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../resources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../resources/resource_limit.html">Resource Limit</a></li>
+<li><a href="../resources/role.html">Role</a></li>
+<li><a href="../resources/ssh_key.html">SSH Key</a></li>
+<li><a href="../resources/sso.html">SSO</a></li>
+<li><a href="../resources/team.html">Team</a></li>
+<li><a href="../resources/user.html">User</a></li>
+<li><a href="../resources/virtual_cluster.html">Virtual Cluster</a></li>
+<li><a href="../resources/virtual_machine.html">Virtual Machine</a></li>
+<li><a href="../resources/workspace.html">Workspace</a></li></ul><h3>Data Sources</h3><ul><li><a href="../data-sources/appliance.html">Appliance</a></li>
+<li><a href="../data-sources/appliances.html">Appliances</a></li>
+<li><a href="../data-sources/application_profile.html">Application Profile</a></li>
+<li><a href="../data-sources/backup_storage_location.html">Backup Storage Location</a></li>
+<li><a href="../data-sources/cloudaccount_apache_cloudstack.html">Cloudaccount Apache Cloudstack</a></li>
+<li><a href="../data-sources/cloudaccount_aws.html">Cloudaccount AWS</a></li>
+<li><a href="../data-sources/cloudaccount_azure.html">Cloudaccount Azure</a></li>
+<li><a href="../data-sources/cloudaccount_custom.html">Cloudaccount Custom</a></li>
+<li><a href="../data-sources/cloudaccount_gcp.html">Cloudaccount GCP</a></li>
+<li><a href="../data-sources/cloudaccount_maas.html">Cloudaccount MAAS</a></li>
+<li><a href="../data-sources/cloudaccount_vsphere.html">Cloudaccount VSPHERE</a></li>
+<li><a href="../data-sources/cluster.html">Cluster</a></li>
+<li><a href="../data-sources/cluster_config_policy.html">Cluster Config Policy</a></li>
+<li><a href="../data-sources/cluster_config_template.html">Cluster Config Template</a></li>
+<li><a href="../data-sources/cluster_group.html">Cluster Group</a></li>
+<li><a href="../data-sources/cluster_profile.html">Cluster Profile</a></li>
+<li><a href="../data-sources/filter.html">Filter</a></li>
+<li><a href="../data-sources/ippool.html">IPPOOL</a></li>
+<li><a href="../data-sources/macros.html">Macros</a></li>
+<li><a href="../data-sources/pack.html">Pack</a></li>
+<li><a href="../data-sources/pack_simple.html">Pack Simple</a></li>
+<li><a href="../data-sources/permission.html">Permission</a></li>
+<li><a href="../data-sources/private_cloud_gateway.html">Private Cloud Gateway</a></li>
+<li><a href="../data-sources/privatecloudgateway_dns_map.html">Privatecloudgateway DNS Map</a></li>
+<li><a href="../data-sources/project.html">Project</a></li>
+<li><a href="../data-sources/registration_token.html">Registration Token</a></li>
+<li><a href="../data-sources/registry.html">Registry</a></li>
+<li><a href="../data-sources/registry_helm.html">Registry Helm</a></li>
+<li><a href="../data-sources/registry_oci.html">Registry Oci</a></li>
+<li><a href="../data-sources/registry_pack.html">Registry Pack</a></li>
+<li><a href="../data-sources/role.html">Role</a></li>
+<li><a href="../data-sources/ssh_key.html">SSH Key</a></li>
+<li><a href="../data-sources/team.html">Team</a></li>
+<li><a href="../data-sources/user.html">User</a></li>
+<li><a href="../data-sources/workspace.html">Workspace</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../reference/index.html">Reference</a> / <a href="../../reference/resources/index.html">Resources</a> / Cluster Group</div>
+    <h1>Cluster Group</h1>
+<p>Resource for managing host cluster groups in Spectro Cloud.</p>
+<h2>Example Usage</h2>
+<h3>Cluster Group</h3>
+<p>An example of how to provision a Palette Cluster Group.</p>
+<pre><code class="language-hcl">resource &quot;spectrocloud_cluster_group&quot; &quot;cg&quot; {
+  name = &quot;cluster-group-demo&quot;
+
+  clusters {
+    cluster_uid = data.spectrocloud_cluster.host_cluster0.id
+    host        = &quot;*.test.com&quot;
+  }
+
+  clusters {
+    cluster_uid = data.spectrocloud_cluster.host_cluster1.id
+    host        = &quot;*&quot;
+  }
+
+  config {
+    host_endpoint_type       = &quot;LoadBalancer&quot;
+    cpu_millicore            = 6000
+    memory_in_mb             = 8192
+    storage_in_gb            = 10
+    oversubscription_percent = 120
+  }
+}</code></pre>
+<h2>Import</h2>
+<p>In Terraform v1.5.0 and later, use an <a href="https://developer.hashicorp.com/terraform/language/import"><code>import</code> block</a> to import the resource spectrocloud_cluster_group by using its <code>id</code> with the Palette <code>context</code> separated by a colon. For example:</p>
+<pre><code class="language-terraform">import {
+  to = spectrocloud_cluster_group.example
+  id = &quot;example_id:context&quot;
+}</code></pre>
+<p>Using <code>terraform import</code>, import the cluster group using the <code>cluster_group_uid</code> or <code>cluster_group_name</code> colon separated with <code>context</code>. For example:</p>
+<pre><code class="language-console">terraform import spectrocloud_cluster_group.example cluster_group_uid/cluster_group_name:&lt;project|tenant&gt;</code></pre>
+<p>Refer to the <a href="/docs#import">Import section</a> to learn more.</p>
+<p>&lt;!-- schema generated by tfplugindocs --&gt;</p>
+<h2>Schema</h2>
+<h3>Required</h3>
+<ul>
+<li><code>config</code> (Block List, Min: 1, Max: 1) (see <a href="#nestedblock--config">below for nested schema</a>)</li>
+<li><code>name</code> (String) Name of the cluster group.</li>
+</ul>
+<h3>Optional</h3>
+<ul>
+<li><code>cluster_profile</code> (Block Set) (see <a href="#nestedblock--cluster_profile">below for nested schema</a>)</li>
+<li><code>clusters</code> (Block List) A list of clusters to include in the cluster group. (see <a href="#nestedblock--clusters">below for nested schema</a>)</li>
+<li><code>context</code> (String) The context of the Cluster group. Allowed values are <code>project</code> or <code>tenant</code>. Defaults to <code>tenant</code>. If  the <code>project</code> context is specified, the project name will sourced from the provider configuration parameter <a href="https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema"><code>project_name</code></a>.</li>
+<li><code>description</code> (String) The description of the cluster. Default value is empty string.</li>
+<li><code>tags</code> (Set of String) A list of tags to be applied to the cluster group. Tags must be in the form of <code>key:value</code>.</li>
+<li><code>timeouts</code> (Block, Optional) (see <a href="#nestedblock--timeouts">below for nested schema</a>)</li>
+</ul>
+<h3>Read-Only</h3>
+<ul>
+<li><code>id</code> (String) The ID of this resource.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--config&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>config</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>cpu_millicore</code> (Number) The CPU limit in millicores.</li>
+<li><code>host_endpoint_type</code> (String) The host endpoint type. Allowed values are &#x27;Ingress&#x27; or &#x27;LoadBalancer&#x27;. Defaults to &#x27;Ingress&#x27;.</li>
+<li><code>k8s_distribution</code> (String) The Kubernetes distribution, allowed values are <code>vcluster-generic</code>,<code>k3s</code> and <code>cncf_k8s</code>.</li>
+<li><code>memory_in_mb</code> (Number) The memory limit in megabytes (MB).</li>
+<li><code>oversubscription_percent</code> (Number) The allowed oversubscription percentage.</li>
+<li><code>storage_in_gb</code> (Number) The storage limit in gigabytes (GB).</li>
+<li><code>values</code> (String) YAML values override string applied to the cluster group configuration.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cluster_profile&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cluster_profile</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>id</code> (String) The ID of the cluster profile.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>pack</code> (Block List) For packs of type <code>spectro</code>, <code>helm</code>, and <code>manifest</code>, at least one pack must be specified. (see <a href="#nestedblock--cluster_profile--pack">below for nested schema</a>)</li>
+<li><code>variables</code> (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: <code>priority = &quot;5&quot;</code>.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cluster_profile--pack&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cluster_profile.pack</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>name</code> (String) The name of the pack. The name must be unique within the cluster profile.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>manifest</code> (Block List) (see <a href="#nestedblock--cluster_profile--pack--manifest">below for nested schema</a>)</li>
+<li><code>registry_name</code> (String) The registry name of the pack. The registry name is the human-readable name of the registry. This attribute can be used instead of <code>registry_uid</code> for better readability. If <code>uid</code> is not provided, this field can be used along with <code>name</code> and <code>tag</code> to resolve the pack UID internally. Either <code>registry_uid</code> or <code>registry_name</code> can be specified, but not both.</li>
+<li><code>registry_uid</code> (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name. If <code>uid</code> is not provided, this field is required along with <code>name</code> and <code>tag</code> to resolve the pack UID internally. Either <code>registry_uid</code> or <code>registry_name</code> can be specified, but not both.</li>
+<li><code>tag</code> (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is <code>spectro</code> or <code>helm</code>. If <code>uid</code> is not provided, this field is required along with <code>name</code> and <code>registry_uid</code> (or <code>registry_name</code>) to resolve the pack UID internally.</li>
+<li><code>type</code> (String) The type of the pack. Allowed values are <code>spectro</code>, <code>manifest</code>, <code>helm</code>, or <code>oci</code>. The default value is spectro. If using an OCI registry for pack, set the type to <code>oci</code>.</li>
+<li><code>uid</code> (String) The unique identifier of the pack. The value can be looked up using the <a href="https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack"><code>spectrocloud_pack</code></a> data source. This value is required if the pack type is <code>spectro</code> and for <code>helm</code> if the chart is from a public helm registry. If not provided, all of <code>name</code>, <code>tag</code>, and <code>registry_uid</code> must be specified to resolve the pack UID internally.</li>
+<li><code>values</code> (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--cluster_profile--pack--manifest&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>cluster_profile.pack.manifest</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>content</code> (String) The content of the manifest. The content is the YAML content of the manifest.</li>
+<li><code>name</code> (String) The name of the manifest. The name must be unique within the pack.</li>
+</ul>
+<p>Read-Only:</p>
+<ul>
+<li><code>uid</code> (String)</li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--clusters&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>clusters</code></h3>
+<p>Required:</p>
+<ul>
+<li><code>cluster_uid</code> (String) The UID of the host cluster.</li>
+</ul>
+<p>Optional:</p>
+<ul>
+<li><code>host_dns</code> (String) The host DNS wildcard for the cluster. i.e. <code><em>.dev</code> or <code></em>test.com</code></li>
+</ul>
+<p>&lt;a id=&quot;nestedblock--timeouts&quot;&gt;&lt;/a&gt;</p>
+<h3>Nested Schema for <code>timeouts</code></h3>
+<p>Optional:</p>
+<ul>
+<li><code>create</code> (String)</li>
+<li><code>delete</code> (String)</li>
+<li><code>update</code> (String)</li>
+</ul>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

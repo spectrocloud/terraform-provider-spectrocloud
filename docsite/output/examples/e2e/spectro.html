@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spectro · Terraform Provider for Spectro Cloud</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-rel-root="../../">
+<header class="site-header">
+  <div class="site-title">Terraform Provider for Spectro Cloud</div>
+  <nav class="site-nav"><a href="../../index.html" class="">Home</a>
+<a href="../../getting-started.html" class="">Getting Started</a>
+<a href="../../examples/index.html" class="active">Examples</a>
+<a href="../../reference/index.html" class="">Reference</a></nav>
+  <div class="search-box">
+    <input id="search-input" type="text" placeholder="Search examples &amp; reference..." autocomplete="off">
+    <div id="search-results" class="search-results"></div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><h3>Examples</h3><ul><li><a href="../e2e/index.html" class="active">E2E</a></li>
+<li><a href="../end-to-end-usecases/index.html" class="">End To End Usecases</a></li>
+<li><a href="../tutorials/index.html" class="">Tutorials</a></li>
+<li><a href="../import/index.html" class="">Import</a></li>
+<li><a href="../provider/index.html" class="">Provider</a></li>
+<li><a href="../custom-cloud-import-demo/index.html" class="">Custom Cloud Import Demo</a></li>
+<li><a href="../import-old/index.html" class="">Import Old</a></li></ul></aside>
+  <main class="content">
+    <div class="breadcrumb"><a href="../../index.html">Home</a> / <a href="../../examples/index.html">Examples</a> / <a href="../../examples/e2e/index.html">E2E</a> / Spectro</div>
+    <h1>Spectro</h1>
+<h2>Configuration Files</h2>
+<div class="file-label">Deployment/main.tf</div><pre><code class="language-hcl">
+
+
+provider &quot;spectrocloud&quot; {
+  project_name = var.SpectroCloudProject # Project name (e.g: Default)
+  host         = var.SpectroCloudURI
+  api_key      = var.SpectroCloudUsername
+}
+
+
+//  required_providers {
+//    spectrocloud = {
+//      version = &quot;&gt;= 0.1&quot;
+//      source  = &quot;spectrocloud/spectrocloud&quot;
+//    }
+//  }
+//</code></pre>
+<div class="file-label">Deployment/modEKSSpectroCloud.tf</div><pre><code class="language-hcl">
+#SpectroCloud Variables
+variable &quot;SpectroCloudProject&quot; { type = string }
+variable &quot;SpectroCloudAccount&quot; { type = string }
+variable &quot;SpectroCloudURI&quot; { type = string }
+variable &quot;SpectroConfig&quot; { type = map(any) }
+variable &quot;SpectroCloudClusterProfiles&quot; { type = map(any) }
+
+module &quot;EKSSpectroCloud&quot; {
+  source        = &quot;../EKSSpectroCloud&quot;
+  ComponentName = &quot;EHSCluster&quot;
+
+  # Core Deployment Information
+  env                    = var.env
+  application            = var.application
+  uai                    = var.uai
+  aws_region             = var.aws_region
+  aws_az_count           = var.aws_az_count
+  aws_availability_zones = var.aws_availability_zones
+
+  # Virtual Network Infomration
+  vpc_cidr      = var.vpc_cidr
+  IPSubnets     = local.IPSubnets
+  trusted_cidrs = var.trusted_cidrs
+
+  # Locals Brought Over
+  taggingstandard = local.taggingstandard
+
+  #Dependancy map to prevent NAT Gateway and Internet Gateway from being pulled from EKS preventing cluster destruction
+  depends_on = [
+    module.core.aws_route_table_internetnat_id, module.core.aws_route_table_internetigw_id, module.core.aws_nat_gateway_ngw_id, module.EKSFramework.EKS_Subnets, module.core.aws_route_internetnat, module.EKSFramework.aws_route_table_association_k8snatgw, module.core.aws_internet_gateway_igw_id, module.core.aws_route_internetigw_id, module.core.aws_route_table_association_publicinternet_id
+  ]
+
+  #Module Outputs
+  aws_vpc_main_id                = module.core.aws_vpc_main_id
+  aws_route_table_internetnat_id = module.core.aws_route_table_internetnat_id
+
+  #SpectroCloud Variables
+  #SpectroCloudProject = var.SpectroCloudProject
+  SpectroCloudClusterProfiles = var.SpectroCloudClusterProfiles
+  SpectroCloudAccount         = var.SpectroCloudAccount
+  SpectroConfig               = var.SpectroConfig
+  aws_subnets                 = module.EKSFramework.EKS_Subnets
+}</code></pre>
+<div class="file-label">Deployment/variables.tf</div><pre><code class="language-hcl">
+
+# Core Deployment Information
+variable &quot;env&quot; { type = string }
+variable &quot;application&quot; { type = string }
+variable &quot;uai&quot; { type = string }
+variable &quot;aws_region&quot; { type = string }
+variable &quot;aws_az_count&quot; { type = number }
+variable &quot;aws_availability_zones&quot; { type = list(any) }
+
+# Virtual Network Infomration
+variable &quot;vpc_cidr&quot; { type = string }
+variable &quot;trusted_cidrs&quot; { type = list(any) }</code></pre>
+<div class="file-label">EKSSpectroCloud/Cluster.tf</div><pre><code class="language-hcl">
+
+resource &quot;spectrocloud_cluster_eks&quot; &quot;cluster&quot; {
+  name             = lower(&quot;${lookup(var.taggingstandard, &quot;deployment&quot;)}-EKS&quot;)
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
+
+  cloud_config {
+    region       = var.aws_region
+    ssh_key_name = &quot;&quot;
+    az_subnets   = var.aws_subnets
+    vpc_id       = var.aws_vpc_main_id
+  }
+
+  dynamic &quot;cluster_profile&quot; {
+    for_each = data.spectrocloud_cluster_profile.profile
+    content {
+      id = cluster_profile.value[&quot;id&quot;]
+    }
+  }
+
+  dynamic &quot;machine_pool&quot; {
+    for_each = var.SpectroConfig
+
+    content {
+      name          = lower(lookup(var.SpectroConfig[machine_pool.key], &quot;WorkerPoolName&quot;))
+      count         = lookup(var.SpectroConfig[machine_pool.key], &quot;WorkerPoolCount&quot;)
+      instance_type = lookup(var.SpectroConfig[machine_pool.key], &quot;WorkerPoolInstanceType&quot;)
+      disk_size_gb  = lookup(var.SpectroConfig[machine_pool.key], &quot;WorkerPoolDiskSize&quot;)
+      az_subnets    = var.aws_subnets
+    }
+  }
+}</code></pre>
+<div class="file-label">EKSSpectroCloud/DataSource.tf</div><pre><code class="language-hcl">
+data &quot;spectrocloud_cluster_profile&quot; &quot;profile&quot; {
+  for_each = toset(values(var.SpectroCloudClusterProfiles))
+  name     = each.value
+}
+
+data &quot;spectrocloud_cloudaccount_aws&quot; &quot;account&quot; {
+  # id = &lt;uid&gt;
+  name = var.SpectroCloudAccount
+}</code></pre>
+<div class="file-label">EKSSpectroCloud/main.tf</div><pre><code class="language-hcl">
+
+terraform {
+  required_providers {
+    spectrocloud = {
+      version = &quot;&gt;= 0.1&quot;
+      source  = &quot;spectrocloud/spectrocloud&quot;
+    }
+  }
+}</code></pre>
+<div class="file-label">EKSSpectroCloud/output.tf</div><pre><code class="language-hcl"></code></pre>
+<div class="file-label">EKSSpectroCloud/variables.tf</div><pre><code class="language-hcl"># Core Deployment Information
+variable &quot;env&quot; { type = string }
+variable &quot;application&quot; { type = string }
+variable &quot;uai&quot; { type = string }
+variable &quot;aws_region&quot; { type = string }
+variable &quot;aws_az_count&quot; { type = number }
+variable &quot;aws_availability_zones&quot; { type = list(any) }
+
+# Virtual Network Infomration
+variable &quot;vpc_cidr&quot; { type = string }
+variable &quot;trusted_cidrs&quot; { type = list(any) }
+variable &quot;IPSubnets&quot; { type = map(any) }
+
+# Locals Brought Over
+variable &quot;ComponentName&quot; { type = string }
+variable &quot;taggingstandard&quot; { type = map(any) }
+variable &quot;aws_vpc_main_id&quot; { type = string }
+variable &quot;aws_route_table_internetnat_id&quot; { type = list(any) }
+
+#SpectroCloud Variables
+#variable SpectroCloudProject { type = string }
+variable &quot;SpectroCloudClusterProfiles&quot; { type = map(any) }
+variable &quot;SpectroCloudAccount&quot; { type = string }
+variable &quot;SpectroConfig&quot; { type = map(any) }
+variable &quot;aws_subnets&quot; { type = map(any) }</code></pre>
+<p><a href="https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e/Spectro">View source on GitHub</a></p>
+  </main>
+</div>
+<footer class="site-footer">
+  Generated from <code>examples/</code> and <code>docs/</code> by <code>docsite/generate_site.py</code>.
+  <a href="https://github.com/spectrocloud/terraform-provider-spectrocloud">View on GitHub</a>
+</footer>
+<script src="../../search-index.js"></script>
+<script src="../../assets/search.js" defer></script>
+</body>
+</html>

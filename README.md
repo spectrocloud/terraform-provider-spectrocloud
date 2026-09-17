@@ -1,37 +1,64 @@
 ![release](https://github.com/spectrocloud/terraform-provider-spectrocloud/workflows/release/badge.svg)
+![ci](https://github.com/spectrocloud/terraform-provider-spectrocloud/actions/workflows/ci.yml/badge.svg)
+![license](https://img.shields.io/github/license/spectrocloud/terraform-provider-spectrocloud)
 
-# Terraform Provider spectrocloud
+# Terraform Provider for Spectro Cloud
 
-Terraform Provider for Spectro Cloud.
+Manage [Palette](https://www.spectrocloud.com/) and Palette VerteX — SaaS or on-prem — as infrastructure as code:
+cloud accounts, cluster profiles, clusters, and more.
 
-## Pre-Requisites
+## Pre-requisites
 
-To use this Spectro Cloud provider, you must meet the following requirements:
-- Spectro Cloud account ([Sign-up for a free trial account](https://www.spectrocloud.com/free-trial/) )
-- Terraform (minimum version 0.13+)
-- Kubernetes/Kubectl CLI (minimum version 1.16+)
+- A Spectro Cloud account ([sign up for a free trial](https://www.spectrocloud.com/free-trial/))
+- Terraform 0.13+
+- kubectl 1.16+ (for interacting with provisioned clusters)
 
-## Usage
+## Quick start
 
-For an end end-to-end cluster provisioning example, please follow the appropriate guide under
-[Spectro Cloud E2E Examples](examples/e2e/).
+```hcl
+terraform {
+  required_providers {
+    spectrocloud = {
+      source  = "spectrocloud/spectrocloud"
+      version = ">= 0.1"
+    }
+  }
+}
 
-Examples of other managed resources are also available in the [examples/resources/](examples/resources/) directory.
+provider "spectrocloud" {
+  host    = var.sc_host
+  api_key = var.sc_api_key
+}
+```
 
-Detailed documentation on supported data sources and resources are available on the
-[Terraform Spectro Cloud Provider Documentation](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs).
+```console
+terraform init && terraform apply
+```
+
+## Documentation & examples
+
+| Looking for... | Go to |
+|---|---|
+| A searchable site with every example + full resource/data source reference | [`docsite/`](docsite/README.md) — clone this repo and open `docsite/output/index.html` (no install, no server) |
+| Examples browsable right here on GitHub, by category | [`examples/`](examples/README.md) |
+| End-to-end use cases (AWS, Azure, GCP, vSphere, MAAS, brownfield import, ...) | [`examples/end-to-end-usecases/`](examples/end-to-end-usecases/) |
+| Tutorials aligned with docs.spectrocloud.com | [`examples/tutorials/`](examples/tutorials/) |
+| Official schema reference (same content as the Registry) | [Terraform Registry docs](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs) |
 
 ## Develop
 
 - Hack away
-- Make sure to run `go generate` after your final commit
+- Run `go generate` after your final commit
+- If you touched `examples/` or `docs/resources` / `docs/data-sources`, regenerate the docs site too:
+  `python3 docsite/generate_site.py` (see [`docsite/README.md`](docsite/README.md))
 - Send in a PR
 
+### Documentation conventions
 
-### Documentation
-
-The documentation for each respective resource is found in the [docs](/docs) folder. Please ensure you are following the Terraform Registry [documentation guidance](https://developer.hashicorp.com/terraform/registry/providers/docs). To preview documentation changes, please utilize the [Terraform Registry Preview Tool](https://registry.terraform.io/tools/doc-preview).
+Resource/data source documentation lives in [`docs/`](docs) and is generated via `tfplugindocs` from the templates in
+[`templates/`](templates) — follow the Terraform Registry [documentation guidance](https://developer.hashicorp.com/terraform/registry/providers/docs)
+and preview changes with the [Terraform Registry Preview Tool](https://registry.terraform.io/tools/doc-preview).
 
 ## Support
 
-For questions or issues with the provider, please post your questions on the provider [discussion board](/discussions).
+For questions or issues with the provider, open a discussion on the [discussion board](https://github.com/spectrocloud/terraform-provider-spectrocloud/discussions).
