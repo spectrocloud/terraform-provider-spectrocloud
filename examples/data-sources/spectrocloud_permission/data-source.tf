@@ -1,20 +1,22 @@
-# Fetches details of a specific permission in SpectroCloud
+# Looks up a permission definition by name and scope.
+#
+# Lookup keys:
+#   name  - Required. Example: "App Deployment", "Cluster Management", "User Access".
+#   scope - Optional, default "project". Allowed: "project", "tenant", "resource".
 data "spectrocloud_permission" "example" {
-  # The name of the permission (Required)
-  # Example: "App Deployment", "Cluster Management", "User Access"
-  name = "App Deployment"
-
-  # Scope of the permission (Optional, Defaults to "project")
-  # Allowed values: "project", "tenant", "resource"
+  name  = "App Deployment"
   scope = "project"
 }
 
-# Output the retrieved permission details
+# Computed outputs:
+#   permission_details - All attributes on this data source, for reference.
+#   permission_id      - ID of the permission.
+#   permission_list    - List of individual permission strings granted by this permission
+#                        name/scope.
 output "permission_details" {
   value = data.spectrocloud_permission.example
 }
 
-# Individual outputs for better clarity (optional)
 output "permission_id" {
   value = data.spectrocloud_permission.example.id
 }

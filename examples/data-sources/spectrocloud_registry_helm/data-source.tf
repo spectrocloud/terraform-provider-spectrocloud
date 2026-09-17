@@ -1,9 +1,13 @@
-# Data source to retrieve details of a specific SpectroCloud Helm registry by name
+# Looks up a Helm registry by name.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_registry_helm" "my_helm_registry" {
-  name = "my-helm-registry" # Name of the Helm registry to look up
+  name = "my-helm-registry"
 }
 
-# Output the ID of the retrieved Helm registry
+# Computed outputs:
+#   helm_registry_id
 output "helm_registry_id" {
   value = data.spectrocloud_registry_helm.my_helm_registry.id
 }

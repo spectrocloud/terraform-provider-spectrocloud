@@ -8,49 +8,59 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     id = "test-profile-id"
   }
 
+  # cloud_config:
+  #   ssh_keys            - Optional. Public SSH keys for accessing cluster nodes.
+  #   vip                 - Optional, Computed. The cluster's virtual IP - an address or FQDN.
+  #                         If omitted, Palette assigns one automatically (within
+  #                         overlay_cidr_range, if set).
+  #   overlay_cidr_range  - Optional. Overlay (VPN) network CIDR, e.g. "100.64.192.0/23". Also
+  #                         individually ForceNew.
+  #   is_two_node_cluster - Optional, default false. Set to true for a two-node (no separate
+  #                         control plane) cluster.
+  #   ntp_servers         - Optional. NTP servers for the cluster to use.
   cloud_config {
-    # Optional. Public SSH keys for accessing cluster nodes.
     ssh_keys = ["spectro2023"]
-    # Optional, Computed. The cluster's virtual IP - an address or FQDN. If omitted, Palette
-    # assigns one automatically (within overlay_cidr_range, if set).
-    vip = "10.10.232.57"
-    # Optional. Overlay (VPN) network CIDR, e.g. "100.64.192.0/23". Also individually ForceNew.
+    vip      = "10.10.232.57"
     # overlay_cidr_range = "100.64.192.0/23"
-    # Optional, default false. Set to true for a two-node (no separate control plane) cluster.
     # is_two_node_cluster = false
-    # Optional. NTP servers for the cluster to use.
     # ntp_servers = ["pool.ntp.org"]
   }
 
+  # machine_pool (control plane "cp-pool"):
+  #   arch_type - Optional, default "amd64". Allowed: "amd64", "arm64".
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
-    # Optional, default "amd64". Allowed: "amd64", "arm64".
-    arch_type = "amd64"
+    arch_type               = "amd64"
 
-    # Required, at least one edge_host per machine pool - each maps a physical/virtual edge
-    # appliance (already paired to Palette) onto this pool.
+    # edge_host: Required, at least one edge_host per machine pool - each maps a
+    #            physical/virtual edge appliance (already paired to Palette) onto this pool.
+    #   host_uid        - Required. UID of the paired edge appliance (see
+    #                     spectrocloud_appliance).
+    #   static_ip, default_gateway, dns_servers, host_name, nic_name, subnet_mask - Optional
+    #     networking overrides; if omitted, the appliance keeps its existing network config
+    #     (e.g. DHCP-assigned address).
+    #   two_node_role   - Optional. Only for is_two_node_cluster = true. Allowed: "primary",
+    #                     "secondary".
     edge_host {
-      # Required. UID of the paired edge appliance (see spectrocloud_appliance).
-      host_uid = "edge-fsdsdedadfasdtest"
-      # Optional networking overrides - if omitted, the appliance keeps its existing network
-      # config (e.g. DHCP-assigned address).
+      host_uid        = "edge-fsdsdedadfasdtest"
       static_ip       = "10.10.32.12"
       default_gateway = "10.10.12.1"
       dns_servers     = ["tf.test.com"]
       host_name       = "test-test"
       nic_name        = "auto162"
       subnet_mask     = "255.255.12.0"
-      # Optional. Only for is_two_node_cluster = true. Allowed: "primary", "secondary".
       # two_node_role = "primary"
     }
   }
 
+  # machine_pool (worker pool "wp-pool"):
+  #   skip_k8s_upgrade - Optional, default "disabled". "enabled" skips the OS/K8s upgrade for
+  #                      this worker pool (N-3 skew allowed) when the cluster profile is
+  #                      upgraded.
   machine_pool {
-    name = "wp-pool"
-    # Optional, default "disabled". "enabled" skips the OS/K8s upgrade for this worker pool
-    # (N-3 skew allowed) when the cluster profile is upgraded.
+    name             = "wp-pool"
     skip_k8s_upgrade = "disabled"
 
     edge_host {

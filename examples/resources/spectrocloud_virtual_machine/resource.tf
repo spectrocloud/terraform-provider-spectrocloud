@@ -5,6 +5,17 @@
 # attributes shown further below - updates in place (KubeVirt itself may still require a VM
 # restart to pick up some of these changes, but Terraform does not recreate the resource for
 # them).
+#
+# Flat attributes on "tf-test-vm-basic-type" below:
+#   cluster_uid     - Required, ForceNew. The cluster UID this VM belongs to.
+#   cluster_context - Optional, default "project". Allowed: "project", "tenant".
+#   run_on_launch   - Optional. The schema's own description says "Default value is `true`", but
+#                     there is no actual Default set - ExactlyOneOf with `run_strategy` below
+#                     means one of the two must always be set explicitly anyway (see the
+#                     data-volume-template example further below, which uses
+#                     run_strategy = "Manual" instead).
+#   name            - Required, ForceNew.
+#   namespace       - Optional, default "default", ForceNew.
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
   name    = "tenant-cluster-002"
   context = "project"
@@ -18,17 +29,11 @@ locals {
 // Create a VM with default cloud init disk, container disk , interface and network
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
-  # Required, ForceNew. Unique within the namespace.
-  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
-  # Optional, default "project". Allowed: "project", "tenant".
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  # Optional, default true. Mutually exclusive with `run_strategy` (see the data-volume-template
-  # example further below, which uses run_strategy = "Manual" instead).
-  run_on_launch = true
-  # Required, ForceNew.
-  name = "tf-test-vm-basic-type"
-  # Optional, default "default", ForceNew.
-  namespace = "default"
+  run_on_launch   = true
+  name            = "tf-test-vm-basic-type"
+  namespace       = "default"
   labels = {
     "tf" = "test"
   }
@@ -377,7 +382,19 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
   labels = {
     "key1" = "value1"
   }
-  #  Sample Day 2 Operation attributes
+  # Sample Day 2 Operation attributes (all commented out, ForceNew: none - update in place):
+  #   priority_class_name, scheduler_name, node_selector, eviction_strategy,
+  #   termination_grace_period_seconds, hostname, subdomain - flat, no further constraints.
+  #   dns_policy - Allowed: "ClusterFirstWithHostNet", "ClusterFirst", "Default", "None".
+  #
+  #   tolerations block, repeatable:
+  #     effect   - Allowed: "NoSchedule", "PreferNoSchedule", "NoExecute".
+  #     operator - Allowed: "Exists", "Equal".
+  #
+  #   pod_dns_config block (at most one), with nested repeatable `option` blocks.
+  #
+  #   affinity block (at most one), with deeply nested pod_anti_affinity ->
+  #   preferred_during_scheduling_ignored_during_execution -> pod_affinity_term -> label_selector.
   #  priority_class_name = "high"
   #  scheduler_name = "test"
   #  node_selector = {
@@ -387,11 +404,11 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
   #  termination_grace_period_seconds = 60
   #  hostname = "spectro-com"
   #  subdomain = "test-spectro-com"
-  #  dns_policy = "Default" //["ClusterFirstWithHostNet", "ClusterFirst", "Default", "None"]
+  #  dns_policy = "Default"
   #  tolerations {
-  #    effect = "NoExecute" // ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+  #    effect = "NoExecute"
   #    key = "tolerationKey"
-  #    operator = "Equal" // ["Exists", "Equal"]
+  #    operator = "Equal"
   #    toleration_seconds = "60"
   #    value = "taintValue"
   #  }
@@ -466,16 +483,20 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
     }
     serial = "1"
   }
+  #  Allowed interface_binding_method values: "InterfaceBridge", "InterfaceSlirp",
+  #  "InterfaceMasquerade", "InterfaceSRIOV".
   interface {
     name                     = "main"
-    interface_binding_method = "InterfaceMasquerade" //["InterfaceBridge", "InterfaceSlirp", "InterfaceMasquerade","InterfaceSRIOV",]
+    interface_binding_method = "InterfaceMasquerade"
     model                    = "virtio"
   }
 
+  #  interface (additional) block, commented out - allowed model values: "", "e1000", "e1000e",
+  #  "ne2k_pci", "pcnet", "rtl8139", "virtio".
   #  interface {
   #    name                     = "additional"
   #    interface_binding_method = "InterfaceBridge"
-  #    model                    = "e1000e" // ["", "e1000", "e1000e", "ne2k_pci", "pcnet", "rtl8139", "virtio"]
+  #    model                    = "e1000e"
   #  }
 
   network {

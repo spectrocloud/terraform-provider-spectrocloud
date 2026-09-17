@@ -2,29 +2,35 @@
 # binding applies to). Day-2 mutability: nothing on this resource is ForceNew - metadata.name,
 # spec, and all nested filter_group/filters attributes update in place.
 resource "spectrocloud_filter" "example" {
+  # metadata:
+  #   name - Required. The filter's display name.
   metadata {
-    # Required. The filter's display name.
     name = "resourcefilter2"
   }
 
   spec {
-    # Required, exactly one filter_group block.
+    # filter_group (Required, exactly one):
+    #   conjunction - Required. How the filters below combine. Allowed: "and", "or".
     filter_group {
-      # Required. How the filters below combine. Allowed: "and", "or".
       conjunction = "and"
 
-      # Required, one or more. Each filters block is one condition.
+      # filters (Required, one or more - each block is one condition; testtag1 condition):
+      #   key      - Required. The tag key to match against.
+      #   negation - Optional, default false. If true, inverts the match (i.e. "not equal").
+      #   operator - Required. Comparison operator. Currently only "eq" (equals) is supported.
+      #   values   - Required. Values to compare the tag's value against.
       filters {
-        # Required. The tag key to match against.
-        key = "testtag1"
-        # Optional, default false. If true, inverts the match (i.e. "not equal").
+        key      = "testtag1"
         negation = false
-        # Required. Comparison operator. Currently only "eq" (equals) is supported.
         operator = "eq"
-        # Required. Values to compare the tag's value against.
-        values = ["spectro__tag"]
+        values   = ["spectro__tag"]
       }
 
+      # filters (testtag2 condition, negated):
+      #   key      - Required. The tag key to match against.
+      #   negation - Optional, default false. If true, inverts the match (i.e. "not equal").
+      #   operator - Required. Comparison operator. Currently only "eq" (equals) is supported.
+      #   values   - Required. Values to compare the tag's value against.
       filters {
         key      = "testtag2"
         negation = true

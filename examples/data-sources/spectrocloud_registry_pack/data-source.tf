@@ -1,10 +1,13 @@
-
-# Data source to retrieve details of a specific SpectroCloud registry pack by name
+# Looks up a Spectro pack registry by name.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_registry_pack" "my_pack" {
-  name = "my-pack" # Name of the registry pack to look up
+  name = "my-pack"
 }
 
-# Output the ID of the retrieved registry pack
+# Computed outputs:
+#   registry_pack_id
 output "registry_pack_id" {
   value = data.spectrocloud_registry_pack.my_pack.id
 }

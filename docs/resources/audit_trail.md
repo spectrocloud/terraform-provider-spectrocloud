@@ -142,7 +142,7 @@ Optional:
 Optional:
 
 - `ca_cert_base64` (String) Base64-encoded CA certificate for self-signed Splunk instances.
-- `insecure_skip_verify` (Boolean) Skip TLS certificate verification when set to `true`. Default is `false`.
+- `insecure_skip_verify` (Boolean) Skip TLS certificate verification when set to `true`. Default is `true`.
 
 Read-Only:
 

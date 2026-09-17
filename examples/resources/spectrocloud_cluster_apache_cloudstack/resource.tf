@@ -20,8 +20,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   # Optional: Update all worker pools in parallel for faster updates (default: false)
   # update_worker_pools_in_parallel = true
 
+  # cloud_config:
+  #   ssh_key_name - Optional. SSH key for cluster nodes.
+  #   override_cluster_api_config - Optional. Raw Cluster API config overrides, merged into the
+  #     generated cluster spec.
+  #   project - Optional (V1CloudStackResource), alternative to leaving the project unset: places
+  #     the cluster in a specific CloudStack project, by id or name.
   cloud_config {
-    # Optional: SSH key for cluster nodes
     ssh_key_name = var.ssh_key_name
 
     override_cluster_api_config = <<-EOT
@@ -32,20 +37,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
               authorization-mode: Node,RBAC
     EOT
 
-    # Optional: CloudStack project (V1CloudStackResource)
     # project {
     #   id   = var.cloudstack_project_id    # CloudStack project ID
     #   name = var.cloudstack_project_name  # CloudStack project name
     # }
 
-    # Zone configuration (required)
+    # zone: Required. The CloudStack zone the cluster is provisioned into.
     zone {
       name = var.cloudstack_zone_name
 
-      # Network configuration within the zone
+      # network: Network configuration within the zone. Optional fields not shown: id, type
+      #   ("shared" or "isolated"), gateway, netmask, offering, routing_mode.
       network {
         name = var.cloudstack_network_name
-        # Optional fields:
         # id           = var.cloudstack_network_id
         # type         = "shared"  # or "isolated"
         # gateway      = "10.0.0.1"
@@ -119,26 +123,25 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   conformance_scan_schedule   = "0 0 1 * *"
   # }
 
-  # Control Plane Pool
+  # machine_pool (control plane):
+  #   offering - Required. CloudStack compute offering (instance type/size) name for this pool.
+  #   network - Optional. Selects the network within the cloud_config zone this pool's nodes
+  #     attach to. If omitted, the zone's own network (cloud_config.zone.network) is used.
+  #   instance_config - Computed (read-only). CloudStack returns the resolved disk/memory/CPU
+  #     sizing for the chosen `offering` here; it cannot be set directly.
+  #   template - Optional. Overrides the CloudStack template used for this pool's nodes.
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
     count                   = 1
 
-    # Required. CloudStack compute offering (instance type/size) name for this pool.
     offering = var.cloudstack_compute_offering
 
-    # Optional. Selects the network within the cloud_config zone this pool's nodes attach to.
-    # If omitted, the zone's own network (set in cloud_config.zone.network) is used.
     network {
       network_name = var.cloudstack_network_name
     }
 
-    # instance_config is Computed (read-only) - CloudStack returns the resolved disk/memory/CPU
-    # sizing for the chosen `offering` here; it cannot be set directly.
-
-    # Optional: CloudStack Template Override
     # template {
     #   name = "ubuntu-22.04-template"
     # }
@@ -156,15 +159,34 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     # }
   }
 
-  # Worker Pool
+  # machine_pool (worker pool "worker-pool"):
+  #   offering - Required. CloudStack compute offering (instance type/size) name for this pool.
+  #   network - Optional. Selects the network within the cloud_config zone this pool's nodes
+  #     attach to.
+  #   override_kubeadm_configuration - Optional. Raw kubeadm config overrides (extra kubelet
+  #     args, pre/post kubeadm commands) merged into the generated node config.
+  #   override_cluster_api_config - Optional. Raw Cluster API config overrides, merged into the
+  #     generated cluster spec.
+  #   skip_k8s_upgrade - Optional, default "disabled". Set to "enabled" to skip the OS/Kubernetes
+  #     version upgrade for this worker pool when the cluster profile is upgraded (worker pools
+  #     only).
+  #   update_strategy - Optional, default "RollingUpdateScaleOut". Allowed:
+  #     "RollingUpdateScaleOut" (adds new nodes before removing old ones), "RollingUpdateScaleIn"
+  #     (removes old nodes before adding new ones), "OverrideScaling" (custom control via
+  #     max_surge/max_unavailable - when used, override_scaling MUST be specified).
+  #   override_scaling - Optional, required when update_strategy = "OverrideScaling". max_surge/
+  #     max_unavailable accept absolute counts or percentages; e.g. max_surge = "1",
+  #     max_unavailable = "0" creates the replacement node before removing the old one
+  #     (zero-downtime).
+  #   node_repave_interval - Optional. Minutes to wait between repaving (recycling) nodes.
+  #   override_health_check_configuration - Optional. Raw Machine Health Check overrides for this
+  #     node pool.
   machine_pool {
     name  = "worker-pool"
     count = 2
 
-    # Required. CloudStack compute offering (instance type/size) name for this pool.
     offering = var.cloudstack_compute_offering_worker
 
-    # Optional. Selects the network within the cloud_config zone this pool's nodes attach to.
     network {
       network_name = var.cloudstack_network_name
     }
@@ -198,8 +220,6 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
             nodeDrainTimeout: 5m
     EOT
 
-    # Optional, default "disabled". Set to "enabled" to skip the OS/Kubernetes version upgrade
-    # for this worker pool when the cluster profile is upgraded (worker pools only).
     # skip_k8s_upgrade = "disabled"
 
     # Update Strategy Options:
@@ -336,4 +356,3 @@ output "cluster_kubeconfig" {
   description = "Kubeconfig for the Apache CloudStack cluster"
   sensitive   = true
 }
-

@@ -1,12 +1,15 @@
 # Day-2 mutability: only `config.k8s_distribution` is ForceNew - changing the underlying
-# distribution (e.g. "k3s" to "vcluster-generic") recreates the cluster group. Everything else -
-# name, context, description, tags, the rest of config, and the clusters list - updates in place.
+# distribution recreates the cluster group. Everything else - name, context, description, tags,
+# the rest of config, and the clusters list - updates in place.
 resource "spectrocloud_cluster_group" "cg" {
   name        = "ran-cp-cluster-group"
   context     = "tenant"
   description = "Cluster Group description updated"
   tags        = ["qa:dev"]
 
+  # config:
+  #   k8s_distribution - Optional, default "vcluster-generic", ForceNew. The Kubernetes
+  #     distribution virtual clusters in this group run on.
   config {
     host_endpoint_type       = "Ingress"
     cpu_millicore            = 12000
@@ -14,9 +17,7 @@ resource "spectrocloud_cluster_group" "cg" {
     storage_in_gb            = 12
     oversubscription_percent = 120
     values                   = ""
-    # Optional, default "vcluster-generic", ForceNew. The Kubernetes distribution virtual
-    # clusters in this group run on.
-    k8s_distribution = "k3s"
+    k8s_distribution         = "k3s"
   }
 
   # Optional. A host cluster profile can also be attached to the group itself (same block shape

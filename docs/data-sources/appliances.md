@@ -13,20 +13,27 @@ Provides details about a set of appliances used for Edge Native cluster provisio
 ## Example Usage
 
 ```terraform
-# Data source to retrieve details of appliances based on filters
+# Looks up the set of Edge Native appliances (hosts) matching the given filters. Every
+# attribute below except `ids` is a filter you set; `ids` is the sole computed output - the
+# result does not include the appliances' other properties (name, tags, etc.), only their IDs.
 data "spectrocloud_appliances" "filtered_appliances" {
-  context      = "project" # Context can be "project" or "tenant"
-  status       = "ready"   # Filter by status ready, in-use, unpaired
-  health       = "healthy" # Filter by health status
-  architecture = "amd_64"  # Filter by architecture type amd64, arm64
+  # Lookup filter, optional, default "project". Allowed: "project", "tenant".
+  context = "project"
+  # Lookup filter, optional. Allowed: "ready", "in-use", "unpaired". Omit to match any status.
+  status = "ready"
+  # Lookup filter, optional. Allowed: "healthy", "unhealthy". Omit to match any health state.
+  health = "healthy"
+  # Lookup filter, optional. Allowed: "amd64", "arm64". Omit to match any architecture.
+  architecture = "amd64"
+  # Lookup filter, optional. Matches appliances carrying all of these tag key/value pairs.
   tags = {
-    environment = "production" # Filter by tag key-value pairs
+    environment = "production"
   }
 }
 
-# Output the list of appliance IDs that match the filters
+# Computed. IDs of every appliance matching the filters above.
 output "appliance_ids" {
-  value = [for a in data.spectrocloud_appliance.filtered_appliances : a.name]
+  value = data.spectrocloud_appliances.filtered_appliances.ids
 }
 ```
 

@@ -1,9 +1,14 @@
-# Retrieve details of a specific application profile
+# Looks up an existing application profile by name (and, optionally, version).
+#
+# Lookup keys:
+#   name    - Required. Name of the application profile.
+#   version - Optional, also Computed. Set to look up a specific version; if omitted, looks up
+#             "1.0.0" and returns whichever version was actually matched.
 data "spectrocloud_application_profile" "example_profile" {
-  name = "my-app-profile" # Specify the name of the application profile
+  name = "my-app-profile"
+  # version = "1.0.0"
 }
 
-# Output the retrieved application profile details
 output "application_profile_version" {
   value = data.spectrocloud_application_profile.example_profile.version
 }

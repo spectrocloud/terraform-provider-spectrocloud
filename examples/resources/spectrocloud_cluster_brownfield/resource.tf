@@ -1,57 +1,81 @@
-# Basic Brownfield Cluster Registration (Day-1)
-# This example shows the minimal required fields for registering an existing Kubernetes cluster.
+# Brownfield Cluster Registration
+# This example registers an existing Kubernetes cluster and additionally exercises most of the
+# resource's optional Day-2 attributes (cluster_profile, scan_policy, backup_policy,
+# machine_pool node actions, cluster_rbac_binding) - the only truly required fields are `name`
+# and `cloud_type`.
 #
 # Day-2 mutability: nothing on this resource is marked ForceNew in the schema (Terraform will
 # always try an in-place update, never a destroy/recreate), but the provider's own docs state
 # that `context` and `import_mode` "cannot be updated after creation" - changing them will not
 # trigger a resource replacement, so re-applying with a different value may be a no-op or error
 # at the API level rather than doing what you'd expect. Treat both as effectively set-once.
+#
+# Flat attributes:
+#   cloud_type - Required. The schema's own description lists aws, eks-anywhere, azure, gcp,
+#     vsphere, openshift, generic, maas - but the provider's registration logic
+#     (resource_cluster_brownfield.go, resourceClusterBrownfieldImportCreate) only actually
+#     branches on aws, azure, gcp, apache-cloudstack, and generic. Any other value (including
+#     several the schema itself lists, like vsphere/maas/openshift/eks-anywhere) silently falls
+#     through to the generic import path with no warning - validation for this field is disabled,
+#     so nothing catches the mismatch at plan time. Stick to aws/azure/gcp/apache-cloudstack/
+#     generic to get the behavior you expect.
+#   context - Optional, default "project". Allowed: "project", "tenant". Not updatable after
+#     creation (see above).
+#   import_mode - Optional, default "full" (documented; empty string on the wire). Allowed:
+#     "read_only", "full". Not updatable after creation (see above).
+#   pause_agent_upgrades - Optional, default "unlock". Allowed: "lock" (pin the Palette agent
+#     version), "unlock".
 
 resource "spectrocloud_cluster_brownfield" "basic" {
-  name = "my-existing-cluster"
-  # Required. Intended allowed values: aws, eks-anywhere, azure, gcp, vsphere, openshift,
-  # generic, maas - note validation for this field is currently disabled in the provider, so any
-  # string is accepted; use one of the above for a value Palette actually recognizes.
-  cloud_type = "generic"
-  # Optional, default "project". Allowed: "project", "tenant". Not updatable after creation.
-  context = "project"
-  # Optional, default "full" (documented; empty string on the wire). Allowed: "read_only", "full".
-  # Not updatable after creation.
-  import_mode = "full"
+  name                 = "my-existing-cluster"
+  cloud_type           = "generic"
+  context              = "project"
+  import_mode          = "full"
+  description          = "My existing Kubernetes cluster"
+  cluster_timezone     = "Etc/UTC"
+  tags                 = ["environment:production", "team:platform", "managed-by:terraform"]
+  apply_setting        = "DownloadAndInstall"
+  pause_agent_upgrades = "lock"
 
-  description      = "My existing Kubernetes cluster"
-  cluster_timezone = "Etc/UTC"
-  tags             = ["environment:production", "team:platform", "managed-by:terraform"]
-  apply_setting    = "DownloadAndInstall"
   cluster_profile {
     id = "CLUSTER_PROFILE_ID"
   }
+
   scan_policy {
     configuration_scan_schedule = "0 0 * * SUN"
     penetration_scan_schedule   = "0 0 * * SUN"
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-  # Optional, default "unlock". Allowed: "lock" (pin the Palette agent version), "unlock".
-  pause_agent_upgrades = "lock"
+  # machine_pool (worker-pool node action):
+  #   node.action - Allowed: "cordon", "uncordon".
   machine_pool {
     name = "worker-pool"
 
     node {
       node_name = "cp-dev-worker"
-      action    = "uncordon" # Options: "cordon" or "uncordon"
+      action    = "uncordon"
     }
   }
 
+  # machine_pool (master-pool node action):
+  #   node.node_id - Optional. Node ID as returned by the platform.
+  #   node.action - Allowed: "cordon", "uncordon".
   machine_pool {
     name = "master-pool"
 
     node {
       node_name = "cp-dev-control-plane2"
       node_id   = "NODE_ID"
-      action    = "uncordon" # Options: "cordon" or "uncordon"
+      action    = "uncordon"
     }
   }
+
+  # cluster_rbac_binding (cluster-scoped ClusterRoleBinding):
+  #   role - map with `kind` (e.g. "ClusterRole") and `name` of the RBAC role to bind.
+  #   subjects - one block per subject bound to the role. `type` is "User", "Group", or
+  #     "ServiceAccount"; `namespace` is required when type = "ServiceAccount", not used
+  #     otherwise.
   cluster_rbac_binding {
     type = "ClusterRoleBinding"
     role = {
@@ -63,20 +87,17 @@ resource "spectrocloud_cluster_brownfield" "basic" {
       name = "admin-user@example.com"
     }
 
-    # Subject type: Group
     subjects {
       type = "Group"
       name = "platform-admins"
     }
 
-    # Subject type: ServiceAccount (requires namespace)
     subjects {
       type      = "ServiceAccount"
       name      = "cluster-admin-sa"
       namespace = "kube-system"
     }
   }
-
 
   backup_policy {
     schedule                  = "0 0 * * SUN"
@@ -87,7 +108,11 @@ resource "spectrocloud_cluster_brownfield" "basic" {
     include_cluster_resources = true
   }
 
-  # RoleBinding - Namespace-specific permissions
+  # cluster_rbac_binding (namespace-scoped RoleBinding, "production"):
+  #   namespace - Required for RoleBinding (not used for ClusterRoleBinding above); scopes the
+  #     binding to this namespace.
+  #   role - map with `kind` (e.g. "Role") and `name` of the RBAC role to bind.
+  #   subjects - see the cluster-scoped binding above for `type`/`namespace` semantics.
   cluster_rbac_binding {
     type      = "RoleBinding"
     namespace = "production"
@@ -111,8 +136,6 @@ resource "spectrocloud_cluster_brownfield" "basic" {
   }
 
 }
-
-
 
 # Output the manifest URL and kubectl command for easy access
 output "manifest_url" {

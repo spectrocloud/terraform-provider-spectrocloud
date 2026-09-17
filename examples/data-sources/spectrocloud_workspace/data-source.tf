@@ -1,9 +1,18 @@
-# Retrieve details of a specific workspace
+# Looks up a workspace by name and resolves its ID.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_workspace" "example_workspace" {
-  name = "my-workspace" # Specify the name of the workspace
+  name = "my-workspace"
 }
 
-# Output the retrieved workspace id
-output "workspace_name" {
+# Computed outputs:
+#   workspace_id
+#   workspace_name
+output "workspace_id" {
   value = data.spectrocloud_workspace.example_workspace.id
+}
+
+output "workspace_name" {
+  value = data.spectrocloud_workspace.example_workspace.name
 }

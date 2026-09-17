@@ -13,17 +13,18 @@ Data source for looking up filter definitions by name.
 ## Example Usage
 
 ```terraform
-# Retrieve details of a specific filter by name
+# Looks up a tag-based filter definition by name.
 data "spectrocloud_filter" "example" {
+  # Required lookup key.
   name = "example-filter"
 }
 
-# Output filter metadata for reference
+# Computed. {name, annotations, labels} - use metadata[0].<field> to reach a specific field.
 output "filter_metadata" {
   value = data.spectrocloud_filter.example.metadata
 }
 
-# Output filter spec details
+# Computed. {filter_group: [{conjunction, filters: [{key, negation, operator, values}]}]}.
 output "filter_spec" {
   value = data.spectrocloud_filter.example.spec
 }
@@ -40,6 +41,8 @@ output "filter_labels" {
   value = data.spectrocloud_filter.example.metadata[0].labels
 }
 
+# Computed. Typically "and" or "or", matching the values accepted by the spectrocloud_filter
+# resource's own conjunction field.
 output "filter_group_conjunction" {
   value = data.spectrocloud_filter.example.spec[0].filter_group[0].conjunction
 }

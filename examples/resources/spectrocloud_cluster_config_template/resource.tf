@@ -7,23 +7,28 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
   cloud_type = "aws"
   context    = "project"
 
-  # Only one policy is supported (MaxItems: 1)
-  # Policy can be replaced by changing the ID
+  # policy:
+  #   Only one policy is supported per template (MaxItems: 1); the policy can be replaced by
+  #   changing the id.
   policy {
-    id   = "69131adb05561b51307764e5"
+    id   = var.maintenance_policy_id
     kind = "maintenance"
   }
 
+  # cluster_profile (addon_profile_id):
   cluster_profile {
     id = var.addon_profile_id
 
-    # Profile variables with assignment strategies
+    # variables (region):
+    #   assign_strategy - "all" applies this value to all clusters.
     variables {
       name            = "region"
       value           = "us-west-2"
-      assign_strategy = "all" # Apply to all clusters
+      assign_strategy = "all"
     }
 
+    # variables (instance_type):
+    #   assign_strategy - "all" applies this value to all clusters.
     variables {
       name            = "instance_type"
       value           = "t3.medium"
@@ -31,13 +36,17 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     }
   }
 
+  # cluster_profile (infra_profile_id):
   cluster_profile {
-    id = "69130518a2d75382d3f0ee89"
+    id = var.infra_profile_id
 
+    # variables (environment):
+    #   assign_strategy - "cluster" applies this value only to this cluster (not to all
+    #                     clusters).
     variables {
       name            = "environment"
       value           = "production"
-      assign_strategy = "cluster" # Cluster-specific override
+      assign_strategy = "cluster"
     }
   }
 
@@ -51,9 +60,11 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
 # ═══════════════════════════════════════════════════════════════════════════
 # IMPORT EXAMPLE
 # ═══════════════════════════════════════════════════════════════════════════
-# Import an existing cluster config template using its UID
+# Import an existing cluster config template. The ID must be
+# "<template_id_or_name>:<project|tenant>" - the context suffix is required, not optional;
+# omitting it causes the import to fail.
 #
 # import {
 #   to = spectrocloud_cluster_config_template.imported_template
-#   id = "63d48062b3a0c92a6f230112"
+#   id = "63d48062b3a0c92a6f230112:project"
 # }

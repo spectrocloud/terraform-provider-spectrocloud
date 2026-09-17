@@ -1,29 +1,33 @@
 # Nothing on this resource is ForceNew - every attribute below updates in place.
+#
+# Attributes:
+#   name                        - Required.
+#   azure_tenant_id             - Required.
+#   azure_client_id             - Required.
+#   azure_client_secret         - Required, sensitive.
+#   context                     - Optional, default "project".
+#   cloud                       - Optional, default "AzurePublicCloud". Allowed:
+#                                 "AzurePublicCloud", "AzureUSGovernmentCloud",
+#                                 "AzureUSSecretCloud".
+#   tenant_name                 - Optional. A display name for the tenant.
+#   disable_properties_request  - Optional, default false.
+#   private_cloud_gateway_id    - Optional. Private cloud gateway ID for private cluster
+#                                 connectivity.
+#   tls_cert                    - Optional. Only allowed when cloud is set to
+#                                 "AzureUSSecretCloud".
 
 # Example 1: Basic Azure cloud account for public cloud
 resource "spectrocloud_cloudaccount_azure" "azure_public" {
-  # Required.
-  name = "azure-public-account"
-  # Required.
-  azure_tenant_id = var.azure_tenant_id
-  # Required.
-  azure_client_id = var.azure_client_id
-  # Required, sensitive.
+  name                = "azure-public-account"
+  azure_tenant_id     = var.azure_tenant_id
+  azure_client_id     = var.azure_client_id
   azure_client_secret = var.azure_client_secret
 
-  # Optional: Context (defaults to "project")
-  context = "project"
-
-  # Optional: Cloud environment (defaults to "AzurePublicCloud")
-  cloud = "AzurePublicCloud"
-
-  # Optional: Tenant name
-  tenant_name = "My Azure Tenant"
-
-  # Optional: Disable properties request (defaults to false)
+  context                    = "project"
+  cloud                      = "AzurePublicCloud"
+  tenant_name                = "My Azure Tenant"
   disable_properties_request = false
 
-  # Optional: Private cloud gateway ID for private cluster connectivity
   # private_cloud_gateway_id = "pcg-12345"
 }
 
@@ -48,7 +52,6 @@ resource "spectrocloud_cloudaccount_azure" "azure_secret" {
   cloud   = "AzureUSSecretCloud"
   context = "project"
 
-  # Optional. Only allowed when cloud is set to "AzureUSSecretCloud".
   tls_cert = var.azure_secret_tls_cert
 
   tenant_name = "Secret Cloud Tenant"

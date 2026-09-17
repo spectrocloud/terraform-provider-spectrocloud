@@ -1,15 +1,24 @@
-# Data source to retrieve details of appliances based on filters
+# Looks up the set of Edge Native appliances (hosts) matching the given filters. Every
+# attribute below except `ids` is a filter you set; `ids` is the sole computed output - the
+# result does not include the appliances' other properties (name, tags, etc.), only their IDs.
+#
+# Filters (all optional):
+#   context      - default "project". Allowed: "project", "tenant".
+#   status       - Allowed: "ready", "in-use", "unpaired". Omit to match any status.
+#   health       - Allowed: "healthy", "unhealthy". Omit to match any health state.
+#   architecture - Allowed: "amd64", "arm64". Omit to match any architecture.
+#   tags         - Matches appliances carrying all of these tag key/value pairs.
 data "spectrocloud_appliances" "filtered_appliances" {
-  context      = "project" # Context can be "project" or "tenant"
-  status       = "ready"   # Filter by status ready, in-use, unpaired
-  health       = "healthy" # Filter by health status
-  architecture = "amd_64"  # Filter by architecture type amd64, arm64
+  context      = "project"
+  status       = "ready"
+  health       = "healthy"
+  architecture = "amd64"
   tags = {
-    environment = "production" # Filter by tag key-value pairs
+    environment = "production"
   }
 }
 
-# Output the list of appliance IDs that match the filters
+# Computed. IDs of every appliance matching the filters above.
 output "appliance_ids" {
-  value = [for a in data.spectrocloud_appliance.filtered_appliances : a.name]
+  value = data.spectrocloud_appliances.filtered_appliances.ids
 }

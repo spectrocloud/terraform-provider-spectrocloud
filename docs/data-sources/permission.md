@@ -13,27 +13,25 @@ Data source for looking up permissions by name and scope.
 ## Example Usage
 
 ```terraform
-# Fetches details of a specific permission in SpectroCloud
+# Looks up a permission definition by name and scope.
 data "spectrocloud_permission" "example" {
-  # The name of the permission (Required)
-  # Example: "App Deployment", "Cluster Management", "User Access"
+  # Required lookup key. Example: "App Deployment", "Cluster Management", "User Access".
   name = "App Deployment"
-
-  # Scope of the permission (Optional, Defaults to "project")
-  # Allowed values: "project", "tenant", "resource"
+  # Optional lookup key, default "project". Allowed: "project", "tenant", "resource".
   scope = "project"
 }
 
-# Output the retrieved permission details
+# Computed. All attributes on this data source, for reference.
 output "permission_details" {
   value = data.spectrocloud_permission.example
 }
 
-# Individual outputs for better clarity (optional)
+# Computed.
 output "permission_id" {
   value = data.spectrocloud_permission.example.id
 }
 
+# Computed. List of individual permission strings granted by this permission name/scope.
 output "permission_list" {
   value = data.spectrocloud_permission.example.permissions
 }

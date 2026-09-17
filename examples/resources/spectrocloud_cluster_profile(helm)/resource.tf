@@ -16,14 +16,15 @@ resource "spectrocloud_cluster_profile" "profile_resource" {
   name        = "addon-profile-1"
   type        = "add-on"
 
+  # pack:
+  #   uid - Left unset here. Since name, tag, and registry_uid are all provided, the provider
+  #         resolves the pack's UID internally rather than requiring it to be looked up separately.
   pack {
     name         = "kubevious-test"
     type         = "helm"
     registry_uid = data.spectrocloud_registry_oci.registry1.id
     tag          = "0.8.15"
-    # uid is left unset here - since name, tag, and registry_uid are all provided, the provider
-    # resolves the pack's UID internally rather than requiring it to be looked up separately.
-    values = <<-EOT
+    values       = <<-EOT
       pack:
         namespace: "helm-test-chart"
         spectrocloud.com/install-priority: "230"

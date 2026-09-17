@@ -2,13 +2,14 @@
 # cluster profile. Nothing on this resource is ForceNew, but note the provider only accepts a
 # path that resolves within Terraform's own working directory (no absolute paths outside it, no
 # "..") - keep the export file alongside your .tf files, as shown below.
+#
+# Attributes:
+#   import_file - Required. Path to the exported cluster profile file, resolved relative to the
+#                 directory `terraform apply` is run from.
+#   context     - Optional, default "project". Allowed: "project", "tenant", "system".
 resource "spectrocloud_cluster_profile_import" "import" {
-  # Required. Path to the exported cluster profile file, resolved relative to the directory
-  # `terraform apply` is run from.
   import_file = "./profile_import.json"
-
-  # Optional, default "project". Allowed: "project", "tenant", "system".
-  context = "project"
+  context     = "project"
 }
 
 # Note: this resource does not support `terraform import` - it only creates a new cluster
