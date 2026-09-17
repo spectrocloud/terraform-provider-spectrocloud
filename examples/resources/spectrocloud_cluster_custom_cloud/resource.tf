@@ -55,7 +55,9 @@ data "spectrocloud_cluster_profile" "profile" {
 # Day-2 mutability: `name`, `cloud`, and `cloud_account_id` are ForceNew - changing any of them
 # recreates the cluster. `cloud_config.values` and `machine_pool.node_pool_config` (both raw
 # templated YAML) are NOT ForceNew and update in place, along with cluster_profile,
-# backup_policy, scan_policy, namespaces, and the RBAC/OS-patch settings below.
+# backup_policy, scan_policy, namespaces, and the RBAC/OS-patch settings below. `os_patch_after`
+# takes an RFC3339 timestamp that the provider requires to be at least 10 minutes in the future
+# at apply time - it's computed here via timeadd() rather than hardcoded to a fixed date.
 resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   name             = local.cloud_config_override_variables.CLUSTER_NAME
   cloud            = "nutanix"
@@ -72,12 +74,14 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
     values = templatefile("config_templates/cloud_config.yaml", local.cloud_config_override_variables)
   }
 
+  # machine_pool (control plane):
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
     node_pool_config        = templatefile("config_templates/cp_pool_config.yaml", local.node_pool_config_variables)
   }
 
+  # machine_pool (worker pool):
   machine_pool {
     control_plane           = false
     control_plane_as_worker = false
@@ -91,14 +95,17 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
       kind = "ClusterRole"
       name = "testRole3"
     }
+    # subjects (User):
     subjects {
       type = "User"
       name = "testRoleUser3"
     }
+    # subjects (Group):
     subjects {
       type = "Group"
       name = "testRoleGroup3"
     }
+    # subjects (ServiceAccount):
     subjects {
       type      = "ServiceAccount"
       name      = "testrolesubject3"
@@ -131,11 +138,9 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   // pause_agent_upgrades = "lock"
   os_patch_on_boot  = true
   os_patch_schedule = "0 0 * * SUN"
-  # RFC3339 timestamp; the provider requires this to be at least 10 minutes in the future at
-  # apply time, so it's computed here rather than hardcoded to a fixed date.
-  os_patch_after  = timeadd(timestamp(), "24h")
-  skip_completion = true
-  force_delete    = true
+  os_patch_after    = timeadd(timestamp(), "24h")
+  skip_completion   = true
+  force_delete      = true
   location_config {
     latitude  = local.location["latitude"]
     longitude = local.location["longitude"]

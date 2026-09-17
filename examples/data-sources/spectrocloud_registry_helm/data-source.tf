@@ -1,10 +1,13 @@
 # Looks up a Helm registry by name.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_registry_helm" "my_helm_registry" {
-  # Required lookup key.
   name = "my-helm-registry"
 }
 
-# Computed.
+# Computed outputs:
+#   helm_registry_id
 output "helm_registry_id" {
   value = data.spectrocloud_registry_helm.my_helm_registry.id
 }

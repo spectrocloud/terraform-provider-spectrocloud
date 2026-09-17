@@ -1,18 +1,22 @@
 # Looks up a cluster profile by name (with optional version) or by ID.
+
+# Retrieve details of a specific cluster profile using name.
 #
-# Retrieve details of a specific cluster profile using name
+# Lookup keys:
+#   name    - Exactly one of `id`/`name` required, also Computed.
+#   version - Optional, also Computed. Defaults to "1.0.0" when omitted.
+#   context - Optional, default "project". Allowed: "project", "tenant", "system".
 data "spectrocloud_cluster_profile" "example" {
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
-  name = "example-cluster-profile"
-  # Optional lookup key, also Computed. Defaults to "1.0.0" when omitted.
+  name    = "example-cluster-profile"
   version = "1.0.0"
-  # Optional lookup key, default "project". Allowed: "project", "tenant", "system".
   context = "project"
 }
 
-# Retrieve details of a cluster profile using ID
+# Retrieve details of a cluster profile using ID.
+#
+# Lookup keys:
+#   id - Exactly one of `id`/`name` required, also Computed.
 data "spectrocloud_cluster_profile" "by_id" {
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
   id = "123e4567e89ba426614174000"
 }
 

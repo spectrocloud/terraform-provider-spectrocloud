@@ -1,9 +1,11 @@
 # Looks up a cluster config template by name.
 # Tech Preview: this data source may undergo changes.
+#
+# Lookup keys:
+#   name    - Required.
+#   context - Optional, default "project". Allowed: "project", "tenant".
 data "spectrocloud_cluster_config_template" "template" {
-  # Required lookup key.
-  name = var.template_name
-  # Optional lookup key, default "project". Allowed: "project", "tenant".
+  name    = var.template_name
   context = var.template_context
 }
 

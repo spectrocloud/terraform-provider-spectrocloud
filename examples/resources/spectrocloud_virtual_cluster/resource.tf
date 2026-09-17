@@ -1,31 +1,37 @@
 # Day-2 mutability: only `name` and `cloud_config` are ForceNew - changing either recreates the
 # virtual cluster. Everything else - host_cluster_uid, cluster_group_uid, resources,
 # cluster_profile, tags, description, and the rest - updates in place.
+#
+# Attributes:
+#   name              - Required, ForceNew.
+#   context           - Optional, default "project". Despite the schema description mentioning
+#                       `tenant`, the only values actually accepted are "project" or "cluster".
+#   tags              - Optional. Tags in `key:value` form.
+#   description       - Optional, default "". Free-text description.
+#   host_cluster_uid  - Required in practice: set exactly one of host_cluster_uid or
+#                       cluster_group_uid to place the virtual cluster - directly on a host
+#                       cluster (this example), or on whichever cluster a cluster group selects.
+#   cluster_group_uid - See host_cluster_uid above.
+#   pause_cluster     - Optional, default false. Set true to pause the cluster; false to resume
+#                       it.
+#
+# resources block (optional, at most one) - all 6 fields optional; set only the ones you want to
+# bound: max_cpu, max_mem_in_mb, max_storage_in_gb, min_cpu, min_mem_in_mb, min_storage_in_gb.
 resource "spectrocloud_virtual_cluster" "cluster" {
-  # Required, ForceNew.
   name = "virtual-cluster-demo"
 
-  # Optional, default "project". Despite the schema description mentioning `tenant`, the only
-  # values actually accepted are "project" or "cluster".
   # context = "project"
 
-  # Optional. Tags in `key:value` form.
   # tags = ["dev", "department:devops", "owner:bob"]
 
-  # Optional, default "". Free-text description.
   # description = "Demo virtual cluster"
 
-  # Required in practice: set exactly one of host_cluster_uid or cluster_group_uid to place the
-  # virtual cluster - directly on a host cluster (this example), or on whichever cluster a
-  # cluster group selects.
   host_cluster_uid = var.host_cluster_uid
   # cluster_group_uid = data.spectrocloud_cluster_group.cg.id
 
-  # Optional, default false. Set true to pause the cluster; false to resume it.
   # pause_cluster = false
 
   resources {
-    # All 6 fields optional; set only the ones you want to bound.
     max_cpu           = 6
     max_mem_in_mb     = 6000
     max_storage_in_gb = 20

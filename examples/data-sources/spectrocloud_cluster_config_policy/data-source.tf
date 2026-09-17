@@ -1,8 +1,10 @@
 # Looks up a cluster config (maintenance) policy by name.
+#
+# Lookup keys:
+#   name    - Required.
+#   context - Optional, default "project". Allowed: "project", "tenant".
 data "spectrocloud_cluster_config_policy" "policy" {
-  # Required lookup key.
-  name = var.policy_name
-  # Optional lookup key, default "project". Allowed: "project", "tenant".
+  name    = var.policy_name
   context = var.policy_context
 }
 

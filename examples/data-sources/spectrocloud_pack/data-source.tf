@@ -8,35 +8,51 @@
 #      of advance_filters; conflicts with id/cloud/name/version/registry_uid.
 # A fourth mode looks up by `id` directly; it conflicts with filters/cloud/name/version/registry_uid.
 #
+# "example" (simple lookup) flat attributes - all lookup keys, optional, also Computed:
+#   name         - Pack name (e.g., "nginx-pack", "k8s-core").
+#   version      - If omitted, the latest available version is used.
+#   cloud        - Set of cloud types to filter by; "all" is implied.
+#   registry_uid - Registry to search within.
+#   type         - Allowed: "helm", "manifest", "container", "operator-instance".
+
 # Retrieve details of a specific pack using name and version
 data "spectrocloud_pack" "example" {
-  # Lookup key, optional, also Computed. Pack name (e.g., "nginx-pack", "k8s-core").
-  name = "nginx-pack"
-  # Lookup key, optional, also Computed. If omitted, the latest available version is used.
+  name    = "nginx-pack"
   version = "1.2.3"
-  # Lookup key, optional, also Computed. Set of cloud types to filter by; "all" is implied.
-  # cloud = ["aws"]
-  # Lookup key, optional, also Computed. Registry to search within.
+  # cloud        = ["aws"]
   # registry_uid = "5ee9c5adc172449eeb9c30cf"
-  # Lookup key, optional, also Computed. Allowed: "helm", "manifest", "container",
-  # "operator-instance".
-  # type = "helm"
+  # type         = "helm"
 }
 
 # Retrieve a pack using advanced filters
+#
+# Flat attributes:
+#   name         - Pack name to search for.
+#   registry_uid - Unique registry identifier.
 data "spectrocloud_pack" "filtered" {
-  name = "k8sgpt-operator" # Pack name to search for
+  name = "k8sgpt-operator"
 
+  # advance_filters block (at most one), structured filtering by pack_type/addon_type/pack_layer/
+  # environment/is_fips/pack_source:
+  #   pack_type   - Allowed: "helm", "spectro", "oci", "manifest".
+  #   addon_type  - Allowed: "load balancer", "ingress", "logging", "monitoring", "security",
+  #                 "authentication", "servicemesh", "system app", "app services", "registry",
+  #                 "csi", "cni", "integration".
+  #   pack_layer  - Allowed: "kernel", "os", "k8s", "cni", "csi", "addon".
+  #   environment - Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas",
+  #                 "edge-native".
+  #   is_fips     - Boolean: true (FIPS-compliant) / false (default).
+  #   pack_source - Allowed: "spectrocloud", "community".
   advance_filters {
-    pack_type   = ["spectro"]    # Allowed: "helm", "spectro", "oci", "manifest"
-    addon_type  = ["system app"] # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
-    pack_layer  = ["addon"]      # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
-    environment = ["all"]        # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
-    is_fips     = false          # Boolean: true (FIPS-compliant) / false (default)
-    pack_source = ["community"]  # Allowed: "spectrocloud", "community"
+    pack_type   = ["spectro"]
+    addon_type  = ["system app"]
+    pack_layer  = ["addon"]
+    environment = ["all"]
+    is_fips     = false
+    pack_source = ["community"]
   }
 
-  registry_uid = "5ee9c5adc172449eeb9c30cf" # Unique registry identifier
+  registry_uid = "5ee9c5adc172449eeb9c30cf"
 }
 
 # Output pack details (all Computed)

@@ -9,14 +9,13 @@ data "spectrocloud_backup_storage_location" "bsl" {
 }
 
 # Day-2 mutability: `name`, `edge_host_uid`, and the entire `cloud_config` block are ForceNew -
-# changing any of them recreates the cluster. `cluster_profile`, `backup_policy`, `scan_policy`,
-# `tags`, and `machine_pool` all update in place.
+# changing any of them recreates the cluster. `edge_host_uid` is the UID of the Edge host
+# (spectrocloud_appliance) this cluster runs on. `context` is Optional (default "project";
+# allowed: "project", "tenant") and, along with `cluster_profile`, `backup_policy`,
+# `scan_policy`, `tags`, and `machine_pool`, updates in place.
 resource "spectrocloud_cluster_edge_vsphere" "cluster" {
-  # Required, ForceNew.
-  name = "edge-vsphere-picard-1"
-  # Optional, default "project". Allowed: "project", "tenant".
-  context = "project"
-  # Required, ForceNew. UID of the Edge host (spectrocloud_appliance) this cluster runs on.
+  name          = "edge-vsphere-picard-1"
+  context       = "project"
   edge_host_uid = var.edge_host_uid
 
   # Optional, default false/20. Force-delete the cluster without waiting for the provisioned
@@ -29,24 +28,28 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
     id = data.spectrocloud_cluster_profile.vmware_profile.id
   }
 
+  # cloud_config:
+  #   ssh_keys              - ExactlyOneOf with ssh_key (singular) - neither is deprecated;
+  #                           ssh_keys just accepts a list instead of one string.
+  #   image_template_folder - Optional. vSphere folder holding VM image templates for node
+  #                           provisioning. Defaults to "spectro-templates" when unset.
+  #   vip                   - Required. Virtual IP for the Kubernetes control plane endpoint.
+  #   static_ip             - Optional, default false. Use a static IP instead of DHCP for the
+  #                           control plane endpoint.
+  #   network_type          - Optional. Network endpoint type for the control plane address
+  #                           (e.g. "DDNS").
+  #   network_search_domain - Optional. DNS search domain for the control plane endpoint, used
+  #                           with DDNS.
   cloud_config {
-    # ssh_key (singular) and ssh_keys are mutually exclusive (ExactlyOneOf) - neither is
-    # deprecated, ssh_keys just accepts a list instead of one string.
     ssh_keys = [var.cluster_ssh_public_key]
 
     datacenter = var.vsphere_datacenter
     folder     = var.vsphere_folder
-    # Optional. vSphere folder holding VM image templates for node provisioning. Defaults to
-    # "spectro-templates" when unset.
     # image_template_folder = "spectro-templates"
 
-    # Required. Virtual IP for the Kubernetes control plane endpoint.
     vip = var.cluster_vip
-    # Optional, default false. Use a static IP instead of DHCP for the control plane endpoint.
     # static_ip = true
-    # Optional. Network endpoint type for the control plane address (e.g. "DDNS").
     # network_type = "DDNS"
-    # Optional. DNS search domain for the control plane endpoint, used with DDNS.
     # network_search_domain = "corp.example.com"
   }
 
@@ -65,19 +68,22 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+  # machine_pool (control plane "cp-pool"):
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
     count                   = 1
+
+    # placement:
+    #   static_ip_pool_id - Optional. UID of a static IP pool to allocate node addresses from -
+    #                       the schema has no coded link to cloud_config.static_ip, so set this
+    #                       whenever you want IP-pool-based placement regardless of that flag.
     placement {
       cluster       = var.vsphere_cluster
       resource_pool = var.vsphere_resource_pool
       datastore     = var.vsphere_datastore
       network       = var.vsphere_network
-      # Optional. UID of a static IP pool to allocate node addresses from - the schema has no
-      # coded link to cloud_config.static_ip, so set this whenever you want IP-pool-based
-      # placement regardless of that flag.
       # static_ip_pool_id = data.spectrocloud_ippool.pool.id
     }
     instance_type {
@@ -87,6 +93,9 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
     }
   }
 
+  # machine_pool (worker pool "worker-basic"):
+  #   override_health_check_configuration - Optional. YAML override for Machine Health Check
+  #                                          settings for this node pool.
   machine_pool {
     name                 = "worker-basic"
     count                = 1
@@ -110,7 +119,6 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
     #   action  = "cordon"
     # }
 
-    # Optional: override Machine Health Check settings for this node pool
     override_health_check_configuration = <<-EOT
       maxUnhealthy: 40%
       nodeStartupTimeout: 10m

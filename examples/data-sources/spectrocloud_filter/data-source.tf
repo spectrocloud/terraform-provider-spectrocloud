@@ -1,6 +1,8 @@
 # Looks up a tag-based filter definition by name.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_filter" "example" {
-  # Required lookup key.
   name = "example-filter"
 }
 

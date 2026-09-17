@@ -1,10 +1,14 @@
 # Looks up a workspace by name and resolves its ID.
+#
+# Lookup keys:
+#   name - Required.
 data "spectrocloud_workspace" "example_workspace" {
-  # Required lookup key.
   name = "my-workspace"
 }
 
-# Computed.
+# Computed outputs:
+#   workspace_id
+#   workspace_name
 output "workspace_id" {
   value = data.spectrocloud_workspace.example_workspace.id
 }

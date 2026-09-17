@@ -1,22 +1,25 @@
 # Looks up macros/service-variable-output values defined at the project or tenant level.
+#
+# Lookup keys:
+#   context    - Optional, default "tenant". Allowed: "project", "tenant".
+#   macro_name - Optional. When set, `macro_value` below is populated with this macro's value.
 data "spectrocloud_macros" "macros" {
-  # Optional lookup key, default "tenant". Allowed: "project", "tenant".
-  context = "project"
-  # Optional lookup key. When set, `macro_value` below is populated with this macro's value.
+  context    = "project"
   macro_name = "MACRO_PROJECT_PODCIDR"
 }
 
-# Computed. Populated only when macro_name above is set.
+# Computed outputs:
+#   macro_value - Populated only when macro_name above is set.
+#   macros_map  - Every macro in this context, as a name -> value map.
+#   macros_id   - UID of the project or tenant this macro set belongs to.
 output "macro_value" {
   value = data.spectrocloud_macros.macros.macro_value
 }
 
-# Computed. Every macro in this context, as a name -> value map.
 output "macros_map" {
   value = data.spectrocloud_macros.macros.macros_map
 }
 
-# Computed. UID of the project or tenant this macro set belongs to.
 output "macros_id" {
   value = data.spectrocloud_macros.macros.id
 }

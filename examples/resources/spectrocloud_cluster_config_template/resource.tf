@@ -7,23 +7,28 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
   cloud_type = "aws"
   context    = "project"
 
-  # Only one policy is supported (MaxItems: 1)
-  # Policy can be replaced by changing the ID
+  # policy:
+  #   Only one policy is supported per template (MaxItems: 1); the policy can be replaced by
+  #   changing the id.
   policy {
     id   = var.maintenance_policy_id
     kind = "maintenance"
   }
 
+  # cluster_profile (addon_profile_id):
   cluster_profile {
     id = var.addon_profile_id
 
-    # Profile variables with assignment strategies
+    # variables (region):
+    #   assign_strategy - "all" applies this value to all clusters.
     variables {
       name            = "region"
       value           = "us-west-2"
-      assign_strategy = "all" # Apply to all clusters
+      assign_strategy = "all"
     }
 
+    # variables (instance_type):
+    #   assign_strategy - "all" applies this value to all clusters.
     variables {
       name            = "instance_type"
       value           = "t3.medium"
@@ -31,13 +36,17 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     }
   }
 
+  # cluster_profile (infra_profile_id):
   cluster_profile {
     id = var.infra_profile_id
 
+    # variables (environment):
+    #   assign_strategy - "cluster" applies this value only to this cluster (not to all
+    #                     clusters).
     variables {
       name            = "environment"
       value           = "production"
-      assign_strategy = "cluster" # Cluster-specific override
+      assign_strategy = "cluster"
     }
   }
 

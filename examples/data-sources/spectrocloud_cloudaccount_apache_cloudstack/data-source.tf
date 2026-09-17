@@ -1,17 +1,21 @@
 # Looks up an existing Apache CloudStack cloud account registered in Palette, by name or by ID.
+
+# Retrieve details of an Apache CloudStack cloud account using name.
 #
-# Retrieve details of an Apache CloudStack cloud account using name
+# Lookup keys:
+#   name    - Exactly one of `id`/`name` required, also Computed.
+#   context - Optional. Allowed: "project", "tenant", "" (default). Required only to
+#             disambiguate when more than one account shares the same `name` across scopes.
 data "spectrocloud_cloudaccount_apache_cloudstack" "example" {
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
-  name = "apache-cloudstack-account-1"
-  # Optional. Allowed: "project", "tenant", "" (default). Required only to disambiguate when
-  # more than one account shares the same `name` across scopes.
+  name    = "apache-cloudstack-account-1"
   context = "project"
 }
 
-# Retrieve details of an Apache CloudStack cloud account using ID
+# Retrieve details of an Apache CloudStack cloud account using ID.
+#
+# Lookup keys:
+#   id - Exactly one of `id`/`name` required, also Computed.
 data "spectrocloud_cloudaccount_apache_cloudstack" "by_id" {
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
   id = "123e4567-e89b-12d3-a456-426614174000"
 }
 

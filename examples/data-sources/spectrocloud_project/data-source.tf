@@ -1,8 +1,10 @@
 # Looks up a Spectro Cloud project by name and resolves its ID.
+#
+# Lookup keys: set either `name` (shown here) or `id` - both are independently implemented
+# lookups (dataSourceProjectRead tries `name` first, then falls back to `id`), so `id` alone
+# works too if you already know the project's UID.
+#   name - Optional, also Computed, ConflictsWith `id`.
 data "spectrocloud_project" "example" {
-  # Lookup key, optional, also Computed, ConflictsWith `id`. Set either `name` (shown here) or
-  # `id` - both are independently implemented lookups (dataSourceProjectRead tries `name` first,
-  # then falls back to `id`), so `id` alone works too if you already know the project's UID.
   name = "MyProject"
 }
 

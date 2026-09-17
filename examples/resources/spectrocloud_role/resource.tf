@@ -12,12 +12,15 @@ data "spectrocloud_role" "roles" {
 
 # Day-2 mutability: nothing on this resource is ForceNew - name, type, and permissions all
 # update in place.
+#
+# Attributes:
+#   name        - Required.
+#   type        - Optional, default "project". Allowed: "project", "tenant", "resource".
+#   permissions - Required. Set of permission ID strings - here composed from other roles'
+#                 permission sets.
 resource "spectrocloud_role" "custom_role" {
-  # Required.
-  name = "Test Cluster Role"
-  # Optional, default "project". Allowed: "project", "tenant", "resource".
-  type = "project"
-  # Required. Set of permission ID strings - here composed from other roles' permission sets.
+  name        = "Test Cluster Role"
+  type        = "project"
   permissions = flatten([for role in data.spectrocloud_role.roles : role.permissions])
 }
 

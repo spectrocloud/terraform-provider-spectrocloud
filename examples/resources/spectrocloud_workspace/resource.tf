@@ -41,17 +41,22 @@ resource "spectrocloud_workspace" "workspace" {
       kind = "ClusterRole"
       name = "testrole3"
     }
+    # subjects (User) block, repeatable:
+    #   type - Required. "User", "Group", or "ServiceAccount".
     subjects {
-      # Required. "User", "Group", or "ServiceAccount".
       type = "User"
       name = "testRoleUser4"
     }
+
+    # subjects (Group) block, repeatable.
     subjects {
       type = "Group"
       name = "testRoleGroup4"
     }
+
+    # subjects (ServiceAccount) block, repeatable:
+    #   namespace - Required when type = "ServiceAccount".
     subjects {
-      # namespace required when type = "ServiceAccount".
       type      = "ServiceAccount"
       name      = "testrolesubject3"
       namespace = "testrolenamespace"

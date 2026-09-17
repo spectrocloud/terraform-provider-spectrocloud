@@ -1,8 +1,10 @@
 # Looks up a backup storage location by name or by ID.
+#
+# Lookup keys (exactly one of `id`/`name` required, both also Computed):
+#   name - Name of the backup storage location.
+#   id   - ID of the backup storage location.
 data "spectrocloud_backup_storage_location" "example" {
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
   name = "my-backup-location"
-  # Lookup key, optional (exactly one of `id`/`name` required), also Computed.
   # id = "657ec9a27afca71b0dc98027"
 }
 

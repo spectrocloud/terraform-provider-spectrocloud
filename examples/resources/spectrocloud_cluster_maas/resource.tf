@@ -12,34 +12,34 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
-# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. cloud_config (domain,
-# enable_lxd_vm, ntp_servers, ssh_keys) and machine_pool update in place. The optional
-# hyper_shift_config block (not shown here - for running HyperShift/OpenShift hosted control
-# planes on MAAS) has both of its fields (cluster_deployment_type, host_cluster_uid) ForceNew.
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. `update_worker_pools_in_parallel`
+# (optional, default false; true updates all worker pools simultaneously, false updates them one
+# at a time), `pause_agent_upgrades` (controls automatic upgrades of the Palette agent/components
+# on this cluster - "lock" pauses them, e.g. while stepping through Canonical K8s LTS versions and
+# you want to gate the agent bump; "unlock", the default, lets them flow automatically),
+# cloud_config (domain, enable_lxd_vm, ntp_servers, ssh_keys), and machine_pool all update in
+# place. The optional hyper_shift_config block (not shown here - for running HyperShift/OpenShift
+# hosted control planes on MAAS) has both of its fields (cluster_deployment_type,
+# host_cluster_uid) ForceNew.
 resource "spectrocloud_cluster_maas" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
-  # Optional, default false. true updates all worker pools simultaneously; false (default)
-  # updates them one at a time.
   # update_worker_pools_in_parallel = false
 
-  # Controls automatic upgrades of the Palette agent/components on this cluster.
-  # Set to "lock" to pause agent upgrades (e.g. while stepping through Canonical K8s
-  # LTS versions and you want to gate the agent bump); "unlock" (default) lets them
-  # flow automatically.
   pause_agent_upgrades = "unlock"
 
+  # cloud_config:
+  #   override_cluster_api_config - Optional. YAML passthrough for CAPMAAS properties not yet
+  #     first-class in Palette. Overrides pack-level and Palette-managed values. Palette does not
+  #     pre-validate keys/types/values; the API surfaces any errors.
   cloud_config {
     domain        = "maas.mycompany.com"
     enable_lxd_vm = false
     ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
     ssh_keys      = var.cluster_ssh_public_keys
 
-    # Optional: YAML passthrough for CAPMAAS properties not yet first-class in
-    # Palette. Overrides pack-level and Palette-managed values. Palette does
-    # not pre-validate keys/types/values; the API surfaces any errors.
     # override_cluster_api_config = <<-EOT
     #   MaasCluster:
     #     spec:
@@ -104,6 +104,17 @@ resource "spectrocloud_cluster_maas" "cluster" {
     azs = ["az1"]
   }
 
+  # machine_pool (worker pool "worker-basic"):
+  #   skip_k8s_upgrade - Optional, default "disabled". Decouples this worker pool's Kubernetes
+  #     upgrade from the control plane: "disabled" upgrades the pool with the cluster profile;
+  #     "enabled" keeps the pool on its current K8s version when the profile is upgraded,
+  #     allowing up to N-3 minor-version skew from the control plane. Useful for Canonical K8s
+  #     LTS upgrade paths (e.g. 1.36 LTS -> 1.42 LTS) where you want to advance the control plane
+  #     first and roll workers later.
+  #   override_cluster_api_config - Optional. YAML passthrough for pool-level CAPMAAS properties.
+  #     Same no-pre-validation posture as the cluster-level attribute.
+  #   override_health_check_configuration - Optional. Overrides Machine Health Check settings for
+  #     this node pool.
   machine_pool {
     name  = "worker-basic"
     count = 1
@@ -119,16 +130,8 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
     azs = ["az2"]
 
-    # Decouple this worker pool's Kubernetes upgrade from the control plane.
-    # "disabled" (default): worker pool upgrades with the cluster profile.
-    # "enabled": pool stays on its current K8s version when the profile is
-    # upgraded, allowing up to N-3 minor-version skew from the control plane.
-    # Useful for Canonical K8s LTS upgrade paths (e.g. 1.36 LTS -> 1.42 LTS)
-    # where you want to advance the control plane first and roll workers later.
     skip_k8s_upgrade = "disabled"
 
-    # Optional: YAML passthrough for pool-level CAPMAAS properties. Same
-    # no-pre-validation posture as the cluster-level attribute.
     # override_cluster_api_config = <<-EOT
     #   MaasMachineTemplate:
     #     spec:
@@ -137,7 +140,6 @@ resource "spectrocloud_cluster_maas" "cluster" {
     #           minCPU: 4
     # EOT
 
-    # Optional: override Machine Health Check settings for this node pool
     override_health_check_configuration = <<-EOT
       maxUnhealthy: 40%
       nodeStartupTimeout: 10m
