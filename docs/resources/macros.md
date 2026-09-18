@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_macros Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Macros"
 description: |-
   A resource for creating and managing service output variables and macros.
 ---

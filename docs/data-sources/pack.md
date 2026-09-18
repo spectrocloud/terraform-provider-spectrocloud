@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_pack Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   This data resource provides the ability to search for a pack in the Palette registries. It supports more advanced search criteria than the pack_simple data source.
 ---

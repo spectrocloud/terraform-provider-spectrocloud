@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_group Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Group"
 description: |-
   Data source for looking up a cluster group by name within a given context.
 ---

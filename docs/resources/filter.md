@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_filter Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Filters"
 description: |-
   A resource for creating and managing filters.
 ---

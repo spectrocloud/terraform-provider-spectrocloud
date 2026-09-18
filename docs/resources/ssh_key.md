@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_ssh_key Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "SSH Keys"
 description: |-
   The SSH key resource allows you to manage SSH keys in Palette.
 ---

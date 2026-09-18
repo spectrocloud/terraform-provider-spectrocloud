@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_alert Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Projects"
 description: |-
   Resource for managing project-level alert channels in Spectro Cloud.
 ---

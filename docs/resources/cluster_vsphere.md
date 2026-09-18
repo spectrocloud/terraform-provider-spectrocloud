@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_vsphere Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   A resource to manage a vSphere cluster in Palette.
 ---

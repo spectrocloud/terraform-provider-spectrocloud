@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Data source for looking up an OCI, Helm, or Spectro registry by name.
 ---

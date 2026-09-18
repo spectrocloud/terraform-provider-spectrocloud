@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_ippool Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   Data source for looking up a private cloud gateway IP pool by name.
 ---

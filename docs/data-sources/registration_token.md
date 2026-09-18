@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registration_token Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registration Token"
 description: |-
   Data source for looking up a registration token by name or UID.
 ---

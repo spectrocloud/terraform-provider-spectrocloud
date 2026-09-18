@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_edge_vsphere Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.
 ---

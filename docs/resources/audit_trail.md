@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_audit_trail Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Audit Trails"
 description: |-
   Resource for managing tenant audit trail data sinks (CloudWatch or Splunk) in Spectro Cloud.
 ---

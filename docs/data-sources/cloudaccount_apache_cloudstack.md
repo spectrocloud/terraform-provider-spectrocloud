@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_apache_cloudstack Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Data source for looking up an Apache CloudStack cloud account by ID or name.
 ---

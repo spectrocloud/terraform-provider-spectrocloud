@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_gcp Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing GCP clusters in Spectro Cloud through Palette.
 ---

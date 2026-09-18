@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_virtual_machine Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Virtual Machines"
 description: |-
   Resource for managing KubeVirt virtual machines on Spectro Cloud clusters.
 ---

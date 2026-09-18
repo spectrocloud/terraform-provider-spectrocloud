@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_group Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Group"
 description: |-
   Resource for managing host cluster groups in Spectro Cloud.
 ---

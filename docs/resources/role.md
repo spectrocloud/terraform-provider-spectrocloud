@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_role Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Roles"
 description: |-
   The role resource allows you to manage roles in Palette.
 ---

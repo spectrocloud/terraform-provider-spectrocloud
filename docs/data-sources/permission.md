@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_permission Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Roles"
 description: |-
   Data source for looking up permissions by name and scope.
 ---

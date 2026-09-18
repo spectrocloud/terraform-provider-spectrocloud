@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_privatecloudgateway_dns_map Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   This resource allows for the management of DNS mappings for private cloud gateways. This helps ensure proper DNS resolution for resources within the private cloud environment.
 ---

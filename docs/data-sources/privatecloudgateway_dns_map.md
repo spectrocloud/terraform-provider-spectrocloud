@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_privatecloudgateway_dns_map Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   Data source for looking up private cloud gateway DNS mappings.
 ---

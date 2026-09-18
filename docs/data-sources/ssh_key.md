@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_ssh_key Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "SSH Keys"
 description: |-
   The SSH key data source allows you to retrieve information about SSH keys in Palette.
 ---

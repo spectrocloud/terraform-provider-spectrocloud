@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_application_profile Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "App Profiles"
 description: |-
   Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.
 ---

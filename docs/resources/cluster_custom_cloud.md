@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_custom_cloud Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing custom cloud clusters in Spectro Cloud through Palette.
 ---

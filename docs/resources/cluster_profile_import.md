@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_profile_import Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Profiles"
 description: |-
   Resource for importing a cluster profile definition from a local file into Spectro Cloud.
 ---

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_sso Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "SSO"
 description: |-
   Resource for managing tenant-level single sign-on configuration in Spectro Cloud.
 ---

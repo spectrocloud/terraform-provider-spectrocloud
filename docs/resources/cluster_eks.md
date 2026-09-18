@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_eks Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing EKS clusters in Spectro Cloud through Palette.
 ---

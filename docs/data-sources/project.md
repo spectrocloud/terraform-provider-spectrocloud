@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_project Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Projects"
 description: |-
   Data source for looking up a Spectro Cloud project by name or id.
 ---

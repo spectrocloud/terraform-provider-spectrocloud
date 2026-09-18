@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_edge_native Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing Edge Native clusters in Spectro Cloud through Palette.
 ---

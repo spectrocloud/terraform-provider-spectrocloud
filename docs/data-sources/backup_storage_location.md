@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_backup_storage_location Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Backup Location"
 description: |-
   Data source for looking up a backup storage location by ID or name.
 ---

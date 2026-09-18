@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry_pack Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Data source for looking up a Spectro pack registry by name.
 ---

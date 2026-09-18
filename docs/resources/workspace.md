@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_workspace Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Workspaces"
 description: |-
   Resource for managing workspaces in Spectro Cloud.
 ---

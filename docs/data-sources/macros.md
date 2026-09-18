@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_macros Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Macros"
 description: |-
   Use this data source to get the ID of a macros resource for use with terraform import.
 ---

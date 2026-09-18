@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry_helm Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Data source for looking up a Helm registry by name.
 ---

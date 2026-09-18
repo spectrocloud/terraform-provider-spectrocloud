@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_maas Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing MAAS clusters in Spectro Cloud through Palette.
 ---

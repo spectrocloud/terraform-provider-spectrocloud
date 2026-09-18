@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_gke Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing GKE clusters through Palette.
 ---

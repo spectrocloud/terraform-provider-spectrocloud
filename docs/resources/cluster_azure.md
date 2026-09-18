@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_azure Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing Azure clusters in Spectro Cloud through Palette.
 ---

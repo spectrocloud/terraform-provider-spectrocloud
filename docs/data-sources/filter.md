@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_filter Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Filters"
 description: |-
   Data source for looking up filter definitions by name.
 ---

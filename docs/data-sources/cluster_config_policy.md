@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_config_policy Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Policy"
 description: |-
   Data source for retrieving information about a cluster config policy (maintenance policy).
 ---

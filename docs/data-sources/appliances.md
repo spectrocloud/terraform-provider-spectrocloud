@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_appliances Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Provides details about a set of appliances used for Edge Native cluster provisioning. Various attributes could be used to search for appliances like tags, status, health, and architecture.
 ---

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_addon_deployment Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for attaching cluster profiles as addon deployments to an existing cluster.
 ---

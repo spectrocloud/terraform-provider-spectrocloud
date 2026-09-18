@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_workspace Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Workspaces"
 description: |-
   Data source for looking up a Spectro Cloud workspace by name.
 ---

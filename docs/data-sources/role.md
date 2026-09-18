@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_role Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Roles"
 description: |-
   Data source for looking up a Spectro Cloud role by ID or name.
 ---

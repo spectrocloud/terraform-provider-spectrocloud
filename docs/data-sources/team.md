@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_team Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Teams"
 description: |-
   Data source for looking up a team by ID or name.
 ---

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_virtual_cluster Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Virtual Clusters"
 description: |-
   A resource to manage a Palette Virtual Cluster.
 ---

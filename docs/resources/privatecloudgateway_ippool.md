@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_privatecloudgateway_ippool Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   A Resource to manage IP pools for Private Cloud Gateway.
 ---

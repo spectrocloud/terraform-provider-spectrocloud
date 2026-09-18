@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_datavolume Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Virtual Machines"
 description: |-
   Manage KubeVirt data volumes attached to virtual machines in Spectro Cloud.
 ---

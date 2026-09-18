@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_private_cloud_gateway Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   A data resource to get the ID or name of Private Cloud Gateway.
 ---
