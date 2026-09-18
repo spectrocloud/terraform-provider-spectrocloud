@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_custom Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Data source for looking up a custom cloud account by ID or name.
 ---

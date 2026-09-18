@@ -1,0 +1,55 @@
+# resource "spectrocloud_cluster_config_policy" "weekly_maintenance" {
+#   name    = "weekly-maintenance-policy"
+#   context = "project"
+
+#   schedules {
+#     name         = "sunday-maintenance"
+#     start_cron   = "0 2 * * SUN"
+#     duration_hrs = 4
+#   }
+# }
+
+# Tech Preview: this resource may change. Nothing on it is ForceNew - name, context, tags, and
+# schedules all update in place.
+#
+# Example with multiple schedules and tags
+resource "spectrocloud_cluster_config_policy" "multi_schedule" {
+  name    = "multi-schedule-policy-updated"
+  context = "project"
+  tags    = ["env:production", "team:devops", "test"]
+  # Optional, default "maintenance" - currently the only supported value ("upgrade" is reserved
+  # for future use and not yet supported).
+  # policy_type = "maintenance"
+
+  schedules {
+    name         = "weekday-maintenance"
+    start_cron   = "0 1 * * 1-5"
+    duration_hrs = 2
+  }
+
+  schedules {
+    name         = "weekend-maintenance"
+    start_cron   = "1 3 * * 0,6"
+    duration_hrs = 6
+  }
+}
+
+# # Tenant-level maintenance policy
+# resource "spectrocloud_cluster_config_policy" "tenant_policy" {
+#   name    = "tenant-wide-maintenance"
+#   context = "tenant"
+
+#   schedules {
+#     name         = "monthly-maintenance"
+#     start_cron   = "0 3 1 * *"
+#     duration_hrs = 8
+#   }
+# }
+
+# Import example. The ID must be "<policy_id_or_name>:<project|tenant>" - the context suffix is
+# required, not optional; omitting it causes the import to fail.
+# import {
+#   to = spectrocloud_cluster_config_policy.imported_policy
+#   id = "63d48062b3a0c92a6f230112:project"
+# }
+

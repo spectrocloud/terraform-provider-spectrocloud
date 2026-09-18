@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_maas Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Resource for managing MaaS cloud accounts in Spectro Cloud.
 ---

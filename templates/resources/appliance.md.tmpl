@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -11,16 +11,7 @@ description: |-
 
 ## Example Usage
 
-```terraform
-resource "spectrocloud_appliance" "appliance" {
-  uid       = "test-dec9"
-  arch_type = "amd64"
-  tags = {
-    "name" = "appliance_name"
-  }
-  wait = true
-}
-```
+{{ tffile "examples/Clusters/resource/Appliance/resource.tf" }}
 
 ## Import
 

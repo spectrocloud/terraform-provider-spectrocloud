@@ -1,0 +1,82 @@
+# Copyright (c) Spectro Cloud
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-universe-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-universe-api-service
+  namespace: hello-universe-api
+spec:
+  type: LoadBalancer
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+  selector:
+    app: hello-universe-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-universe-db-service
+  namespace: hello-universe-api
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  selector:
+    app: hello-universe-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-universe-api-deployment
+  namespace: hello-universe-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-universe-api
+  template:
+    metadata:
+      labels:
+        app: hello-universe-api
+    spec:
+      containers:
+      - name: hello-universe-api
+        image: ghcr.io/spectrocloud/hello-universe-api:1.0.9
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+          - name: DB_HOST
+            value: "hello-universe-db-service.hello-universe-api.svc.cluster.local"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-universe-db-deployment
+  namespace: hello-universe-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-universe-db
+  template:
+    metadata:
+      labels:
+        app: hello-universe-db
+    spec:
+      containers:
+      - name: hello-universe-db
+        image: ghcr.io/spectrocloud/hello-universe-db:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432

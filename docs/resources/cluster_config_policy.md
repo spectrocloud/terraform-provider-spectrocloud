@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_config_policy Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Policy"
 description: |-
   A resource for creating and managing cluster config policies (maintenance policies). Tech Preview: This resource is in tech preview and may undergo changes.
 ---

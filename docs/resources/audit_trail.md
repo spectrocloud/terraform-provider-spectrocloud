@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_audit_trail Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Audit Trails"
 description: |-
   Resource for managing tenant audit trail data sinks (CloudWatch or Splunk) in Spectro Cloud.
 ---
@@ -142,7 +142,7 @@ Optional:
 Optional:
 
 - `ca_cert_base64` (String) Base64-encoded CA certificate for self-signed Splunk instances.
-- `insecure_skip_verify` (Boolean) Skip TLS certificate verification when set to `true`. Default is `false`.
+- `insecure_skip_verify` (Boolean) Skip TLS certificate verification when set to `true`. Default is `true`.
 
 Read-Only:
 
