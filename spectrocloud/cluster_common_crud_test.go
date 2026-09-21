@@ -33,13 +33,14 @@ import (
 // clusterFixtureFor(). Each test picks a UID that shapes the mock's
 // response into the exact state branch under test.
 
-// castV1Client extracts the concrete *client.V1Client from
-// unitTestMockAPIClient (typed as interface{} at the package level).
-// A helper here avoids repeating the assertion in every t.Run.
+// castV1Client extracts the project-scoped *client.V1Client from
+// unitTestMockAPIClient (typed as interface{} at the package level, holding
+// a *ProviderMeta). A helper here avoids repeating the assertion in every
+// t.Run.
 func castV1Client(t *testing.T, m interface{}) *client.V1Client {
-	c, ok := m.(*client.V1Client)
-	require.True(t, ok, "unitTestMockAPIClient must be a *client.V1Client")
-	return c
+	pm, ok := m.(*ProviderMeta)
+	require.True(t, ok, "unitTestMockAPIClient must be a *ProviderMeta")
+	return pm.Project
 }
 
 func TestResourceClusterReadyRefreshFunc(t *testing.T) {

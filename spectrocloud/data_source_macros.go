@@ -60,7 +60,7 @@ func dataSourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interfa
 	var macros []*models.V1Macro
 
 	if macroContext == "project" {
-		uid = ProviderInitProjectUid
+		uid = getProviderProjectUID(m)
 		macros, err = c.GetMacros(uid)
 		if err != nil {
 			return diag.FromErr(err)
