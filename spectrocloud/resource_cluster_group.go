@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -109,11 +110,13 @@ func resourceClusterGroup() *schema.Resource {
 							Description: "YAML values override string applied to the cluster group configuration.",
 						},
 						"k8s_distribution": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "vcluster-generic",
-							ForceNew:    true,
-							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.",
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "vcluster-generic",
+							ForceNew: true,
+							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`. " +
+								"`k3s` is deprecated and cannot be used for new cluster groups - existing `k3s` cluster groups remain " +
+								"supported and updatable, but should migrate to `vcluster-generic` or `cncf_k8s`.",
 						},
 					},
 				},
@@ -165,7 +168,31 @@ func resourceClusterGroupStateUpgradeV2(ctx context.Context, rawState map[string
 	return rawState, nil
 }
 
+// validateClusterGroupK8sDistribution rejects k8s_distribution = "k3s" for
+// new cluster groups. k3s support is deprecated (see PPD-1605); existing k3s
+// cluster groups remain supported and updatable - k8s_distribution is
+// ForceNew, so this Create-only check does not affect updates to an
+// existing group (e.g. resizing limits) and cannot be bypassed by an update
+// path, since changing the value already forces a replace.
+func validateClusterGroupK8sDistribution(d *schema.ResourceData) error {
+	resourcesObj, ok := d.GetOk("config")
+	if !ok {
+		return nil
+	}
+	resources := resourcesObj.([]interface{})[0].(map[string]interface{})
+	if k8sDistribution, _ := resources["k8s_distribution"].(string); k8sDistribution == "k3s" {
+		return fmt.Errorf("k8s_distribution = \"k3s\" is deprecated and cannot be used for new cluster groups; " +
+			"use \"vcluster-generic\" or \"cncf_k8s\" instead. Existing k3s cluster groups remain supported and " +
+			"updatable, but should migrate to one of these distributions")
+	}
+	return nil
+}
+
 func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if err := validateClusterGroupK8sDistribution(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
