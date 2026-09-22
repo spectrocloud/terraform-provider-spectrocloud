@@ -4,10 +4,15 @@ import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 func ClusterTemplateSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:        schema.TypeList,
-		Optional:    true,
-		MaxItems:    1,
-		Description: "The cluster template of the cluster.",
+		Type:     schema.TypeList,
+		Optional: true,
+		MaxItems: 1,
+		Description: "The cluster template of the cluster. If the cluster was created with `cluster_profile` and this " +
+			"is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named " +
+			"template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile " +
+			"set is applied by the template's batch reconciler at the next maintenance window, not synchronously. " +
+			"This is currently one-way: there is no supported way to detach a cluster from a template and revert to " +
+			"`cluster_profile`, so removing `cluster_template` after it has been set is rejected.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"id": {

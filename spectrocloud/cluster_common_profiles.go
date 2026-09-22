@@ -15,6 +15,13 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
+// resourceChangeGetter is satisfied by both *schema.ResourceData (apply time)
+// and *schema.ResourceDiff (plan time / CustomizeDiff), letting
+// classifyClusterTemplateTransition run identically at either stage.
+type resourceChangeGetter interface {
+	GetChange(key string) (interface{}, interface{})
+}
+
 func normalizeInterfaceSliceFromListOrSet(v interface{}) []interface{} {
 	switch t := v.(type) {
 	case nil:
@@ -39,6 +46,120 @@ func validateProfileSource(d *schema.ResourceData) error {
 
 	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
 		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
+	}
+
+	return nil
+}
+
+// classifyClusterTemplateTransition detects a Day 2 cluster_template attach
+// (PLT-2410): cluster_profile populated -> empty and cluster_template empty ->
+// populated, in the same apply/plan. It also flags the unsupported reverse
+// (detach) so callers can reject it explicitly, since there is no backend
+// detach-from-template API yet - silently falling through to the ordinary
+// cluster_profile/cluster_template update paths would leave the cluster's
+// server-side template reference stale instead of actually detaching it.
+// Neither flag can be true on Create, since GetChange's "old" value is always
+// empty there.
+func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, detach bool) {
+	oldProfileRaw, newProfileRaw := d.GetChange("cluster_profile")
+	oldTemplateRaw, newTemplateRaw := d.GetChange("cluster_template")
+
+	oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
+	newProfile := normalizeInterfaceSliceFromListOrSet(newProfileRaw)
+	oldTemplate := normalizeInterfaceSliceFromListOrSet(oldTemplateRaw)
+	newTemplate := normalizeInterfaceSliceFromListOrSet(newTemplateRaw)
+
+	attach = len(oldProfile) > 0 && len(newProfile) == 0 && len(oldTemplate) == 0 && len(newTemplate) > 0
+	detach = len(oldTemplate) > 0 && len(newTemplate) == 0 && len(oldProfile) == 0 && len(newProfile) > 0
+	return attach, detach
+}
+
+// validateClusterTemplateAttachTransition is a CustomizeDiff guard (PLT-2410):
+// it rejects the cluster_template -> cluster_profile "detach" transition at
+// plan time, before apply ever runs. Attach (the supported direction) is
+// intentionally allowed through here; it's handled in updateCommonFields.
+func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	if _, detach := classifyClusterTemplateTransition(diff); detach {
+		return errors.New("removing cluster_template and adding cluster_profile is not supported: " +
+			"detaching a cluster from a cluster template has no backend API yet. " +
+			"The cluster must remain governed by cluster_template once attached")
+	}
+	return nil
+}
+
+// attachClusterToTemplate binds the cluster to the template in the new
+// cluster_template value (Day 2 attach, PLT-2410). Per-profile variables set
+// in cluster_template are sent inline with the attach request itself -
+// profile application is deferred to the template's batch reconciler at the
+// next maintenance window, so this call does not wait for reconciliation.
+func attachClusterToTemplate(c *client.V1Client, d *schema.ResourceData) error {
+	newTemplate, ok := d.Get("cluster_template").([]interface{})
+	if !ok || len(newTemplate) == 0 {
+		return errors.New("cluster_template is required to attach a cluster to a template")
+	}
+
+	templateData, ok := newTemplate[0].(map[string]interface{})
+	if !ok {
+		return errors.New("invalid cluster_template data")
+	}
+	templateID, _ := templateData["id"].(string)
+	if templateID == "" {
+		return errors.New("cluster_template.id is required to attach a cluster to a template")
+	}
+
+	profiles, err := extractProfilesFromTemplateData(newTemplate)
+	if err != nil {
+		return err
+	}
+
+	entityProfiles := make([]*models.V1SpectroClusterAttachTemplateProfileEntity, 0, len(profiles))
+	for _, profile := range profiles {
+		p, ok := profile.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		profileID, _ := p["id"].(string)
+		if profileID == "" {
+			continue
+		}
+
+		var pVars []*models.V1SpectroClusterVariable
+		if pv, ok := p["variables"]; ok && pv != nil {
+			if variables, ok := pv.(map[string]interface{}); ok {
+				for key, value := range variables {
+					val, _ := value.(string)
+					pVars = append(pVars, &models.V1SpectroClusterVariable{
+						Name:  StringPtr(key),
+						Value: val,
+					})
+				}
+			}
+		}
+
+		entityProfiles = append(entityProfiles, &models.V1SpectroClusterAttachTemplateProfileEntity{
+			ProfileUID: StringPtr(profileID),
+			Variables:  pVars,
+		})
+	}
+
+	body := &models.V1SpectroClusterAttachTemplateEntity{
+		Spec: &models.V1SpectroClusterAttachTemplateEntitySpec{
+			Profiles: entityProfiles,
+		},
+	}
+
+	log.Printf("Attaching cluster %s to cluster template %s (%d profiles)", d.Id(), templateID, len(entityProfiles))
+	if err := c.AttachClusterTemplate(d.Id(), templateID, body); err != nil {
+		return err
+	}
+
+	// Refresh cluster_template state (resolved variables) after attach. Profile
+	// application itself is asynchronous (next maintenance window), so this
+	// only reflects the variables accepted at attach time, not a converged
+	// profile set - that's expected, matching the async nature documented on
+	// the attach API.
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		log.Printf("Warning: failed to refresh cluster_template after attach: %v", err)
 	}
 
 	return nil

@@ -41,6 +41,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Version: 0,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
