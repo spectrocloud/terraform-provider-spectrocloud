@@ -288,6 +288,14 @@ func resourceClusterEks() *schema.Resource {
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
+						"dedicate_node_pool_for_system_pods": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+							Description: "If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved " +
+								"taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the " +
+								"matching toleration. Custom taints cannot be set on a dedicated pool.",
+						},
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
 							Required:    true,
@@ -701,6 +709,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		oi["dedicate_node_pool_for_system_pods"] = machinePool.DedicateNodePoolForSystemPods
 		if machinePool.UpdateStrategy != nil && machinePool.UpdateStrategy.Type != "" {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -1128,6 +1137,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if dVal, ok := m["disk_size_gb"]; ok {
 		diskSizeGb = SafeInt64(dVal.(int))
 	}
+	dedicateNodePoolForSystemPods, _ := m["dedicate_node_pool_for_system_pods"].(bool)
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
 			RootDeviceSize: diskSizeGb,
@@ -1138,16 +1148,17 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			AmiType:        amiType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels:      toAdditionalNodePoolLabels(m),
-			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
-			Taints:                toClusterTaints(m),
-			IsControlPlane:        controlPlane,
-			Labels:                labels,
-			Name:                  types.Ptr(m["name"].(string)),
-			Size:                  types.Ptr(poolSize),
-			UpdateStrategy:        toUpdateStrategy(m),
-			MinSize:               min,
-			MaxSize:               max,
+			AdditionalLabels:              toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations:         toAdditionalNodePoolAnnotations(m),
+			Taints:                        toClusterTaints(m),
+			DedicateNodePoolForSystemPods: dedicateNodePoolForSystemPods,
+			IsControlPlane:                controlPlane,
+			Labels:                        labels,
+			Name:                          types.Ptr(m["name"].(string)),
+			Size:                          types.Ptr(poolSize),
+			UpdateStrategy:                toUpdateStrategy(m),
+			MinSize:                       min,
+			MaxSize:                       max,
 		},
 	}
 

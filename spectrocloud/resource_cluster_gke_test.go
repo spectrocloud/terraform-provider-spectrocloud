@@ -372,3 +372,46 @@ func TestToMachinePoolGkeOverrideClusterAPIConfig(t *testing.T) {
 		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
 	})
 }
+
+func TestToMachinePoolGke_DedicateNodePoolForSystemPods(t *testing.T) {
+	t.Run("true is passed through", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":                               "system-pool",
+			"instance_type":                      "e2-standard-2",
+			"disk_size_gb":                       60,
+			"count":                              1,
+			"dedicate_node_pool_for_system_pods": true,
+		}
+		got, err := toMachinePoolGke(m)
+		require.NoError(t, err)
+		require.NotNil(t, got.PoolConfig)
+		assert.True(t, got.PoolConfig.DedicateNodePoolForSystemPods)
+	})
+
+	t.Run("absent key defaults to false rather than panicking", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":          "regular-pool",
+			"instance_type": "e2-standard-2",
+			"disk_size_gb":  60,
+			"count":         1,
+		}
+		got, err := toMachinePoolGke(m)
+		require.NoError(t, err)
+		require.NotNil(t, got.PoolConfig)
+		assert.False(t, got.PoolConfig.DedicateNodePoolForSystemPods)
+	})
+}
+
+func TestFlattenMachinePoolConfigsGke_DedicateNodePoolForSystemPods(t *testing.T) {
+	machinePools := []*models.V1GcpMachinePoolConfig{
+		{
+			Name:                          "system-pool",
+			InstanceType:                  types.Ptr("e2-standard-2"),
+			DedicateNodePoolForSystemPods: true,
+		},
+	}
+	result := flattenMachinePoolConfigsGke(machinePools)
+	require.Len(t, result, 1)
+	oi := result[0].(map[string]interface{})
+	assert.Equal(t, true, oi["dedicate_node_pool_for_system_pods"])
+}
