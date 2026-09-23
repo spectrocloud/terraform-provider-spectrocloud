@@ -19,7 +19,6 @@ const (
 		"[`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema)."
 )
 
-var ProviderInitProjectUid = ""
 var ProviderFeaturePreview = map[string]bool{}
 
 // isFeaturePreviewEnabled returns true if the given feature flag name is
@@ -262,24 +261,33 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, version stri
 		transportDebug = d.Get("trace").(bool)
 	}
 
-	c := client.New(
+	clientOpts := []func(*client.V1Client){
 		client.WithPaletteURI(host),
 		client.WithAPIKey(apiKey),
 		client.WithInsecureSkipVerify(insecure),
 		client.WithRetries(retryAttempts),
 		client.WithClientHeader(resolveClientHeader(version)),
-	)
+	}
 	if transportDebug {
-		client.WithTransportDebug()(c)
+		clientOpts = append(clientOpts, client.WithTransportDebug())
 	}
 
-	uid, err := c.GetProjectUID(projectName)
+	// Build the tenant-scoped client first and resolve the project UID off
+	// it; the project-scoped client (if any) is a second, independent
+	// client built from the same options, never derived by mutating the
+	// tenant one. Both are fully scoped here, once, before any resource
+	// CRUD runs - see ProviderMeta and getV1ClientWithResourceContext.
+	tenantClient := client.New(clientOpts...)
+
+	uid, err := tenantClient.GetProjectUID(projectName)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
+
+	projectClient := tenantClient
 	if uid != "" {
-		ProviderInitProjectUid = uid
-		client.WithScopeProject(uid)(c)
+		projectClient = client.New(clientOpts...)
+		client.WithScopeProject(uid)(projectClient)
 	}
 
 	if v, ok := d.GetOk("feature_preview"); ok {
@@ -294,5 +302,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, version stri
 		}
 	}
 
-	return c, diags
+	return &ProviderMeta{
+		Project:    projectClient,
+		Tenant:     tenantClient,
+		ProjectUID: uid,
+	}, diags
 }

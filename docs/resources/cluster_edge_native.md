@@ -186,13 +186,25 @@ Required:
 
 Optional:
 
+- `additional_labels` (Map of String) Per-host labels for this edge host, merged with the machine pool's `additional_labels` (this host's values win on key collision). Combined with `taints`, this lets a single node within a pool be marked as a witness/arbiter node - e.g. schedulable primary nodes plus a non-schedulable witness for etcd quorum - without splitting the pool.
 - `default_gateway` (String) Default gateway IP address for the edge host network interface.
 - `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
 - `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
 - `static_ip` (String) Static IP address assigned to the edge host.
 - `subnet_mask` (String) Subnet mask for the edge host network interface.
+- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--edge_host--taints))
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
+
+<a id="nestedblock--machine_pool--edge_host--taints"></a>
+### Nested Schema for `machine_pool.edge_host.taints`
+
+Required:
+
+- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+- `key` (String) The key of the taint.
+- `value` (String) The value of the taint.
+
 
 
 <a id="nestedblock--machine_pool--node"></a>

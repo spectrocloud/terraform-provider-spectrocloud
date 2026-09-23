@@ -17,23 +17,32 @@ func isForbiddenErr(err error) bool {
 	return code == "OperationForbidden" || code == "ResOperationForbidden"
 }
 
+// ProviderMeta is the provider's `meta` value, returned by providerConfigure
+// and passed as `m` to every resource/data-source CRUD function. It holds
+// one client per supported scope, each fully scoped once at configure time -
+// never mutated afterward - so concurrent resource CRUDs (Terraform runs
+// these in parallel) only ever read already-finished, independent clients
+// instead of racing on a shared client's scope (PLT-2438).
+type ProviderMeta struct {
+	Project    *client.V1Client
+	Tenant     *client.V1Client
+	ProjectUID string
+}
+
 func getV1ClientWithResourceContext(m interface{}, resourceContext string) *client.V1Client {
-	c := m.(*client.V1Client)
-	switch resourceContext {
-	case "project":
-		if ProviderInitProjectUid != "" {
-			client.WithScopeProject(ProviderInitProjectUid)(c)
-		}
-		return c
-	case "tenant":
-		client.WithScopeTenant()(c)
-		return c
-	default:
-		if ProviderInitProjectUid != "" {
-			client.WithScopeProject(ProviderInitProjectUid)(c)
-		}
-		return c
+	pm := m.(*ProviderMeta)
+	if resourceContext == "tenant" {
+		return pm.Tenant
 	}
+	return pm.Project
+}
+
+// getProviderProjectUID returns the project UID resolved from the provider's
+// `project_name` at configure time, replacing the former package-level
+// ProviderInitProjectUid global (which was overwritten by every provider
+// block/alias, corrupting any other aliased provider's calls).
+func getProviderProjectUID(m interface{}) string {
+	return m.(*ProviderMeta).ProjectUID
 }
 
 func handleReadError(d *schema.ResourceData, err error, diags diag.Diagnostics) diag.Diagnostics {

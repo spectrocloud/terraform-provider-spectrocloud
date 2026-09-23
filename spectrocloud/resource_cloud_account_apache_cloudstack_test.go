@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -78,7 +77,7 @@ func TestToApacheCloudStackAccount(t *testing.T) {
 			d := schema.TestResourceDataRaw(t, resourceCloudAccountApacheCloudStack().Schema, tt.input)
 
 			// Call the function under test (passing nil client since we're only testing conversion logic)
-			c := unitTestMockAPIClient.(*client.V1Client)
+			c := unitTestMockAPIClient.(*ProviderMeta).Project
 			result := toApacheCloudStackAccount(d, c)
 
 			// Perform assertions
@@ -171,7 +170,7 @@ func TestToApacheCloudStackAccountWithSystemPCG(t *testing.T) {
 	_ = d.Set("insecure", false)
 
 	// Call the function under test with mock client
-	c := unitTestMockAPIClient.(*client.V1Client)
+	c := unitTestMockAPIClient.(*ProviderMeta).Project
 	account := toApacheCloudStackAccount(d, c)
 
 	// Assert that overlordType annotation is set to "system" for System Private Gateway
@@ -193,7 +192,7 @@ func TestToApacheCloudStackAccountWithRegularPCG(t *testing.T) {
 	_ = d.Set("insecure", false)
 
 	// Call the function under test with mock client
-	c := unitTestMockAPIClient.(*client.V1Client)
+	c := unitTestMockAPIClient.(*ProviderMeta).Project
 	account := toApacheCloudStackAccount(d, c)
 
 	// Assert that overlordType annotation is NOT set for regular PCG

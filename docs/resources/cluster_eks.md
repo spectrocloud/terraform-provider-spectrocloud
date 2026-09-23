@@ -201,6 +201,7 @@ Optional:
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
 - `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
+- `dedicate_node_pool_for_system_pods` (Boolean) If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the matching toleration. Custom taints cannot be set on a dedicated pool.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
 - `max` (Number) Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.

@@ -2,14 +2,12 @@
 page_title: "spectrocloud_cluster_brownfield Resource - terraform-provider-spectrocloud"
 subcategory: "Clusters"
 description: |-
-  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack).
 ---
 
 # spectrocloud_cluster_brownfield (Resource)
 
-  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.
-
-~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack).
 
 ## Example Usage
 
