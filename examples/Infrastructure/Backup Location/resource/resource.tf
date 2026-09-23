@@ -16,6 +16,19 @@
 # storage_provider is "aws"/"minio", and forbids `s3` when it's "azure"/"gcp" - each provider's
 # block below is mutually exclusive with the others in practice, not just by convention.
 # All of the above (aside from storage_provider) update in place.
+#
+# s3 block (used by bsl_s3/bsl_minio/bsl_sts below - one block shape shared by AWS and any
+# S3-compatible service, at most one per resource):
+#   credential_type     - Required. Allowed: "secret" (static access/secret key) or "sts"
+#                         (assumable IAM role).
+#   access_key          - Required when credential_type = "secret", sensitive.
+#   secret_key          - Required when credential_type = "secret", sensitive.
+#   arn                 - Required when credential_type = "sts". The IAM role ARN to assume.
+#   external_id         - Optional. Used alongside `arn` for cross-account STS role assumption
+#                         when credential_type = "sts".
+#   s3_force_path_style - Optional. Forces path-style S3 URLs (bucket in the path, not the
+#                         hostname) - needed for most S3-compatible services (e.g. Minio).
+#   s3_url              - Optional. The S3 endpoint URL.
 
 // S3 backup location, using static access/secret key credentials
 resource "spectrocloud_backup_storage_location" "bsl_s3" {
@@ -27,13 +40,7 @@ resource "spectrocloud_backup_storage_location" "bsl_s3" {
   bucket_name      = "project-backup-bucket-s3"
   # ca_cert          = "REPLACE_ME"
 
-  # s3 block (static access/secret key credentials, at most one):
-  #   credential_type     - Required. Allowed: "secret" (static keys) or "sts" (assumable IAM role).
-  #   access_key          - Required when credential_type = "secret", sensitive.
-  #   secret_key          - Required when credential_type = "secret", sensitive.
-  #   s3_force_path_style - Optional. Forces path-style S3 URLs (bucket in the path, not the
-  #                         hostname) - needed for most S3-compatible services (e.g. Minio).
-  #   s3_url              - Optional. The S3 endpoint URL.
+  # Static access/secret key credentials - see the s3 block reference in the top comment.
   s3 {
     credential_type     = "secret"
     access_key          = var.aws_access_key
@@ -52,13 +59,8 @@ resource "spectrocloud_backup_storage_location" "bsl_minio" {
   region           = "us-east-2"
   bucket_name      = "project-backup-bucket-minio"
 
-  # s3 block (Minio, static credentials, at most one):
-  #   credential_type     - Required. Allowed: "secret" (static keys) or "sts" (assumable IAM role).
-  #   access_key          - Required when credential_type = "secret", sensitive.
-  #   secret_key          - Required when credential_type = "secret", sensitive.
-  #   s3_force_path_style - Optional. Minio (and most other S3-compatible services) require
-  #                         path-style URLs (bucket in the path, not the hostname).
-  #   s3_url              - Optional. The S3 endpoint URL.
+  # Same s3 block shape as bsl_s3 above; Minio (and most other S3-compatible services) need
+  # s3_force_path_style = true, unlike AWS's own endpoint.
   s3 {
     credential_type     = "secret"
     access_key          = var.aws_access_key
@@ -118,14 +120,8 @@ resource "spectrocloud_backup_storage_location" "bsl_sts" {
   region      = "us-east-2"
   bucket_name = "tenant-backup-bucket-sts"
 
-  # s3 block (STS assumable IAM role, at most one):
-  #   credential_type     - Required. Allowed: "secret" (static keys) or "sts" (assumable IAM role).
-  #   arn                 - Required when credential_type = "sts". The IAM role ARN to assume.
-  #   external_id         - Optional. Used alongside `arn` for cross-account STS role assumption
-  #                         when credential_type = "sts".
-  #   s3_force_path_style - Optional. Forces path-style S3 URLs (bucket in the path, not the
-  #                         hostname) - needed for most S3-compatible services (e.g. Minio).
-  #   s3_url              - Optional. The S3 endpoint URL.
+  # Same s3 block shape as bsl_s3 above, but credential_type = "sts" - see the top comment for
+  # arn/external_id.
   s3 {
     credential_type     = "sts"
     arn                 = var.aws_sts_role_arn

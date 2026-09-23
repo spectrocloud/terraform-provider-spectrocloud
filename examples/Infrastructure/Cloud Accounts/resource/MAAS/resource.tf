@@ -9,7 +9,7 @@
 #   maas_api_key             - Required, sensitive.
 
 data "spectrocloud_private_cloud_gateway" "maas_pcg" {
-  name = "System Private Gateway"
+  name = var.maas_pcg_name
 }
 
 resource "spectrocloud_cloudaccount_maas" "maas-1" {

@@ -1,6 +1,6 @@
 # Porting checklist for tutorial-aligned examples
 
-This is the repeatable process used to port each example under `examples/tutorials/` from the source
+This is the repeatable process used to port each example under `examples/Spectro-TF-tutorials/` from the source
 tutorial code at [github.com/spectrocloud/tutorials](https://github.com/spectrocloud/tutorials)
 (`terraform/<name>-tf/`). It was established while porting `custom-pack` (the first example ported here)
 and should be followed for every example added to this directory afterward.
@@ -18,7 +18,7 @@ and should be followed for every example added to this directory afterward.
 
 3. **Adapt the provider configuration.** Replace a hardcoded `project_name` / API-key-via-environment-only
    setup with this repo's convention: `sc_host`, `sc_api_key`, and `sc_project_name` variables feeding the
-   `provider "spectrocloud"` block, matching the existing `examples/e2e/*/providers.tf` style.
+   `provider "spectrocloud"` block, matching the existing `examples/E2E-clusters-examples/*/providers.tf` style.
 
 4. **Verify every attribute against the current provider schema — not just against the source repo.**
    The tutorials repo can lag the provider's release. Check each resource/data source attribute against

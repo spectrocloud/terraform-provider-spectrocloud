@@ -14,3 +14,9 @@ variable "sc_project_name" {
 
 variable "maas_api_endpoint" {}
 variable "maas_api_key" {}
+
+variable "maas_pcg_name" {
+  type        = string
+  description = "Name of the Private Cloud Gateway used to reach this MAAS environment"
+  default     = "System Private Gateway"
+}

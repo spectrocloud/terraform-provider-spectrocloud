@@ -43,8 +43,6 @@
 
 # --- spectrocloud_cluster_aws ---
 # terraform import spectrocloud_cluster_aws.example my-aws-cluster:project
-# terraform plan -generate-config-out=generated_cluster_aws.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_aws.example
   id = "my-aws-cluster:project"
@@ -52,8 +50,6 @@ import {
 
 # --- spectrocloud_cluster_azure ---
 # terraform import spectrocloud_cluster_azure.example my-azure-cluster:project
-# terraform plan -generate-config-out=generated_cluster_azure.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_azure.example
   id = "my-azure-cluster:project"
@@ -61,8 +57,6 @@ import {
 
 # --- spectrocloud_cluster_gcp ---
 # terraform import spectrocloud_cluster_gcp.example my-gcp-cluster:project
-# terraform plan -generate-config-out=generated_cluster_gcp.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_gcp.example
   id = "my-gcp-cluster:project"
@@ -70,8 +64,6 @@ import {
 
 # --- spectrocloud_cluster_vsphere ---
 # terraform import spectrocloud_cluster_vsphere.example my-vsphere-cluster:project
-# terraform plan -generate-config-out=generated_cluster_vsphere.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_vsphere.example
   id = "my-vsphere-cluster:project"
@@ -79,8 +71,6 @@ import {
 
 # --- spectrocloud_cluster_aks ---
 # terraform import spectrocloud_cluster_aks.example my-aks-cluster:project
-# terraform plan -generate-config-out=generated_cluster_aks.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_aks.example
   id = "my-aks-cluster:project"
@@ -88,8 +78,6 @@ import {
 
 # --- spectrocloud_cluster_eks ---
 # terraform import spectrocloud_cluster_eks.example my-eks-cluster:project
-# terraform plan -generate-config-out=generated_cluster_eks.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_eks.example
   id = "my-eks-cluster:project"
@@ -97,8 +85,6 @@ import {
 
 # --- spectrocloud_cluster_gke ---
 # terraform import spectrocloud_cluster_gke.example my-gke-cluster:project
-# terraform plan -generate-config-out=generated_cluster_gke.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_gke.example
   id = "my-gke-cluster:project"
@@ -106,8 +92,6 @@ import {
 
 # --- spectrocloud_cluster_maas ---
 # terraform import spectrocloud_cluster_maas.example my-maas-cluster:project
-# terraform plan -generate-config-out=generated_cluster_maas.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_maas.example
   id = "my-maas-cluster:project"
@@ -115,8 +99,6 @@ import {
 
 # --- spectrocloud_cluster_edge_native ---
 # terraform import spectrocloud_cluster_edge_native.example my-edge-native-cluster:project
-# terraform plan -generate-config-out=generated_cluster_edge_native.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_edge_native.example
   id = "my-edge-native-cluster:project"
@@ -124,8 +106,6 @@ import {
 
 # --- spectrocloud_cluster_edge_vsphere ---
 # terraform import spectrocloud_cluster_edge_vsphere.example my-edge-vsphere-cluster:project
-# terraform plan -generate-config-out=generated_cluster_edge_vsphere.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_edge_vsphere.example
   id = "my-edge-vsphere-cluster:project"
@@ -133,8 +113,6 @@ import {
 
 # --- spectrocloud_cluster_apache_cloudstack ---
 # terraform import spectrocloud_cluster_apache_cloudstack.example my-cloudstack-cluster:project
-# terraform plan -generate-config-out=generated_cluster_apache_cloudstack.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_apache_cloudstack.example
   id = "my-cloudstack-cluster:project"
@@ -145,8 +123,6 @@ import {
 # (e.g. "nutanix"), which is set on the resource's `cloud` attribute on import.
 # Format: <cluster_id_or_name>:<project|tenant>:<custom_cloud_name>
 # terraform import spectrocloud_cluster_custom_cloud.example my-nutanix-cluster:project:nutanix
-# terraform plan -generate-config-out=generated_cluster_custom_cloud.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_custom_cloud.example
   id = "my-nutanix-cluster:project:nutanix"
@@ -158,8 +134,6 @@ import {
 # resource's `cloud_type` attribute on import.
 # Format: <cluster_id_or_name>:<project|tenant>:<cloud_type>
 # terraform import spectrocloud_cluster_brownfield.example my-existing-cluster:project:generic
-# terraform plan -generate-config-out=generated_cluster_brownfield.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_brownfield.example
   id = "my-existing-cluster:project:generic"
@@ -170,8 +144,6 @@ import {
 # "project" context. The ID is just the cluster's UID or name.
 # Format: <virtual_cluster_id_or_name>
 # terraform import spectrocloud_virtual_cluster.example my-virtual-cluster
-# terraform plan -generate-config-out=generated_virtual_cluster.tf
-# terraform apply
 import {
   to = spectrocloud_virtual_cluster.example
   id = "my-virtual-cluster"
@@ -185,8 +157,6 @@ import {
 # --- spectrocloud_cluster_group ---
 # Format: <cluster_group_id_or_name>:<project|tenant>
 # terraform import spectrocloud_cluster_group.example my-cluster-group:tenant
-# terraform plan -generate-config-out=generated_cluster_group.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_group.example
   id = "my-cluster-group:tenant"
@@ -196,8 +166,6 @@ import {
 # Format: <profile_id_or_name>:<project|tenant|system>[:<version>]
 # The version segment is optional; when omitted, the profile's current/latest version is used.
 # terraform import spectrocloud_cluster_profile.example my-profile:project:1.0.0
-# terraform plan -generate-config-out=generated_cluster_profile.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_profile.example
   id = "my-profile:project:1.0.0"
@@ -206,8 +174,6 @@ import {
 # --- spectrocloud_cluster_config_template (Tech Preview) ---
 # Format: <template_id_or_name>:<project|tenant>
 # terraform import spectrocloud_cluster_config_template.example my-template:project
-# terraform plan -generate-config-out=generated_cluster_config_template.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_config_template.example
   id = "my-template:project"
@@ -216,8 +182,6 @@ import {
 # --- spectrocloud_cluster_config_policy (Tech Preview) ---
 # Format: <policy_id_or_name>:<project|tenant>
 # terraform import spectrocloud_cluster_config_policy.example my-config-policy:project
-# terraform plan -generate-config-out=generated_cluster_config_policy.tf
-# terraform apply
 import {
   to = spectrocloud_cluster_config_policy.example
   id = "my-config-policy:project"
@@ -232,8 +196,6 @@ import {
 
 # --- spectrocloud_cloudaccount_aws ---
 # terraform import spectrocloud_cloudaccount_aws.example my-aws-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_aws.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_aws.example
   id = "my-aws-account:project"
@@ -241,8 +203,6 @@ import {
 
 # --- spectrocloud_cloudaccount_azure ---
 # terraform import spectrocloud_cloudaccount_azure.example my-azure-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_azure.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_azure.example
   id = "my-azure-account:project"
@@ -250,8 +210,6 @@ import {
 
 # --- spectrocloud_cloudaccount_gcp ---
 # terraform import spectrocloud_cloudaccount_gcp.example my-gcp-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_gcp.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_gcp.example
   id = "my-gcp-account:project"
@@ -259,8 +217,6 @@ import {
 
 # --- spectrocloud_cloudaccount_vsphere ---
 # terraform import spectrocloud_cloudaccount_vsphere.example my-vsphere-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_vsphere.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_vsphere.example
   id = "my-vsphere-account:project"
@@ -268,8 +224,6 @@ import {
 
 # --- spectrocloud_cloudaccount_maas ---
 # terraform import spectrocloud_cloudaccount_maas.example my-maas-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_maas.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_maas.example
   id = "my-maas-account:project"
@@ -277,8 +231,6 @@ import {
 
 # --- spectrocloud_cloudaccount_apache_cloudstack ---
 # terraform import spectrocloud_cloudaccount_apache_cloudstack.example my-cloudstack-account:project
-# terraform plan -generate-config-out=generated_cloudaccount_apache_cloudstack.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_apache_cloudstack.example
   id = "my-cloudstack-account:project"
@@ -289,8 +241,6 @@ import {
 # (e.g. "nutanix"), which is set on the resource's `cloud` attribute on import.
 # Format: <account_id_or_name>:<project|tenant>:<custom_cloud_name>
 # terraform import spectrocloud_cloudaccount_custom.example my-nutanix-account:project:nutanix
-# terraform plan -generate-config-out=generated_cloudaccount_custom.tf
-# terraform apply
 import {
   to = spectrocloud_cloudaccount_custom.example
   id = "my-nutanix-account:project:nutanix"
@@ -305,8 +255,6 @@ import {
 # Format: <bsl_id_or_name>[:<project|tenant>] - the context suffix is optional and defaults to
 # "project" when omitted.
 # terraform import spectrocloud_backup_storage_location.example my-backup-location:project
-# terraform plan -generate-config-out=generated_backup_storage_location.tf
-# terraform apply
 import {
   to = spectrocloud_backup_storage_location.example
   id = "my-backup-location:project"
@@ -315,8 +263,6 @@ import {
 # --- spectrocloud_appliance ---
 # Format: <appliance_uid_or_name> - always project-scoped, no context suffix.
 # terraform import spectrocloud_appliance.example my-edge-appliance-uid
-# terraform plan -generate-config-out=generated_appliance.tf
-# terraform apply
 import {
   to = spectrocloud_appliance.example
   id = "my-edge-appliance-uid"
@@ -327,8 +273,6 @@ import {
 # not a context suffix. Either segment can be a UID or a name, in any combination.
 # Format: <pcg_id_or_name>:<ip_pool_id_or_name>
 # terraform import spectrocloud_privatecloudgateway_ippool.example my-pcg:my-ip-pool
-# terraform plan -generate-config-out=generated_privatecloudgateway_ippool.tf
-# terraform apply
 import {
   to = spectrocloud_privatecloudgateway_ippool.example
   id = "my-pcg:my-ip-pool"
@@ -339,8 +283,6 @@ import {
 # not a context suffix. Either segment can be a UID or a name, in any combination.
 # Format: <pcg_id_or_name>:<dns_map_id_or_name>
 # terraform import spectrocloud_privatecloudgateway_dns_map.example my-pcg:my-dns-map
-# terraform plan -generate-config-out=generated_privatecloudgateway_dns_map.tf
-# terraform apply
 import {
   to = spectrocloud_privatecloudgateway_dns_map.example
   id = "my-pcg:my-dns-map"
@@ -354,8 +296,6 @@ import {
 # --- spectrocloud_role ---
 # Format: <role_uid_or_name> - always tenant-scoped, no context suffix.
 # terraform import spectrocloud_role.example my-custom-role
-# terraform plan -generate-config-out=generated_role.tf
-# terraform apply
 import {
   to = spectrocloud_role.example
   id = "my-custom-role"
@@ -366,8 +306,6 @@ import {
 # import-by-name fallback for teams.
 # Format: <team_uid>
 # terraform import spectrocloud_team.example 5f6e7d8c9b0a1234567890ab
-# terraform plan -generate-config-out=generated_team.tf
-# terraform apply
 import {
   to = spectrocloud_team.example
   id = "5f6e7d8c9b0a1234567890ab"
@@ -376,8 +314,6 @@ import {
 # --- spectrocloud_user ---
 # Format: <user_uid_or_email> - always tenant-scoped, no context suffix.
 # terraform import spectrocloud_user.example jane.doe@example.com
-# terraform plan -generate-config-out=generated_user.tf
-# terraform apply
 import {
   to = spectrocloud_user.example
   id = "jane.doe@example.com"
@@ -387,8 +323,6 @@ import {
 # Format: <ssh_key_id_or_name>[:<project|tenant>] - the context suffix is optional and defaults
 # to "project" when omitted.
 # terraform import spectrocloud_ssh_key.example my-ssh-key:project
-# terraform plan -generate-config-out=generated_ssh_key.tf
-# terraform apply
 import {
   to = spectrocloud_ssh_key.example
   id = "my-ssh-key:project"
@@ -398,8 +332,6 @@ import {
 # Format: <project_uid_or_name> - projects are themselves the context, so there is no context
 # suffix.
 # terraform import spectrocloud_project.example my-project-name
-# terraform plan -generate-config-out=generated_project.tf
-# terraform apply
 import {
   to = spectrocloud_project.example
   id = "my-project-name"
@@ -409,8 +341,6 @@ import {
 # Format: <workspace_uid_or_name> - scoped to the provider's configured project, no context
 # suffix.
 # terraform import spectrocloud_workspace.example my-workspace
-# terraform plan -generate-config-out=generated_workspace.tf
-# terraform apply
 import {
   to = spectrocloud_workspace.example
   id = "my-workspace"
@@ -419,8 +349,6 @@ import {
 # --- spectrocloud_filter ---
 # Format: <filter_uid_or_name> - scoped to the provider's configured project, no context suffix.
 # terraform import spectrocloud_filter.example my-tag-filter
-# terraform plan -generate-config-out=generated_filter.tf
-# terraform apply
 import {
   to = spectrocloud_filter.example
   id = "my-tag-filter"
@@ -429,8 +357,6 @@ import {
 # --- spectrocloud_registration_token ---
 # Format: <token_uid_or_name> - always tenant-scoped, no context suffix.
 # terraform import spectrocloud_registration_token.example my-registration-token
-# terraform plan -generate-config-out=generated_registration_token.tf
-# terraform apply
 import {
   to = spectrocloud_registration_token.example
   id = "my-registration-token"
@@ -444,8 +370,6 @@ import {
 # --- spectrocloud_registry_helm ---
 # Format: <registry_uid_or_name> - always tenant-scoped, no context suffix.
 # terraform import spectrocloud_registry_helm.example my-helm-registry
-# terraform plan -generate-config-out=generated_registry_helm.tf
-# terraform apply
 import {
   to = spectrocloud_registry_helm.example
   id = "my-helm-registry"
@@ -458,8 +382,6 @@ import {
 # Format: <registry_uid_or_name> - always tenant-scoped, no context suffix. Resolves against
 # both ECR-backed and generic OCI-basic-auth registries.
 # terraform import spectrocloud_registry_oci.example my-ecr-registry
-# terraform plan -generate-config-out=generated_registry_oci.tf
-# terraform apply
 import {
   to = spectrocloud_registry_oci.example
   id = "my-ecr-registry"
@@ -475,8 +397,6 @@ import {
 # Format: <tenant_uid_or_org_name> - must match the tenant your provider is authenticated
 # against; the provider rejects an import for any other tenant.
 # terraform import spectrocloud_resource_limit.example my-org-name
-# terraform plan -generate-config-out=generated_resource_limit.tf
-# terraform apply
 import {
   to = spectrocloud_resource_limit.example
   id = "my-org-name"
@@ -487,8 +407,6 @@ import {
 # Format: <tenant_uid_or_org_name> - must match the tenant your provider is authenticated
 # against.
 # terraform import spectrocloud_password_policy.example my-org-name
-# terraform plan -generate-config-out=generated_password_policy.tf
-# terraform apply
 import {
   to = spectrocloud_password_policy.example
   id = "my-org-name"
@@ -499,8 +417,6 @@ import {
 # Format: <tenant_uid_or_org_name> - must match the tenant your provider is authenticated
 # against.
 # terraform import spectrocloud_developer_setting.example my-org-name
-# terraform plan -generate-config-out=generated_developer_setting.tf
-# terraform apply
 import {
   to = spectrocloud_developer_setting.example
   id = "my-org-name"
@@ -511,8 +427,6 @@ import {
 # "platformsetting-" prefix (stripped automatically); name is then resolved to a UID in the
 # given context.
 # terraform import spectrocloud_platform_setting.example my-platform-setting:tenant
-# terraform plan -generate-config-out=generated_platform_setting.tf
-# terraform apply
 import {
   to = spectrocloud_platform_setting.example
   id = "my-platform-setting:tenant"
@@ -521,8 +435,6 @@ import {
 # --- spectrocloud_macros ---
 # Format: <macros_id_or_name>:<project|tenant>
 # terraform import spectrocloud_macros.example my-macros:project
-# terraform plan -generate-config-out=generated_macros.tf
-# terraform apply
 import {
   to = spectrocloud_macros.example
   id = "my-macros:project"
@@ -533,8 +445,6 @@ import {
 # context - SSO is always tenant-scoped.
 # Format: <tenant_uid_or_org_name>:<saml|oidc>
 # terraform import spectrocloud_sso.example my-org-name:saml
-# terraform plan -generate-config-out=generated_sso.tf
-# terraform apply
 import {
   to = spectrocloud_sso.example
   id = "my-org-name:saml"
@@ -550,8 +460,6 @@ import {
 # project/tenant context. Currently the only supported component is "ClusterHealth".
 # Format: <project_uid_or_name>:ClusterHealth
 # terraform import spectrocloud_alert.example my-project:ClusterHealth
-# terraform plan -generate-config-out=generated_alert.tf
-# terraform apply
 import {
   to = spectrocloud_alert.example
   id = "my-project:ClusterHealth"
@@ -561,8 +469,6 @@ import {
 # Format: <audit_trail_sink_uid> - always tenant-scoped, no context suffix. Currently only the
 # Splunk sink type is supported.
 # terraform import spectrocloud_audit_trail.example 5f6e7d8c9b0a1234567890cd
-# terraform plan -generate-config-out=generated_audit_trail.tf
-# terraform apply
 import {
   to = spectrocloud_audit_trail.example
   id = "5f6e7d8c9b0a1234567890cd"
@@ -577,8 +483,6 @@ import {
 # Format: <application_id_or_name> - the provider tries the "project" context first, then
 # "tenant", so no explicit context suffix is needed (or accepted).
 # terraform import spectrocloud_application.example my-app-deployment
-# terraform plan -generate-config-out=generated_application.tf
-# terraform apply
 import {
   to = spectrocloud_application.example
   id = "my-app-deployment"
@@ -588,8 +492,6 @@ import {
 # Format: <profile_id_or_name>[:<project|tenant|system>[:<version>]] - context defaults to
 # "project" and version defaults to "1.0.0" when omitted.
 # terraform import spectrocloud_application_profile.example my-app-profile:project:1.0.0
-# terraform plan -generate-config-out=generated_application_profile.tf
-# terraform apply
 import {
   to = spectrocloud_application_profile.example
   id = "my-app-profile:project:1.0.0"
@@ -606,8 +508,6 @@ import {
 # --- spectrocloud_virtual_machine ---
 # Format: <project|tenant>/<host_cluster_uid>/<namespace>/<vm_name>
 # terraform import spectrocloud_virtual_machine.example project/64f1a2b3c4d5e6f7a8b9c0d1/default/my-vm
-# terraform plan -generate-config-out=generated_virtual_machine.tf
-# terraform apply
 import {
   to = spectrocloud_virtual_machine.example
   id = "project/64f1a2b3c4d5e6f7a8b9c0d1/default/my-vm"
@@ -616,8 +516,6 @@ import {
 # --- spectrocloud_datavolume ---
 # Format: <project|tenant>/<host_cluster_uid>/<vm_namespace>/<vm_name>/<datavolume_name>
 # terraform import spectrocloud_datavolume.example project/64f1a2b3c4d5e6f7a8b9c0d1/default/my-vm/my-datavolume
-# terraform plan -generate-config-out=generated_datavolume.tf
-# terraform apply
 import {
   to = spectrocloud_datavolume.example
   id = "project/64f1a2b3c4d5e6f7a8b9c0d1/default/my-vm/my-datavolume"

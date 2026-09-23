@@ -1,7 +1,9 @@
-# Example demonstrating automatic pack UID resolution
-# This example shows how to create a cluster profile without explicitly 
-# specifying pack UIDs - the system will resolve them automatically using
-# the pack name, tag, and registry_uid.
+# Pack UID resolution: alternatives to resource.tf's explicit `uid` on each pack. Same resource
+# type and Day-2 mutability as resource.tf in this folder - see that file's top comment.
+#
+# `uid` is Optional/Computed on every pack - when omitted, the provider resolves it internally
+# from name + tag + registry_uid (or registry_name) instead. Two packs are enough to show this;
+# it works identically for however many packs a profile has.
 
 data "spectrocloud_registry" "public_registry" {
   name = "Public Repo"
@@ -15,7 +17,7 @@ resource "spectrocloud_cluster_profile" "profile_with_auto_resolution" {
   type        = "cluster"
   version     = "1.0.0"
 
-  # Operating System pack - automatically resolved
+  # Operating System pack - uid resolved automatically from name+tag+registry_uid
   pack {
     name         = "ubuntu-aws"
     tag          = "22.04"
@@ -26,7 +28,7 @@ resource "spectrocloud_cluster_profile" "profile_with_auto_resolution" {
     EOT
   }
 
-  # Kubernetes pack - automatically resolved
+  # Kubernetes pack - same resolution
   pack {
     name         = "kubernetes"
     tag          = "1.27.5"
@@ -39,60 +41,6 @@ resource "spectrocloud_cluster_profile" "profile_with_auto_resolution" {
             audit-log-maxbackup: "10"
         kubernetesVersion: "v1.27.5"
     EOT
-  }
-
-  # CNI pack - automatically resolved
-  pack {
-    name         = "cni-calico"
-    tag          = "3.26.1"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = <<-EOT
-      manifests:
-        calico:
-          contents: |
-            # Calico configuration
-            apiVersion: operator.tigera.io/v1
-            kind: Installation
-            metadata:
-              name: default
-            spec:
-              calicoNetwork:
-                ipPools:
-                - blockSize: 26
-                  cidr: 10.244.0.0/16
-                  encapsulation: VXLANCrossSubnet
-    EOT
-  }
-
-  # CSI pack - automatically resolved
-  pack {
-    name         = "csi-aws-ebs"
-    tag          = "1.22.0"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = <<-EOT
-      manifests:
-        ebs-csi-driver:
-          contents: |
-            # AWS EBS CSI Driver configuration
-    EOT
-  }
-
-  # Manifest pack - no UID resolution needed for manifest type
-  pack {
-    name = "custom-manifests"
-    type = "manifest"
-    tag  = "1.0.0"
-    manifest {
-      name    = "example-namespace"
-      content = <<-EOT
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: example-app
-          labels:
-            purpose: example
-      EOT
-    }
   }
 }
 

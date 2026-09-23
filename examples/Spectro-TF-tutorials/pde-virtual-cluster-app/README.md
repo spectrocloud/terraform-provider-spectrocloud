@@ -32,7 +32,7 @@ You will need the following before getting started:
 ## Instructions
 
 Clone this repository to a local directory, and change directory to
-`examples/tutorials/pde-virtual-cluster-app`. Proceed with the following:
+`examples/Spectro-TF-tutorials/pde-virtual-cluster-app`. Proceed with the following:
 1. From the current directory, copy the template variable file `terraform.template.tfvars` to a new
    file `terraform.tfvars`.
 2. Set `cluster-group-name` to your existing cluster group's name.

@@ -1,0 +1,116 @@
+# Creating a VM with a data_volume_template (boot volume provisioned alongside the VM, instead of
+# a plain container disk). Uses run_strategy = "Manual" instead of run_on_launch - see resource.tf
+# in this folder for why (ExactlyOneOf between the two).
+#
+# Intentionally named .tf1, not .tf: it re-declares the same data "spectrocloud_cluster" and
+# locals block as resource.tf in this folder, so Terraform would fail with duplicate-declaration
+# errors if both were loaded together. Copy this file's content into its own directory (renamed
+# to .tf) to actually run it, rather than renaming it in place here.
+
+data "spectrocloud_cluster" "vm_enabled_base_cluster" {
+  name    = "tenant-cluster-002"
+  context = "project"
+}
+
+locals {
+  storage_class_name = "spectro-storage-class"
+}
+
+resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
+  run_strategy    = "Manual"
+  name            = "tf-test-vm-data-volume-template"
+  namespace       = "default"
+  labels = {
+    "tf" = "test"
+  }
+  data_volume_templates {
+    metadata {
+      name      = "test-vm-bootvolume"
+      namespace = "default"
+    }
+    spec {
+      source {
+        registry {
+          image_url = "gcr.io/spectro-images-public/release/vm-dashboard/os/ubuntu-container-disk:20.04"
+        }
+        # Alternative to registry (mutually exclusive):
+        # http {
+        #   url = "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+        # }
+      }
+      pvc {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "5Gi"
+          }
+        }
+        storage_class_name = local.storage_class_name
+      }
+    }
+  }
+  volume {
+    name = "test-vm-datavolumedisk1"
+    volume_source {
+      data_volume {
+        name = "test-vm-bootvolume"
+      }
+    }
+  }
+
+  disk {
+    name = "test-vm-datavolumedisk1"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+
+  cpu {
+    cores   = 2
+    sockets = 1
+    threads = 10
+  }
+  memory {
+    guest = "1G"
+  }
+
+  resources {
+    requests = {
+      memory = "1G"
+      cpu    = 2
+    }
+    limits = {
+      cpu    = 2
+      memory = "1G"
+    }
+  }
+
+  interface {
+    name                     = "main"
+    interface_binding_method = "InterfaceMasquerade"
+  }
+  interface {
+    name                     = "additional"
+    interface_binding_method = "InterfaceBridge"
+  }
+
+  network {
+    name = "main"
+    network_source {
+      pod {}
+    }
+  }
+  network {
+    name = "additional"
+    network_source {
+      multus {
+        network_name = "macvlan-conf"
+        default      = false
+      }
+    }
+  }
+}

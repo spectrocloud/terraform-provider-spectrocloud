@@ -22,35 +22,33 @@ variable "instance_type" {
   default     = "m4.xlarge"
 }
 
-# ToDo: Provide a value for the variable below. The value will be the actual cloud account name added to your Palette project settings.
+# Required, no default - see docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html
+# for the AWS regions/AZs referenced below.
 variable "cluster_cloud_account_aws_name" {
   type        = string
   description = "The name of the AWS cloud account already registered in your Palette project settings (Tenant Settings > Cloud Accounts)."
 }
 
-# ToDo: Provide a value for the variable below. The value will be one of the [AWS regions](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html)
-# The tutorial example uses "us-east-1" region.
+# Required, no default. The tutorial itself uses "us-east-1".
 variable "aws_region_name" {
   type        = string
   description = "The AWS region to deploy the cluster into, for example \"us-east-1\"."
 }
 
-# ToDo: Provide a value for the variable below. The value will be one of the [AWS Availability Zones](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html)
-# The tutorial example uses "us-east-1a" availability zone.
+# The tutorial itself uses ["us-east-1a"].
 variable "aws_az_names" {
   type        = list(string)
   description = "The AWS Availability Zones to deploy into, for example [\"us-east-1a\", \"us-east-1b\"]. If left empty, the first available AZ in aws_region_name is used automatically."
   default     = []
 }
 
-# ToDo: Provide a value for the variable below. The value will be the SSH key created in the AWS region where you will deploy the cluster.
+# Required, no default - an existing EC2 key pair in aws_region_name.
 variable "ssh_key_name" {
   type        = string
   description = "The name of an existing AWS EC2 key pair in aws_region_name, used for SSH access to the cluster nodes."
 }
 
-# ToDo: Provide the name of your private registry server.
-# The tutorial example uses "private-pack-registry".
+# Required, no default (when use_oci_registry = false). The tutorial itself uses "private-pack-registry".
 variable "private_pack_registry" {
   type        = string
   description = "The name, in Palette, of the pack registry that hosts the custom add-on pack from the tutorial (used only when use_oci_registry is false)."
@@ -68,8 +66,6 @@ variable "custom_addon_pack_version" {
   default     = "1.0.0"
 }
 
-# ToDo: Set the use of OCI registry to true or false.
-# The default value is set as true.
 variable "use_oci_registry" {
   type        = bool
   description = "Whether the custom add-on pack is hosted in an OCI registry (true) or a standard Palette pack registry (false)."

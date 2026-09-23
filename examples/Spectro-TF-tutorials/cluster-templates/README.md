@@ -44,7 +44,7 @@ You will need the following before getting started:
 ## Instructions
 
 Clone this repository to a local directory, and change directory to
-`examples/tutorials/cluster-templates`. Proceed with the following:
+`examples/Spectro-TF-tutorials/cluster-templates`. Proceed with the following:
 1. From the current directory, copy the template variable file `terraform.template.tfvars` to a new
    file `terraform.tfvars`.
 2. Set the `deploy-aws` and/or `deploy-azure` toggle(s), and fill in the placeholder (`REPLACE ME`)

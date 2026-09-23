@@ -256,85 +256,22 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     EOT
   }
 
-  # Optional: Additional Worker Pool with Minimum and Maximum Scaling
+  # Optional: an autoscaled worker pool (min/max instead of a fixed count) using OverrideScaling -
+  # see the "worker-pool" block above for what override_scaling's fields mean. max_surge/
+  # max_unavailable also accept percentages (e.g. "25%") instead of absolute counts.
   # machine_pool {
-  #   name    = "worker-pool-scalable"
-  #   count   = 2
-  #   min     = 1
-  #   max     = 5
-  #
-  #   offering = var.cloudstack_compute_offering_worker
-  #
-  #   network {
-  #     network_name = var.cloudstack_network_name
-  #   }
-  #
-  #   additional_labels = {
-  #     "role"     = "worker"
-  #     "scalable" = "true"
-  #   }
-  # }
-
-  # Optional: Worker Pool with Override Scaling Strategy
-  # This example demonstrates the use of override_scaling for fine-grained control
-  # over rolling updates with custom surge and unavailability settings.
-  # machine_pool {
-  #   name  = "worker-pool-override-scaling"
-  #   count = 3
-  #   min   = 2
-  #   max   = 5
-  #
-  #   offering = var.cloudstack_compute_offering_worker
-  #
-  #   network {
-  #     network_name = var.cloudstack_network_name
-  #   }
-  #
-  #   # Use OverrideScaling strategy to control the rolling update behavior
-  #   # Note: When using OverrideScaling, you MUST specify the override_scaling block
+  #   name            = "worker-pool-scalable"
+  #   count           = 2
+  #   min             = 1
+  #   max             = 5
+  #   offering        = var.cloudstack_compute_offering_worker
   #   update_strategy = "OverrideScaling"
-  #
-  #   # Override scaling configuration for rolling updates
-  #   # max_surge: Maximum number of nodes that can be created above the desired count
-  #   # max_unavailable: Maximum number of nodes that can be unavailable during update
-  #   # Values can be absolute numbers (e.g., "1", "2") or percentages (e.g., "25%", "50%")
   #   override_scaling {
-  #     max_surge       = "1"    # Allow 1 extra node during updates
-  #     max_unavailable = "0"    # Ensure no nodes are unavailable (zero-downtime updates)
+  #     max_surge       = "1"
+  #     max_unavailable = "0"
   #   }
-  #
-  #   additional_labels = {
-  #     "role"            = "worker"
-  #     "update-strategy" = "override-scaling"
-  #   }
-  #
-  #   node_repave_interval = 90
-  # }
-  #
-  # Alternative example with percentage-based scaling:
-  # machine_pool {
-  #   name  = "worker-pool-percentage-scaling"
-  #   count = 4
-  #   min   = 2
-  #   max   = 10
-  #
-  #   offering = var.cloudstack_compute_offering_worker
-  #
   #   network {
   #     network_name = var.cloudstack_network_name
-  #   }
-  #
-  #   update_strategy = "OverrideScaling"
-  #
-  #   # Using percentage values for scaling control
-  #   override_scaling {
-  #     max_surge       = "25%"  # Allow up to 25% more nodes during updates
-  #     max_unavailable = "25%"  # Allow up to 25% of nodes to be unavailable
-  #   }
-  #
-  #   additional_labels = {
-  #     "role"            = "worker"
-  #     "update-strategy" = "percentage-scaling"
   #   }
   # }
 

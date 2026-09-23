@@ -8,8 +8,9 @@ resource "spectrocloud_cluster_group" "cg" {
   tags        = ["qa:dev"]
 
   # config:
-  #   k8s_distribution - Optional, default "vcluster-generic", ForceNew. The Kubernetes
-  #     distribution virtual clusters in this group run on.
+  #   k8s_distribution - Optional, default "vcluster-generic", ForceNew. Allowed: "vcluster-generic",
+  #     "cncf_k8s". "k3s" also exists in the schema but is deprecated and rejected on create for new
+  #     cluster groups (existing k3s cluster groups remain supported/updatable, but should migrate).
   config {
     host_endpoint_type       = "Ingress"
     cpu_millicore            = 12000
@@ -17,7 +18,7 @@ resource "spectrocloud_cluster_group" "cg" {
     storage_in_gb            = 12
     oversubscription_percent = 120
     values                   = ""
-    k8s_distribution         = "k3s"
+    k8s_distribution         = "vcluster-generic"
   }
 
   # Optional. A host cluster profile can also be attached to the group itself (same block shape

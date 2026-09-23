@@ -66,7 +66,7 @@ resource "spectrocloud_registry_oci" "r1" {
 }
 # 
 # Import by Name:
-# terraform import spectrocloud_registry_oci.example "Pack Registry"
+# terraform import spectrocloud_registry_oci.example "test-nik2"
 # terraform import spectrocloud_registry_oci.example "REGISTRY-NAME"
 
 # Import by UID:

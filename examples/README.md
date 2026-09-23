@@ -11,10 +11,9 @@ Each leaf folder is a standalone, runnable example: `providers.tf`, `resource.tf
 * **provider/provider.tf** example file for the provider index page
 * **Projects/, Cluster Profiles/, Clusters/, Infrastructure/, Security/, Platform/, App Mode/, Roles/, Users/, Teams/, Cluster Group/, Cluster Configuration/, Virtual Machines/, Workspaces/** - the navigation-aligned examples; see "Navigation structure" below.
 * **Other/** - resources/data sources that don't map cleanly onto a single Palette nav entry; see below.
-* **e2e/\<cloud\>/** directory contains end-to-end examples of provisioning K8s clusters.
-* **end-to-end-usecases/\<resource\>/** one comprehensive, "kitchen-sink" example per cluster-provisioning resource - see [end-to-end-usecases/README.md](end-to-end-usecases/README.md).
-* **import_resource/** a single reference file (`import.tf`) documenting `terraform import` for every importable resource - see [import_resource/README.md](import_resource/README.md).
-* **tutorials/\<name\>/** directory contains examples aligned to specific tutorials at [docs.spectrocloud.com/tutorials](https://docs.spectrocloud.com/tutorials/) — see [tutorials/README.md](tutorials/README.md) for the full list.
+* **E2E-clusters-examples/\<resource\>/** one comprehensive, "kitchen-sink" example per cluster-provisioning resource, demonstrating end-to-end cluster provisioning - see [E2E-clusters-examples/README.md](E2E-clusters-examples/README.md).
+* **imports/** a single reference file (`import.tf`) documenting `terraform import` for every importable resource - see [imports/README.md](imports/README.md).
+* **Spectro-TF-tutorials/\<name\>/** directory contains examples aligned to specific tutorials at [docs.spectrocloud.com/tutorials](https://docs.spectrocloud.com/tutorials/) — see [Spectro-TF-tutorials/README.md](Spectro-TF-tutorials/README.md) for the full list.
 
 ### How docs generation finds examples
 

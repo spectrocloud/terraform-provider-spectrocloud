@@ -1,0 +1,89 @@
+# Cloning an existing VM ("tf-test-vm-basic-type" from resource.tf) via base_vm_name.
+#
+# Intentionally named .tf1, not .tf: it re-declares the same data "spectrocloud_cluster" and
+# locals block as resource.tf in this folder, so Terraform would fail with duplicate-declaration
+# errors if both were loaded together. Copy this file's content into its own directory (renamed
+# to .tf) to actually run it, rather than renaming it in place here.
+
+data "spectrocloud_cluster" "vm_enabled_base_cluster" {
+  name    = "tenant-cluster-002"
+  context = "project"
+}
+
+# For a clone, disk/volume/interface/cpu/memory/network are all optional - anything omitted here
+# is inherited from the base VM instead.
+resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
+  base_vm_name    = "tf-test-vm-basic-type"
+  name            = "tf-test-vm-clone"
+  namespace       = "default"
+  run_on_launch   = true
+  labels = {
+    "tf" = "test"
+  }
+  resources {
+    requests = {
+      memory = "1Gi"
+      cpu    = 2
+    }
+    limits = {
+      cpu    = 2
+      memory = "1Gi"
+    }
+  }
+  volume {
+    name = "containerdisk"
+    volume_source {
+      container_disk {
+        image_url = "gcr.io/spectro-images-public/release/vm-dashboard/os/ubuntu-container-disk:20.04"
+      }
+    }
+  }
+  volume {
+    name = "cloudintdisk"
+    volume_source {
+      cloud_init_config_drive {
+        user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+      }
+    }
+  }
+
+  disk {
+    name = "containerdisk"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+  disk {
+    name = "cloudintdisk"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+
+  cpu {
+    cores   = 2
+    sockets = 1
+    threads = 10
+  }
+  memory {
+    guest = "1Gi"
+  }
+
+  interface {
+    name                     = "default"
+    interface_binding_method = "InterfaceMasquerade"
+  }
+
+  network {
+    name = "default"
+    network_source {
+      pod {}
+    }
+  }
+}

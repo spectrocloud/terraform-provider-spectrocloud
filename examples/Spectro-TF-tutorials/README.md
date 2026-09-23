@@ -1,10 +1,10 @@
 # Tutorial-aligned examples
 
 This directory holds Terraform examples that mirror specific tutorials published at
-[docs.spectrocloud.com/tutorials](https://docs.spectrocloud.com/tutorials/). Unlike the general-purpose
-examples under [`../resources`](../resources), [`../data-sources`](../data-sources), and [`../e2e`](../e2e),
-each folder here is scoped to a single named tutorial, so you can follow the docs page and this code side
-by side.
+[docs.spectrocloud.com/tutorials](https://docs.spectrocloud.com/tutorials/). Unlike the general-purpose,
+per-resource examples elsewhere under `examples/` (organized by Palette nav category, e.g. `Clusters/`,
+`Infrastructure/`), each folder here is scoped to a single named tutorial, so you can follow the docs page
+and this code side by side.
 
 Each example folder contains its own `README.md` linking back to the docs tutorial it accompanies, along
 with prerequisites and apply/destroy instructions specific to that example. New examples are ported

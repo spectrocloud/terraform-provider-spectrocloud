@@ -62,9 +62,9 @@ data "spectrocloud_pack_simple" "kafka_pack" {
 #   description - Optional.
 #   cloud       - Optional, default "all". The cloud provider this profile is eligible for.
 #
-# Common pack fields not called out per tier below: uid (Computed - don't set), registry_name
-# (Optional, mutually exclusive with registry_uid), tag (Optional), manifest (Optional, one or
-# more raw-manifest blocks with name/content).
+# Common pack fields not called out per tier below: name (Required, unique per profile), uid
+# (Computed - don't set), registry_name (Optional, mutually exclusive with registry_uid), tag
+# (Optional), manifest (Optional, one or more raw-manifest blocks with name/content).
 resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   name        = "profile-all-tiers-test"
   version     = "1.0.0"
@@ -74,7 +74,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   cloud       = "all"
 
   # pack (container-tier, container image tier):
-  #   name            - Required, unique per profile.
   #   type            - Optional, default "spectro"; set explicitly here to "container".
   #   registry_uid    - Optional, mutually exclusive with registry_name.
   #   source_app_tier - Optional. UID of the source pack this tier is based on.
@@ -108,7 +107,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 
   # pack (kafka-tier, Helm chart tier):
-  #   name            - Required, unique per profile.
   #   type            - Optional, default "spectro"; set explicitly here to "helm".
   #   registry_uid    - Optional, mutually exclusive with registry_name.
   #   source_app_tier - Optional. UID of the source pack this tier is based on.
@@ -157,7 +155,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 
   # pack (manifest-3, raw Kubernetes manifest tier):
-  #   name          - Required, unique per profile.
   #   type          - Optional, default "spectro"; set explicitly here to "manifest".
   #   install_order - Optional, default 0. Lower values run first.
   pack {
@@ -193,7 +190,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 
   # pack (minio-operator-stage, operator-instance tier):
-  #   name            - Required, unique per profile.
   #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
   #   source_app_tier - Optional. UID of the source pack this tier is based on.
   #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).
@@ -209,7 +205,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 
   # pack (mysql-3-stage, operator-instance tier):
-  #   name            - Required, unique per profile.
   #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
   #   source_app_tier - Optional. UID of the source pack this tier is based on.
   #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).
@@ -225,7 +220,6 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 
   # pack (redis-4-stage, operator-instance tier):
-  #   name            - Required, unique per profile.
   #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
   #   source_app_tier - Optional. UID of the source pack this tier is based on.
   #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).

@@ -71,6 +71,11 @@ locals {
 # version whenever `version` changes, which behaves like a replacement from the caller's point of
 # view. `name`, `tags`, `description`, `context`, `pack`, and `profile_variables` all update in
 # place - note `name` is NOT ForceNew here, unlike most other resources in this provider.
+#
+# This describes the default (legacy) behavior. With the provider's `immutable-clusterprofiles`
+# feature_preview flag enabled, `version` changes become a true ForceNew replacement instead, and
+# `skip_destroy`/`lifecycle.create_before_destroy` come into play to preserve old versions - see
+# the "Immutable versioning" section of this resource's generated docs for that variant.
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "vsphere-picard-3"
   description = "basic cp"

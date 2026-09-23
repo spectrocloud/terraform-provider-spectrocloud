@@ -57,9 +57,6 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
 }
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# IMPORT EXAMPLE
-# ═══════════════════════════════════════════════════════════════════════════
 # Import an existing cluster config template. The ID must be
 # "<template_id_or_name>:<project|tenant>" - the context suffix is required, not optional;
 # omitting it causes the import to fail.

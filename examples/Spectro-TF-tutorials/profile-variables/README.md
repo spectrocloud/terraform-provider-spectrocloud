@@ -38,7 +38,7 @@ You will need the following before getting started:
 ## Instructions
 
 Clone this repository to a local directory, and change directory to
-`examples/tutorials/profile-variables`. Proceed with the following:
+`examples/Spectro-TF-tutorials/profile-variables`. Proceed with the following:
 1. From the current directory, copy the template variable file `terraform.template.tfvars` to a new
    file `terraform.tfvars`.
 2. Set the `deploy-<cloud>` toggle(s) for the cloud(s) you want, and fill in all the placeholder

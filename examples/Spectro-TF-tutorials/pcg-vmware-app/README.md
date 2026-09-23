@@ -31,7 +31,7 @@ You will need the following before getting started:
 ## Instructions
 
 Clone this repository to a local directory, and change directory to
-`examples/tutorials/pcg-vmware-app`. Proceed with the following:
+`examples/Spectro-TF-tutorials/pcg-vmware-app`. Proceed with the following:
 1. From the current directory, copy the template variable file `terraform.template.tfvars` to a new
    file `terraform.tfvars`.
 2. Specify and update all the placeholder (`REPLACE ME`) values in the `terraform.tfvars` file.

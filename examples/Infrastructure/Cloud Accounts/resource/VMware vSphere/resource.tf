@@ -25,24 +25,3 @@ resource "spectrocloud_cloudaccount_vsphere" "account" {
   vsphere_password              = var.vsphere_password
   vsphere_ignore_insecure_error = true
 }
-
-variable "vsphere_pcg_name" {
-  type        = string
-  description = "Name of the Private Cloud Gateway used to reach this vSphere environment"
-}
-
-variable "vsphere_vcenter" {
-  type        = string
-  description = "vCenter server address"
-}
-
-variable "vsphere_username" {
-  type        = string
-  description = "vSphere username"
-}
-
-variable "vsphere_password" {
-  type        = string
-  description = "vSphere password"
-  sensitive   = true
-}

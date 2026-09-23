@@ -11,3 +11,9 @@ variable "sc_project_name" {
   description = "Spectro Cloud Project (e.g: Default)"
   default     = "Default"
 }
+
+variable "nutanix_password" {
+  type        = string
+  description = "Nutanix credential password for the custom cloud account"
+  sensitive   = true
+}

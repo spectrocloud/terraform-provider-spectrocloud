@@ -32,7 +32,8 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   #   ssh_keys              - ExactlyOneOf with ssh_key (singular) - neither is deprecated;
   #                           ssh_keys just accepts a list instead of one string.
   #   image_template_folder - Optional. vSphere folder holding VM image templates for node
-  #                           provisioning. Defaults to "spectro-templates" when unset.
+  #                           provisioning. Palette applies its own default ("spectro-templates")
+  #                           server-side when omitted - this isn't a Terraform schema default.
   #   vip                   - Required. Virtual IP for the Kubernetes control plane endpoint.
   #   static_ip             - Optional, default false. Use a static IP instead of DHCP for the
   #                           control plane endpoint.

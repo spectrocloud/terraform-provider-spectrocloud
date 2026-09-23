@@ -5,7 +5,7 @@
 # works too if you already know the project's UID.
 #   name - Optional, also Computed, ConflictsWith `id`.
 data "spectrocloud_project" "example" {
-  name = "MyProject"
+  name = "Default"
 }
 
 # Equivalent lookup by ID instead of name:

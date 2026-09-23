@@ -1,6 +1,9 @@
 ##########################################
 # Scenario 1: Single Application
 ##########################################
+# Note: the `postReadinessHooks` block below is repeated verbatim in 3 places in this file (once
+# per container pack tier) - each pack's `values` is an independent YAML payload sent to a
+# separate Palette pack tier, so there's no way to share/import a fragment across them here.
 resource "spectrocloud_application_profile" "hello-universe-ui" {
   name        = "hello-universe-ui"
   description = "Hello Universe as a single UI instance"

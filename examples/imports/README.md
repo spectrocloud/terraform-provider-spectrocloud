@@ -1,4 +1,4 @@
-# import_resource - import examples for every supported resource
+# imports - import examples for every supported resource
 
 `import.tf` is a single reference file with one `terraform import`-style example per
 `spectrocloud_*` resource that supports import (i.e. every resource with an `Importer` defined

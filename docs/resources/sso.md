@@ -84,13 +84,8 @@ data "spectrocloud_team" "team" {
 # mutability: nothing here is ForceNew - every attribute, including the nested oidc block,
 # updates in place.
 #
-# `sso_auth_type = "oidc"` requires the oidc block below and forbids a saml block.
-#
-# Flat attributes:
-#   sso_auth_type  - Optional, default "none". Allowed: "none", "saml", "oidc".
-#   domains        - Optional. Email domains that are routed through this SSO configuration.
-#   auth_providers - Optional. External auth providers to also allow. Allowed values: "github",
-#                    "google".
+# `sso_auth_type = "oidc"` requires the oidc block below and forbids a saml block. Flat
+# attributes (sso_auth_type/domains/auth_providers) are the same as ../SAML/resource.tf.
 resource "spectrocloud_sso" "sso_setting" {
   sso_auth_type  = "oidc"
   domains        = ["test.com", "test-login.com"]
@@ -123,18 +118,8 @@ resource "spectrocloud_sso" "sso_setting" {
     }
   }
 
-  # SAML is mutually exclusive with oidc above - only one may be set, matching sso_auth_type.
-  # saml {
-  #   service_provider           = "Microsoft ADFS"
-  #   identity_provider_metadata = "<note>test</note>"
-  #   default_team_ids           = [data.spectrocloud_team.team.id]
-  #   enable_single_logout       = true
-  #   name_id_format             = "name_id_format"
-  #   first_name                 = "testfirst"
-  #   last_name                  = "testlast"
-  #   email                      = "test@test.com"
-  #   spectro_team               = "SpectroTeam"
-  # }
+  # saml is mutually exclusive with oidc above - only one may be set, matching sso_auth_type.
+  # See ../SAML/resource.tf for a full saml block example.
 }
 
 # Import existing OIDC settings.

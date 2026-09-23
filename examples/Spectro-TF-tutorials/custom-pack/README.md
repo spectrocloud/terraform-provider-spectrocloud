@@ -25,7 +25,7 @@ You will need the following before getting started:
 
 ## Instructions
 
-Clone this repository to a local directory, and change directory to `examples/tutorials/custom-pack`.
+Clone this repository to a local directory, and change directory to `examples/Spectro-TF-tutorials/custom-pack`.
 Proceed with the following:
 1. From the current directory, copy the template variable file `terraform.template.tfvars` to a new
    file `terraform.tfvars`.
