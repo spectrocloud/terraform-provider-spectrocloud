@@ -21,7 +21,7 @@ resource "spectrocloud_developer_setting" "dev_setting" {
   hide_system_cluster_group = false
 }
 
-## import existing developer settings
+# import existing developer settings
 #import {
 #  to = spectrocloud_developer_setting.dev_setting
 #  id = "{tenantUID}" // tenant-uid

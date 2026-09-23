@@ -15,36 +15,9 @@ You can learn more about managing resource limit in Palette by reviewing the [De
 
 ## Example Usage
 
-An example of managing an password policy in Palette.
+{{ tffile "examples/Platform/Resource Limits/resource/resource.tf" }}
 
-```hcl
-resource "spectrocloud_resource_limit" "resource_limit" {
-  alert                  = 101
-  api_keys               = 201
-  appliance              = 6001
-  appliance_token        = 201
-  application_deployment = 200
-  application_profile    = 200
-  certificate            = 20
-  cloud_account          = 355
-  cluster                = 300
-  cluster_group          = 50
-  cluster_profile        = 2500
-  filter                 = 200
-  location               = 100
-  macro                  = 6000
-  private_gateway        = 100
-  project                = 200
-  registry               = 200
-  role                   = 100
-  ssh_key                = 300
-  team                   = 100
-  user                   = 300
-  workspace              = 60
-}
-
-```
-## import existing resource limit## Import
+## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
 to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:

@@ -11,9 +11,7 @@ description: |-
 
 ## Example Usage
 
-
 ```terraform
-
 data "spectrocloud_cloudaccount_gcp" "account" {
   name = var.gcp_cloud_account_name
 }
@@ -23,29 +21,54 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `cluster_profile`, `machine_pool`, and the rest of `cloud_config` all update in place.
+# Use `update_worker_pools_in_parallel` (plural) - the singular `update_worker_pool_in_parallel`
+# is deprecated and will be removed.
 resource "spectrocloud_cluster_gke" "cluster" {
   name             = var.cluster_name
-  description = "Gke Cluster"
+  description      = "Gke Cluster"
   tags             = ["dev", "department:pax"]
   cloud_account_id = data.spectrocloud_cloudaccount_gcp.account.id
-  context = "project"
+  context          = "project"
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
   }
 
+  # cloud_config:
+  #   project, region - ForceNew; unlike the plain (non-GKE) GCP cluster resource, where these
+  #     two update in place, here changing either recreates the cluster.
+  #   override_cluster_api_config - Optional. YAML passthrough for CAPG-managed (GKE) properties
+  #     not yet first-class in Palette. Overrides pack-level and Palette-managed values. Palette
+  #     does not pre-validate keys/types/values; the API surfaces any errors.
   cloud_config {
     project = var.gcp_project
-    region = var.gcp_region
+    region  = var.gcp_region
+
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedControlPlane:
+    #     spec:
+    #       releaseChannel: REGULAR
+    # EOT
   }
-  update_worker_pool_in_parallel = true
+  update_worker_pools_in_parallel = true
+
+  # machine_pool:
+  #   override_cluster_api_config - Optional. YAML passthrough for pool-level CAPG-managed
+  #     properties (e.g. GCPManagedMachinePool).
   machine_pool {
-    name                 = "worker-basic"
-    count                = 3
-    instance_type        = "n2-standard-4"
+    name          = "worker-basic"
+    count         = 3
+    instance_type = "n2-standard-4"
+
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedMachinePool:
+    #     spec:
+    #       nodePoolName: worker-basic
+    # EOT
   }
 }
-
 ```
 
 ## Import

@@ -15,24 +15,29 @@ You can learn more about managing SSH keys in Palette by reviewing the [SSH Keys
 
 ## Example Usage
 
-An example of creating an SSH key resource in Palette.
+An example of creating SSH key resources in Palette, in both the `project` and `tenant` contexts.
 
-```hcl
-resource "spectrocloud_ssh_key" "ssh_tenant" {
-  name        = "ssh-dev-1"
-  context     = "project"
-  ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ....."
-}
-```
-
-The example below demonstrates how to create an SSH key resource in Palette with the `context` attribute set to `tenant`.
-
-```hcl
-resource "spectrocloud_ssh_key" "ssh_tenant" {
-  name        = "ssh-dev-1"
-  context     = "tenant"
+```terraform
+# Day-2 mutability: nothing on this resource is ForceNew - name, ssh_key, and context all
+# update in place.
+#
+# Attributes:
+#   name    - Required. The SSH key asset's name.
+#   context - Optional, default "project". Allowed: "project", "tenant".
+#   ssh_key - Required (credential material, not secret-sensitive by nature but marked
+#             Sensitive). Public key in "authorized_keys" format, e.g. "ssh-rsa AAAAB3Nza...".
+resource "spectrocloud_ssh_key" "ssh_project" {
+  name    = "ssh-dev-1-project"
+  context = "project"
   ssh_key = var.ssh_key_value
 }
+resource "spectrocloud_ssh_key" "ssh_tenant" {
+  name    = "ssh-dev-1"
+  context = "tenant"
+  ssh_key = var.ssh_key_value
+}
+
+# terraform import spectrocloud_ssh_key.ssh_project "<ssh-key-uid>:project"
 ```
 
 ### Generate SSH Key with TLS Provider

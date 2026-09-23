@@ -13,27 +13,8 @@ To learn more about SSH Keys in Palette, review the [SSH Keys](https://docs.spec
 
 ## Example Usage
 
-
-
 You can specify the context as `project` or `tenant` to get the SSH key from the respective context.
 
-
-Example with context as `project`.
-
-```hcl
-data "spectrocloud_ssh_key" "ssh_project" {
-  name    = "test-tf-ssh"
-  context = "project"
-}
-```
-
-Example with context as `tenant`.
-
-```hcl
-data "spectrocloud_ssh_key" "ssh_project" {
-  name    = "global-tf-ssh"
-  context = "tenant"
-}
-```
+{{ tffile "examples/Security/SSH Keys/data-source/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

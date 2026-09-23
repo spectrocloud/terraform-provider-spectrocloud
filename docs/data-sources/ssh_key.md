@@ -13,26 +13,31 @@ To learn more about SSH Keys in Palette, review the [SSH Keys](https://docs.spec
 
 ## Example Usage
 
-
-
 You can specify the context as `project` or `tenant` to get the SSH key from the respective context.
 
-
-Example with context as `project`.
-
-```hcl
-data "spectrocloud_ssh_key" "ssh_project" {
-  name    = "test-tf-ssh"
+```terraform
+# Looks up an SSH key asset by name or by ID.
+#
+# Lookup keys:
+#   name    - Optional (conflicts with `id`), also Computed.
+#   id      - Optional (conflicts with `name`), also Computed.
+#   context - Optional, default "project". Allowed: "project", "tenant".
+data "spectrocloud_ssh_key" "example" {
+  name = "my-ssh-key"
+  # id = "657ec9a27afca71b0dc98027"
   context = "project"
 }
-```
 
-Example with context as `tenant`.
+# Computed outputs:
+#   ssh_key_value - Sensitive. Public key that was uploaded to Palette.
+#   ssh_key_id
+output "ssh_key_value" {
+  value     = data.spectrocloud_ssh_key.example.ssh_key
+  sensitive = true
+}
 
-```hcl
-data "spectrocloud_ssh_key" "ssh_project" {
-  name    = "global-tf-ssh"
-  context = "tenant"
+output "ssh_key_id" {
+  value = data.spectrocloud_ssh_key.example.id
 }
 ```
 

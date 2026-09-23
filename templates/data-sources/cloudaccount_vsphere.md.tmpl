@@ -11,11 +11,6 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_cloudaccount_vsphere" "example" {
-  name    = "vsphere-account"
-  context = "project"
-}
-```
+{{ tffile "examples/Infrastructure/Cloud Accounts/data-source/VMware vSphere/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

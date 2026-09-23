@@ -17,7 +17,7 @@ resource "spectrocloud_registration_token" "tf_token" {
   status      = "active"
 }
 
-## import existing registration token
+# import existing registration token
 #import {
 #  to = spectrocloud_registration_token.token
 #  id = "{tokenUID}" //tokenUID

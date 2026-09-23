@@ -11,39 +11,59 @@ description: |-
 
 ## Example Usage
 
-
-### Virtual Cluster Deployment 
+### Virtual Cluster Deployment
 An example of a Palette Virtual Cluster with a host and optional cluster group.
 
-```hcl
+```terraform
+# Day-2 mutability: only `name` and `cloud_config` are ForceNew - changing either recreates the
+# virtual cluster. Everything else - host_cluster_uid, cluster_group_uid, resources,
+# cluster_profile, tags, description, and the rest - updates in place.
+#
+# Attributes:
+#   name              - Required, ForceNew.
+#   context           - Optional, default "project". Despite the schema description mentioning
+#                       `tenant`, the only values actually accepted are "project" or "cluster".
+#   tags              - Optional. Tags in `key:value` form.
+#   description       - Optional, default "". Free-text description.
+#   host_cluster_uid  - Required in practice: set exactly one of host_cluster_uid or
+#                       cluster_group_uid to place the virtual cluster - directly on a host
+#                       cluster (this example), or on whichever cluster a cluster group selects.
+#   cluster_group_uid - See host_cluster_uid above.
+#   pause_cluster     - Optional, default false. Set true to pause the cluster; false to resume
+#                       it.
+#
+# resources block (optional, at most one) - all 6 fields optional; set only the ones you want to
+# bound: max_cpu, max_mem_in_mb, max_storage_in_gb, min_cpu, min_mem_in_mb, min_storage_in_gb.
 resource "spectrocloud_virtual_cluster" "cluster" {
   name = "virtual-cluster-demo"
 
+  # context = "project"
+
+  # tags = ["dev", "department:devops", "owner:bob"]
+
+  # description = "Demo virtual cluster"
+
   host_cluster_uid = var.host_cluster_uid
-  # cluster_group_uid = var.cluster_group_uid
+  # cluster_group_uid = data.spectrocloud_cluster_group.cg.id
+
+  # pause_cluster = false
 
   resources {
-    max_cpu       = 6
-    max_mem_in_mb = 6000
-    min_cpu       = 0
-    min_mem_in_mb = 0
+    max_cpu           = 6
+    max_mem_in_mb     = 6000
+    max_storage_in_gb = 20
+    min_cpu           = 0
+    min_mem_in_mb     = 0
+    min_storage_in_gb = 0
   }
-
-  # cluster_profile {
-  #   id = spectrocloud_cluster_profile.profile.id
-  # }
-
-  # optional virtual cluster config
-  # cloud_config {
-  #   chart_name = var.chart_name
-  #   chart_repo = var.chart_repo
-  #   chart_version = var.chart_version
-  #   chart_values = var.chart_values
-  #   k8s_version = var.k8s_version
-  # }
-
 }
-   
+
+# Other optional, less commonly changed attributes not shown above: cluster_profile,
+# pause_agent_upgrades, apply_setting, update_worker_pools_in_parallel, cluster_timezone,
+# os_patch_on_boot/os_patch_schedule/os_patch_after, backup_policy, scan_policy,
+# cluster_rbac_binding, namespaces, force_delete/force_delete_delay. None of these are ForceNew.
+# `cloud_config` (chart_name/chart_repo/chart_version/chart_values) IS ForceNew if you do set it -
+# it configures the Helm chart used to install the virtual cluster's control plane.
 ```
 
 ## Import

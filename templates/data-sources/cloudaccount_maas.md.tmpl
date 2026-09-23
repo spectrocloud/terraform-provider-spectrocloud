@@ -11,11 +11,6 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_cloudaccount_maas" "example" {
-  name    = "maas-account"
-  context = "project"
-}
-```
+{{ tffile "examples/Infrastructure/Cloud Accounts/data-source/MAAS/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

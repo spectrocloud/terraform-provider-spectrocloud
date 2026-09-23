@@ -11,160 +11,20 @@ description: |-
 
 ## Example Usage
 
-
-### App Profile with Manifest
-
-```hcl
-data "spectrocloud_pack" "byom" {
-  name = "spectro-byo-manifest"
-  version  = "1.0.0"
-}
-
-data "spectrocloud_pack" "csi" {
-  name = "csi-gcp"
-  version  = "1.0.0"
-}
-
-data "spectrocloud_pack" "cni" {
-  name    = "cni-calico"
-  version = "3.16.0"
-}
-
-data "spectrocloud_pack" "k8s" {
-  name    = "kubernetes"
-  version = "1.18.14"
-}
-
-data "spectrocloud_pack" "ubuntu" {
-  name = "ubuntu-gcp"
-  version  = "1.0.0"
-}
-
-resource "spectrocloud_application_profile" "profile" {
-  name        = "gcp-picard-2"
-  description = "basic cp"
-  version     = "1.0.0"
-  context     = "tenant"
-  cloud       = "all"
-
-  pack {
-    name            = "manifest-1"
-    tag             = "1.0.0"
-    type            = "manifest"
-    source_app_tier = "spectro-manifest-pack"
-
-    values = <<-EOT
-      manifests:
-        byo-manifest:
-          contents: |
-            apiVersion: v1
-            kind: Namespace
-            metadata:
-              labels:
-                app: wordpress
-                app3: wordpress3
-              name: wordpress
-    EOT
-  }
-}
-   
-```
-
-### App Profile with Container
-
-```hcl
-
-variable "single-container-image" {
-    type        = string
-    description = "The name of the container image to use for the virtual cluster in a single scenario"
-    default     = "ghcr.io/spectrocloud/hello-universe:1.0.8"
-}
-
-data "spectrocloud_cluster_group" "beehive" {
-  name    = "beehive"
-  context = "system"
-}
-
-data "spectrocloud_registry" "container_registry" {
-  name = "Public Repo"
-}
-
-data "spectrocloud_pack_simple" "container_pack" {
-  type         = "container"
-  name         = "container"
-  version      = "1.0.0"
-  registry_uid = data.spectrocloud_registry.container_registry.id
-}
-
-resource "spectrocloud_application_profile" "hello-universe-ui" {
-  name        = "hello-universe"
-  description = "Hello Universe as a single UI instance"
-  pack {
-    name = "hello-universe-ui"
-    type = data.spectrocloud_pack_simple.container_pack.type
-    registry_uid = data.spectrocloud_registry.container_registry.id
-    source_app_tier = data.spectrocloud_pack_simple.container_pack.id
-    values = <<-EOT
-        containerService:
-            serviceName: "hello-universe-ui-test"
-            registryUrl: ""
-            image: ${var.single-container-image}
-            access: public
-            ports:
-              - "8080"
-            serviceType: LoadBalancer
-    EOT
-  }
-  tags = ["scenario-1"]
-}
-
-
-```
-
-
-###  App Profile with Helm Chart
-
-```hcl
-data "spectrocloud_registry_helm" "helm" {
-  name = "Public Spectro Helm Repo"
-}
-
-data "spectrocloud_pack" "marvel-app" {
-  name         = "marvel-app"
-  registry_uid = data.spectrocloud_registry_helm.helm.id
-  version      = "0.1.0"
-}
-
-resource "spectrocloud_application_profile" "my-app-profile" {
-  name        = "my-app-profile"
-  description = "A profile for a simple application"
-  context     = "project"
-  pack {
-    name            = data.spectrocloud_pack.marvel-app.name
-    type            = "helm"
-    registry_uid    = data.spectrocloud_registry_helm.helm.id
-    source_app_tier = data.spectrocloud_pack.marvel-app.id
-  }
-  tags = ["name:marvel-app", "terraform_managed:true", "env:dev"]
-}
-```
-
-###  App Profile with All Type of Tiers
-```hcl
-
+```terraform
 data "spectrocloud_registry" "common_registry" {
   name = "Public Repo"
 }
 
 data "spectrocloud_registry" "container_registry" {
-  name = "Public Repo"
+  name = "automation-pack-registry"
 }
 
 data "spectrocloud_registry" "db_registry" {
   name = "svtest"
 }
 
-data "spectrocloud_registry" "Bitnami_registry" {
+data "spectrocloud_registry" "bitnami_registry" {
   name = "Bitnami"
 
 }
@@ -201,17 +61,37 @@ data "spectrocloud_pack_simple" "kafka_pack" {
   type         = "helm"
   name         = "kafka"
   version      = "20.0.0"
-  registry_uid = data.spectrocloud_registry.Bitnami_registry.id
+  registry_uid = data.spectrocloud_registry.bitnami_registry.id
 }
 
+# This profile demonstrates every pack tier type an application profile supports: a plain
+# container image, a Helm chart, a raw Kubernetes manifest, and three operator-instance tiers
+# (each backed by a Palette operator pack). Nothing on this resource is ForceNew - the whole
+# profile, including its packs, updates in place.
+#
+#   name        - Required.
+#   version     - Optional, default "1.0.0". Must be a valid (or coercible) semantic version.
+#   context     - Optional, default "project". Allowed: "project", "tenant", "system".
+#   tags        - Optional. Tags are conventionally "key:value" strings.
+#   description - Optional.
+#   cloud       - Optional, default "all". The cloud provider this profile is eligible for.
+#
+# Common pack fields not called out per tier below: name (Required, unique per profile), uid
+# (Computed - don't set), registry_name (Optional, mutually exclusive with registry_uid), tag
+# (Optional), manifest (Optional, one or more raw-manifest blocks with name/content).
 resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   name        = "profile-all-tiers-test"
   version     = "1.0.0"
   context     = "project"
-  tags        = ["sivaa", "terraform"]
-  description = "test"
+  tags        = ["owner:sivaa", "managed-by:terraform"]
+  description = "Application profile demonstrating container, Helm, manifest, and operator-instance tiers."
   cloud       = "all"
-  # Sample Container Tier
+
+  # pack (container-tier, container image tier):
+  #   type            - Optional, default "spectro"; set explicitly here to "container".
+  #   registry_uid    - Optional, mutually exclusive with registry_name.
+  #   source_app_tier - Optional. UID of the source pack this tier is based on.
+  #   values          - Optional. Pack configuration values in YAML/JSON.
   pack {
     name            = "container-tier"
     type            = data.spectrocloud_pack_simple.container_pack.type
@@ -219,7 +99,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     source_app_tier = data.spectrocloud_pack_simple.container_pack.id
     values          = <<-EOT
         containerService:
-            serviceName: "spectro-system-appdeployment-tiername-svc"
+            serviceName: "{{.spectro.system.appdeployment.tiername}}-svc"
             registryUrl: ""
             image: alphine
             access: public
@@ -237,53 +117,60 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
             volumeName: TestVolume
             volumeSize: 10
             pathToMount: /pack/
-          EOT
+    EOT
   }
-  # Sample Helm Tier
+
+  # pack (kafka-tier, Helm chart tier):
+  #   type            - Optional, default "spectro"; set explicitly here to "helm".
+  #   registry_uid    - Optional, mutually exclusive with registry_name.
+  #   source_app_tier - Optional. UID of the source pack this tier is based on.
   pack {
     name            = "kafka-tier"
     type            = data.spectrocloud_pack_simple.kafka_pack.type
-    registry_uid    = data.spectrocloud_registry.Bitnami_registry.id
+    registry_uid    = data.spectrocloud_registry.bitnami_registry.id
     source_app_tier = data.spectrocloud_pack_simple.kafka_pack.id
     manifest {
       name    = "kafka"
       content = <<-EOT
-                annotations:
-                  category: Infrastructure
-                apiVersion: v2
-                appVersion: 3.3.1
-                dependencies:
-                  - condition: zookeeper.enabled
-                    name: zookeeper
-                    repository: https://charts.bitnami.com/bitnami
-                    version: 11.x.x
-                  - name: common
-                    repository: https://charts.bitnami.com/bitnami
-                    tags:
-                      - bitnami-common
-                    version: 2.x.x
-                description: Apache Kafka is a distributed streaming platform designed to build real-time pipelines and can be used as a message broker or as a replacement for a log aggregation solution for big data applications.
-                engine: gotpl
-                home: https://github.com/bitnami/charts/tree/main/bitnami/kafka
-                icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-220x234.png
-                keywords:
-                  - kafka
-                  - zookeeper
-                  - streaming
-                  - producer
-                  - consumer
-                maintainers:
-                  - name: Bitnami
-                    url: https://github.com/bitnami/charts
-                name: kafka
-                sources:
-                  - https://github.com/bitnami/containers/tree/main/bitnami/kafka
-                  - https://kafka.apache.org/
-                version: 20.0.0
-            EOT
+          annotations:
+            category: Infrastructure
+          apiVersion: v2
+          appVersion: 3.3.1
+          dependencies:
+            - condition: zookeeper.enabled
+              name: zookeeper
+              repository: https://charts.bitnami.com/bitnami
+              version: 11.x.x
+            - name: common
+              repository: https://charts.bitnami.com/bitnami
+              tags:
+                - bitnami-common
+              version: 2.x.x
+          description: Apache Kafka is a distributed streaming platform designed to build real-time pipelines and can be used as a message broker or as a replacement for a log aggregation solution for big data applications.
+          engine: gotpl
+          home: https://github.com/bitnami/charts/tree/main/bitnami/kafka
+          icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-220x234.png
+          keywords:
+            - kafka
+            - zookeeper
+            - streaming
+            - producer
+            - consumer
+          maintainers:
+            - name: Bitnami
+              url: https://github.com/bitnami/charts
+          name: kafka
+          sources:
+            - https://github.com/bitnami/containers/tree/main/bitnami/kafka
+            - https://kafka.apache.org/
+          version: 20.0.0
+      EOT
     }
   }
-  # Sample Manifest Tier
+
+  # pack (manifest-3, raw Kubernetes manifest tier):
+  #   type          - Optional, default "spectro"; set explicitly here to "manifest".
+  #   install_order - Optional, default 0. Lower values run first.
   pack {
     name          = "manifest-3"
     type          = "manifest"
@@ -291,31 +178,35 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     manifest {
       name    = "test-manifest-3"
       content = <<-EOT
-                apiVersion: apps/v1
-                kind: Deployment
-                metadata:
-                  name: nginx-deployment
-                  labels:
-                    app: nginx
-                spec:
-                  replicas: 3
-                  selector:
-                    matchLabels:
-                      app: nginx
-                  template:
-                    metadata:
-                      labels:
-                        app: nginx
-                    spec:
-                      containers:
-                        - name: nginx
-                          image: nginx:1.14.2
-                          ports:
-                            - containerPort: 80
-            EOT
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-deployment
+            labels:
+              app: nginx
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx:1.14.2
+                    ports:
+                      - containerPort: 80
+      EOT
     }
   }
-  # Sample Operator-Instance Tier's
+
+  # pack (minio-operator-stage, operator-instance tier):
+  #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
+  #   source_app_tier - Optional. UID of the source pack this tier is based on.
+  #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).
   pack {
     name            = "minio-operator-stage"
     type            = data.spectrocloud_pack_simple.minio_pack.type
@@ -326,6 +217,11 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
       "volumeSize"        = "10"
     }
   }
+
+  # pack (mysql-3-stage, operator-instance tier):
+  #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
+  #   source_app_tier - Optional. UID of the source pack this tier is based on.
+  #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).
   pack {
     name            = "mysql-3-stage"
     type            = data.spectrocloud_pack_simple.mysql_pack.type
@@ -336,6 +232,11 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
       "version"        = "5.7"
     }
   }
+
+  # pack (redis-4-stage, operator-instance tier):
+  #   type            - Optional, default "spectro"; set explicitly here to "operator-instance".
+  #   source_app_tier - Optional. UID of the source pack this tier is based on.
+  #   properties      - Optional. Simple key-value pack inputs (as opposed to YAML `values`).
   pack {
     name            = "redis-4-stage"
     type            = data.spectrocloud_pack_simple.redis_pack.type
@@ -347,6 +248,17 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
   }
 }
 
+# Import example:
+# terraform import spectrocloud_application_profile.app_profile_all_tiers "profile_uid_here"
+#
+# Where:
+# - profile_uid_here is the unique identifier of the application profile
+#
+# To import using import block:
+# import {
+#   to = spectrocloud_application_profile.app_profile_all_tiers
+#   id = "profile_uid_here"
+# }
 ```
 
 ## Import

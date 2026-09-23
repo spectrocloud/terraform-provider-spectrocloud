@@ -11,40 +11,39 @@ description: |-
 
 ## Example Usage
 
+```terraform
+# Looks up an existing AWS cloud account registered in Palette, by name or by ID.
 
-You can retrieve the details of an AWS cloud registered in Palette by specifying the ID of the cloud account.
-
-```hcl
-# Retrieve details of an AWS cloud account using name
-data "spectrocloud_cloud_account_aws" "example" {
-  name    = "example-aws-account"  # Required if 'id' is not provided
-  context = "project"              # Optional: Allowed values are "project", "tenant", or "" (default)
+# Retrieve details of an AWS cloud account using name.
+#
+# Lookup keys:
+#   name    - Exactly one of `id`/`name` required, also Computed.
+#   context - Optional. Allowed: "project", "tenant", "" (default). Required only to
+#             disambiguate when more than one account shares the same `name` across scopes.
+data "spectrocloud_cloudaccount_aws" "example" {
+  name    = "example-aws-account"
+  context = "project"
 }
 
-# Retrieve details of an AWS cloud account using ID
-data "spectrocloud_cloud_account_aws" "by_id" {
-  id = "123e4567-e89b-12d3-a456-426614174000"  # Required if 'name' is not provided
+# Retrieve details of an AWS cloud account using ID.
+#
+# Lookup keys:
+#   id - Exactly one of `id`/`name` required, also Computed.
+data "spectrocloud_cloudaccount_aws" "by_id" {
+  id = "123e4567-e89b-12d3-a456-426614174000"
 }
 
 # Output cloud account details
 output "aws_account_id" {
-  value = data.spectrocloud_cloud_account_aws.example.id
+  value = data.spectrocloud_cloudaccount_aws.example.id
 }
 
 output "aws_account_name" {
-  value = data.spectrocloud_cloud_account_aws.example.name
+  value = data.spectrocloud_cloudaccount_aws.example.name
 }
 
 output "aws_account_context" {
-  value = data.spectrocloud_cloud_account_aws.example.context
-}
-```
-
-Alternatively, you specify the ID of the cloud account to retrieve the details of the AWS cloud.
-
-```hcl
-data "spectrocloud_cloudaccount_aws" "aws_account" {
-   name = "primary-aws-account"
+  value = data.spectrocloud_cloudaccount_aws.example.context
 }
 ```
 

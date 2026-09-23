@@ -29,14 +29,28 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two
+# are ConflictsWith each other - use only one.
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
+  # cloud_config:
+  #   ssh_key_name, region, vpc_id, azs, az_subnets, endpoint_access, and encryption_config_arn -
+  #     ALL ForceNew; changing any of them recreates the cluster.
+  #   endpoint_access - Optional, default "public". Allowed: "public", "private",
+  #     "private_and_public".
+  #   public_access_cidrs, private_access_cidrs - Optional. Restrict public/private API server
+  #     access to these CIDR blocks. Unlike the ForceNew fields above, these (and
+  #     override_cluster_api_config) update in place.
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
+    # endpoint_access = "public"
+    # public_access_cidrs  = ["203.0.113.0/24"]
+    # private_access_cidrs = ["10.0.0.0/16"]
     override_cluster_api_config = <<-EOT
       spec:
         controlPlaneConfiguration:
@@ -50,6 +64,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     id = data.spectrocloud_cluster_profile.profile.id
 
     # To override or specify values for a cluster:
+
     # pack {
     #   name   = "spectro-byo-manifest"
     #   tag    = "1.0.x"
@@ -84,6 +99,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+
   machine_pool {
     name          = "worker-basic"
     count         = 1
@@ -92,8 +108,8 @@ resource "spectrocloud_cluster_eks" "cluster" {
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }
-    encryption_config_arn = "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab"
   }
+
 }
 ```
 ## Import

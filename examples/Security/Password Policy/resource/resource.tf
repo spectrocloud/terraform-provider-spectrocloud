@@ -29,7 +29,7 @@ resource "spectrocloud_password_policy" "policy_regex" {
   min_uppercase_letters  = 1
 }
 
-## import existing password policy
+# import existing password policy
 #import {
 #  to = spectrocloud_password_policy.password_policy
 #  id = "password-policy" // tenant-uid

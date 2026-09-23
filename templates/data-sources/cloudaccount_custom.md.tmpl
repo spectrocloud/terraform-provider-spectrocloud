@@ -11,12 +11,6 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_cloudaccount_custom" "example" {
-  name    = "custom-account"
-  cloud   = "nutanix"
-  context = "project"
-}
-```
+{{ tffile "examples/Infrastructure/Cloud Accounts/data-source/Custom Cloud/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

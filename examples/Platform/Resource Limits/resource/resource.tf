@@ -51,7 +51,7 @@ resource "spectrocloud_resource_limit" "resource_limit" {
   workspace              = 60
 }
 
-## import existing resource limit
+# import existing resource limit
 #import {
 #  to = spectrocloud_resource_limit.resource_limit
 #  id = "5eea74e919f5e0d43fd3f316" // tenant-uid
