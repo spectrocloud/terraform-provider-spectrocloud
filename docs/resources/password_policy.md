@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_password_policy Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Password Policy"
 description: |-
   Resource for managing tenant password policy settings in Spectro Cloud.
 ---

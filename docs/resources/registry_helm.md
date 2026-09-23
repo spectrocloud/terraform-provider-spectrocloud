@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry_helm Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Resource for managing Helm registries in Spectro Cloud.
 ---

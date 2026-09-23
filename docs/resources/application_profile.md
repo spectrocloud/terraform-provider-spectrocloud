@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_application_profile Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "App Profiles"
 description: |-
   Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.
 ---
@@ -378,7 +378,7 @@ terraform import spectrocloud_application_profile.example profile_uid_here/profi
 ### Optional
 
 - `cloud` (String) The cloud provider the profile is eligible for. Default value is `all`.
-- `context` (String) Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `context` (String) Context of the profile. Allowed values are `project`, `tenant`, or `system`. Default value is `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) Description of the profile.
 - `tags` (Set of String) A list of tags to be applied to the application profile. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))

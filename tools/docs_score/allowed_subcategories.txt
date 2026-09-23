@@ -1,0 +1,28 @@
+Projects
+Cluster Profiles
+Cluster Policy
+Cluster Template
+Clusters
+Cluster Group
+Roles
+Users
+Teams
+Cloud Accounts
+Registries
+Private Cloud Gateway
+Backup Location
+Audit Trails
+SSH Keys
+SSO
+Password Policy
+Registration Token
+Developer Settings
+Macros
+Resource Limits
+Platform Settings
+Filters
+App Profiles
+Apps
+Virtual Clusters
+Virtual Machines
+Workspaces

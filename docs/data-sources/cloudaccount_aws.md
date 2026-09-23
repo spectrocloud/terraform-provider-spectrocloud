@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_aws Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   A data source for retrieving information about an AWS cloud account registered in Palette.
 ---

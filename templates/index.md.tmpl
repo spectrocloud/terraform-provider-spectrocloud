@@ -1,6 +1,5 @@
 ---
 page_title: "Spectro Cloud Provider"
-subcategory: ""
 description: |-
   The Spectro Cloud provider provides resources to interact with the Spectro Cloud management API (whether SaaS or on-prem).
 ---

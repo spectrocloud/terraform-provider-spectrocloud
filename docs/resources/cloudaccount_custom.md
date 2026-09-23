@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_custom Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Resource for managing custom cloud accounts in Spectro Cloud.
 ---

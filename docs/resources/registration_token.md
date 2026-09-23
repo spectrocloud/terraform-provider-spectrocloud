@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registration_token Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registration Token"
 description: |-
   Resource for managing registration tokens in Spectro Cloud.
 ---

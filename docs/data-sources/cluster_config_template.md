@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_config_template Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Template"
 description: |-
   Data source for retrieving information about a cluster config template. Tech Preview: This data source is in tech preview and may undergo changes.
 ---

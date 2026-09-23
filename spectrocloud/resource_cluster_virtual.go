@@ -162,7 +162,7 @@ func resourceClusterVirtual() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {

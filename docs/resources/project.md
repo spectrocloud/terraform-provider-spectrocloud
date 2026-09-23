@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_project Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Projects"
 description: |-
   Create and manage projects in Palette.
 ---

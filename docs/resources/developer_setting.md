@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_developer_setting Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Developer Settings"
 description: |-
   Resource for managing tenant-level developer quota settings in Spectro Cloud.
 ---

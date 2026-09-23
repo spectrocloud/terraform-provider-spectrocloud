@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_application_profile Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "App Profiles"
 description: |-
   Use this data source to get the details of an existing application profile.
 ---

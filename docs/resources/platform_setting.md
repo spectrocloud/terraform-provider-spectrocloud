@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_platform_setting Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Platform Settings"
 description: |-
   Resource for managing tenant and project platform settings in Spectro Cloud.
 ---

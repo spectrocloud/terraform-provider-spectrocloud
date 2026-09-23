@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_vsphere Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Data source for looking up a vSphere cloud account by ID or name.
 ---

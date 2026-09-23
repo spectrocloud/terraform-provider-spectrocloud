@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_privatecloudgateway_dns_map Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   This resource allows for the management of DNS mappings for private cloud gateways. This helps ensure proper DNS resolution for resources within the private cloud environment.
 ---
@@ -15,16 +15,29 @@ You can learn more about Private Cloud Gateways DNS Mapping by reviewing the [Cr
 
 An example of creating an DNS Map for a Private Cloud Gateway using a search domain, datacenter and network.
 
-```hcl
- data "spectrocloud_private_cloud_gateway" "gateway" {
-   name = "test-vm-pcg"
- }
- resource "spectrocloud_privatecloudgateway_dns_map" "dns_map_test" {
-   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.gateway.id
-   search_domain_name = "test1.spectro.com"
-   data_center = "DataCenterTest"
-   network = "TEST-VM-NETWORK"
- }
+```terraform
+data "spectrocloud_private_cloud_gateway" "gateway" {
+  name = "test-vm-pcg"
+}
+
+# Day-2 mutability: `private_cloud_gateway_id`, `data_center`, and `network` are ForceNew -
+# changing any of them recreates the mapping. `search_domain_name` updates in place.
+#
+# Attributes:
+#   private_cloud_gateway_id - Required, ForceNew. ID of the private cloud gateway this DNS
+#                              mapping applies to.
+#   search_domain_name       - Required. Domain name used for DNS search queries within the
+#                              private cloud. Must be a valid domain name (e.g. "example.com").
+#   data_center              - Required, ForceNew. The vSphere datacenter this mapping applies
+#                              to, as it appears in vSphere.
+#   network                  - Required, ForceNew. The vSphere network this mapping is bound to,
+#                              as it appears in vSphere.
+resource "spectrocloud_privatecloudgateway_dns_map" "dns_map_test" {
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.gateway.id
+  search_domain_name       = "test1.spectro.com"
+  data_center              = "DataCenterTest"
+  network                  = "TEST-VM-NETWORK"
+}
 ```
 
 ## Import
