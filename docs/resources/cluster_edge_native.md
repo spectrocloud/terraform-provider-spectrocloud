@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_edge_native Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing Edge Native clusters in Spectro Cloud through Palette.
 ---
@@ -12,66 +12,81 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_cluster_profile" "profile" {
-  name = "edge-native-infra"
-}
-
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. The entire `cloud_config` block
+# is also ForceNew - changing ssh_keys, vip, overlay_cidr_range, etc. recreates the cluster.
+# `cluster_profile` and `machine_pool` (including edge_host assignments) update in place.
 resource "spectrocloud_cluster_edge_native" "cluster" {
-  name            = "edge-native-example"
-  skip_completion = true
+  name = "ran-edge-tf"
 
   cluster_profile {
-    id = data.spectrocloud_cluster_profile.profile.id
+    id = "test-profile-id"
   }
 
+  # cloud_config:
+  #   ssh_keys            - Optional. Public SSH keys for accessing cluster nodes.
+  #   vip                 - Optional, Computed. The cluster's virtual IP - an address or FQDN.
+  #                         If omitted, Palette assigns one automatically (within
+  #                         overlay_cidr_range, if set).
+  #   overlay_cidr_range  - Optional. Overlay (VPN) network CIDR, e.g. "100.64.192.0/23". Also
+  #                         individually ForceNew.
+  #   is_two_node_cluster - Optional, default false. Set to true for a two-node (no separate
+  #                         control plane) cluster.
+  #   ntp_servers         - Optional. NTP servers for the cluster to use.
   cloud_config {
-    ssh_keys           = ["spectro2022", "spectro2023"]
-    vip                = "100.0.0.1"
-    overlay_cidr_range = "100.0.0.12/12"
+    ssh_keys = ["spectro2023"]
+    vip      = "10.10.232.57"
+    # overlay_cidr_range = "100.64.192.0/23"
+    # is_two_node_cluster = false
+    # ntp_servers = ["pool.ntp.org"]
   }
 
+  # machine_pool (control plane "cp-pool"):
+  #   arch_type - Optional, default "amd64". Allowed: "amd64", "arm64".
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
     arch_type               = "amd64"
 
+    # edge_host: Required, at least one edge_host per machine pool - each maps a
+    #            physical/virtual edge appliance (already paired to Palette) onto this pool.
+    #   host_uid        - Required. UID of the paired edge appliance (see
+    #                     spectrocloud_appliance).
+    #   static_ip, default_gateway, dns_servers, host_name, nic_name, subnet_mask - Optional
+    #     networking overrides; if omitted, the appliance keeps its existing network config
+    #     (e.g. DHCP-assigned address).
+    #   two_node_role   - Optional. Only for is_two_node_cluster = true. Allowed: "primary",
+    #                     "secondary".
     edge_host {
-      host_uid  = spectrocloud_appliance.appliance0.uid
-      static_ip = "4.1.2.3"
+      host_uid        = "edge-fsdsdedadfasdtest"
+      static_ip       = "10.10.32.12"
+      default_gateway = "10.10.12.1"
+      dns_servers     = ["tf.test.com"]
+      host_name       = "test-test"
+      nic_name        = "auto162"
+      subnet_mask     = "255.255.12.0"
+      # two_node_role = "primary"
     }
-
   }
 
+  # machine_pool (worker pool "wp-pool"):
+  #   skip_k8s_upgrade - Optional, default "disabled". "enabled" skips the OS/K8s upgrade for
+  #                      this worker pool (N-3 skew allowed) when the cluster profile is
+  #                      upgraded.
   machine_pool {
-    name      = "worker-pool"
-    # optional: "enabled" to skip OS/K8s upgrade (N-3 skew)
+    name             = "wp-pool"
     skip_k8s_upgrade = "disabled"
 
     edge_host {
-      host_uid  = spectrocloud_appliance.appliance1.uid
-      static_ip = "1.2.3.4"
+      host_uid        = "edge-bef8384adfasdtest"
+      default_gateway = "10.10.12.1"
       dns_servers     = ["tf.test.com"]
       host_name       = "test-test"
       nic_name        = "auto160"
-      static_ip       = "112.21.12.21"
-      subnet_mask     = "2.2.1.0"
+      static_ip       = "10.10.44.22"
+      subnet_mask     = "255.255.92.0"
     }
-
-    # Optional: override Machine Health Check settings for this node pool
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-        - type: Ready
-          status: "Unknown"
-          timeout: 5m
-    EOT
   }
-
 }
 ```
 ## Import
@@ -137,7 +152,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 
@@ -186,13 +201,25 @@ Required:
 
 Optional:
 
+- `additional_labels` (Map of String) Per-host labels for this edge host, merged with the machine pool's `additional_labels` (this host's values win on key collision). Combined with `taints`, this lets a single node within a pool be marked as a witness/arbiter node - e.g. schedulable primary nodes plus a non-schedulable witness for etcd quorum - without splitting the pool.
 - `default_gateway` (String) Default gateway IP address for the edge host network interface.
 - `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
 - `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
 - `static_ip` (String) Static IP address assigned to the edge host.
 - `subnet_mask` (String) Subnet mask for the edge host network interface.
+- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--edge_host--taints))
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
+
+<a id="nestedblock--machine_pool--edge_host--taints"></a>
+### Nested Schema for `machine_pool.edge_host.taints`
+
+Required:
+
+- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+- `key` (String) The key of the taint.
+- `value` (String) The value of the taint.
+
 
 
 <a id="nestedblock--machine_pool--node"></a>

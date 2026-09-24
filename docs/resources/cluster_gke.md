@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_gke Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing GKE clusters through Palette.
 ---
@@ -11,9 +11,7 @@ description: |-
 
 ## Example Usage
 
-
 ```terraform
-
 data "spectrocloud_cloudaccount_gcp" "account" {
   name = var.gcp_cloud_account_name
 }
@@ -23,29 +21,54 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `cluster_profile`, `machine_pool`, and the rest of `cloud_config` all update in place.
+# Use `update_worker_pools_in_parallel` (plural) - the singular `update_worker_pool_in_parallel`
+# is deprecated and will be removed.
 resource "spectrocloud_cluster_gke" "cluster" {
   name             = var.cluster_name
-  description = "Gke Cluster"
+  description      = "Gke Cluster"
   tags             = ["dev", "department:pax"]
   cloud_account_id = data.spectrocloud_cloudaccount_gcp.account.id
-  context = "project"
+  context          = "project"
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
   }
 
+  # cloud_config:
+  #   project, region - ForceNew; unlike the plain (non-GKE) GCP cluster resource, where these
+  #     two update in place, here changing either recreates the cluster.
+  #   override_cluster_api_config - Optional. YAML passthrough for CAPG-managed (GKE) properties
+  #     not yet first-class in Palette. Overrides pack-level and Palette-managed values. Palette
+  #     does not pre-validate keys/types/values; the API surfaces any errors.
   cloud_config {
     project = var.gcp_project
-    region = var.gcp_region
+    region  = var.gcp_region
+
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedControlPlane:
+    #     spec:
+    #       releaseChannel: REGULAR
+    # EOT
   }
-  update_worker_pool_in_parallel = true
+  update_worker_pools_in_parallel = true
+
+  # machine_pool:
+  #   override_cluster_api_config - Optional. YAML passthrough for pool-level CAPG-managed
+  #     properties (e.g. GCPManagedMachinePool).
   machine_pool {
-    name                 = "worker-basic"
-    count                = 3
-    instance_type        = "n2-standard-4"
+    name          = "worker-basic"
+    count         = 3
+    instance_type = "n2-standard-4"
+
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedMachinePool:
+    #     spec:
+    #       nodePoolName: worker-basic
+    # EOT
   }
 }
-
 ```
 
 ## Import
@@ -109,7 +132,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
@@ -140,6 +163,7 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
+- `dedicate_node_pool_for_system_pods` (Boolean) If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the matching toleration. Custom taints cannot be set on a dedicated pool.
 - `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.

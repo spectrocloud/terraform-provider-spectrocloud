@@ -103,7 +103,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -327,6 +327,18 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
 										Optional:     true,
 										ValidateFunc: validation.StringInSlice([]string{"primary", "secondary"}, false),
+									},
+									"taints": schemas.ClusterTaintsSchema(),
+									"additional_labels": {
+										Type:     schema.TypeMap,
+										Optional: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Description: "Per-host labels for this edge host, merged with the machine pool's `additional_labels` " +
+											"(this host's values win on key collision). Combined with `taints`, this lets a single node " +
+											"within a pool be marked as a witness/arbiter node - e.g. schedulable primary nodes plus a " +
+											"non-schedulable witness for etcd quorum - without splitting the pool.",
 									},
 								},
 							},
@@ -555,6 +567,12 @@ func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interfa
 	}
 	if host.TwoNodeCandidatePriority != "" {
 		rawHost["two_node_role"] = host.TwoNodeCandidatePriority
+	}
+	if taints := flattenClusterTaints(host.Taints); len(taints) > 0 {
+		rawHost["taints"] = taints
+	}
+	if len(host.AdditionalLabels) > 0 {
+		rawHost["additional_labels"] = host.AdditionalLabels
 	}
 	return rawHost
 }
@@ -953,6 +971,15 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		}
 		if v, ok := host.(map[string]interface{})["subnet_mask"]; ok {
 			edgeHost.Nic.Subnet = v.(string)
+		}
+
+		edgeHost.Taints = toClusterTaints(host.(map[string]interface{}))
+		if v, ok := host.(map[string]interface{})["additional_labels"].(map[string]interface{}); ok && len(v) > 0 {
+			additionalLabels := make(map[string]string, len(v))
+			for k, val := range v {
+				additionalLabels[k] = val.(string)
+			}
+			edgeHost.AdditionalLabels = additionalLabels
 		}
 
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {

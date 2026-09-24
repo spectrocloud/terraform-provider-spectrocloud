@@ -1035,5 +1035,12 @@ func resourceEdgeHostHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
 	}
 
+	if _, ok := host["taints"]; ok {
+		buf.WriteString(HashStringMapList(host["taints"]))
+	}
+	if _, ok := host["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(host["additional_labels"]))
+	}
+
 	return int(hash(buf.String()))
 }

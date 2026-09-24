@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_group Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Group"
 description: |-
   Resource for managing host cluster groups in Spectro Cloud.
 ---
@@ -11,33 +11,50 @@ description: |-
 
 ## Example Usage
 
-
-### Cluster Group 
-An example of how to provision a Palette Cluster Group.
-
-```hcl
+```terraform
+# Day-2 mutability: only `config.k8s_distribution` is ForceNew - changing the underlying
+# distribution recreates the cluster group. Everything else - name, context, description, tags,
+# the rest of config, and the clusters list - updates in place.
 resource "spectrocloud_cluster_group" "cg" {
-  name = "cluster-group-demo"
+  name        = "ran-cp-cluster-group"
+  context     = "tenant"
+  description = "Cluster Group description updated"
+  tags        = ["qa:dev"]
 
-  clusters {
-    cluster_uid = data.spectrocloud_cluster.host_cluster0.id
-    host        = "*.test.com"
-  }
-
-  clusters {
-    cluster_uid = data.spectrocloud_cluster.host_cluster1.id
-    host        = "*"
-  }
-
+  # config:
+  #   k8s_distribution - Optional, default "vcluster-generic", ForceNew. Allowed: "vcluster-generic",
+  #     "cncf_k8s". "k3s" also exists in the schema but is deprecated and rejected on create for new
+  #     cluster groups (existing k3s cluster groups remain supported/updatable, but should migrate).
   config {
-    host_endpoint_type       = "LoadBalancer"
-    cpu_millicore            = 6000
-    memory_in_mb             = 8192
-    storage_in_gb            = 10
+    host_endpoint_type       = "Ingress"
+    cpu_millicore            = 12000
+    memory_in_mb             = 16384
+    storage_in_gb            = 12
     oversubscription_percent = 120
+    values                   = ""
+    k8s_distribution         = "vcluster-generic"
   }
+
+  # Optional. A host cluster profile can also be attached to the group itself (same block shape
+  # as spectrocloud_cluster_profile's cluster_profile reference) - omitted here.
+  # cluster_profile {
+  #   id = data.spectrocloud_cluster_profile.host_profile.id
+  # }
+
+  clusters {
+    cluster_uid = "684fba868619ff5e691f0741"
+    host_dns    = "*.dev.spectrocloud.com"
+  }
+
 }
-   
+
+# terraform import spectrocloud_cluster_group.cg "cluster_group_id:tenant"
+
+# Or using the import block (Terraform 1.5+):
+# import {
+#   to = spectrocloud_cluster_group.cg
+#   id = "cluster_group_id:context"
+# }
 ```
 
 ## Import
@@ -88,7 +105,7 @@ Optional:
 
 - `cpu_millicore` (Number) The CPU limit in millicores.
 - `host_endpoint_type` (String) The host endpoint type. Allowed values are 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
-- `k8s_distribution` (String) The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.
+- `k8s_distribution` (String) The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`. `k3s` is deprecated and cannot be used for new cluster groups - existing `k3s` cluster groups remain supported and updatable, but should migrate to `vcluster-generic` or `cncf_k8s`.
 - `memory_in_mb` (Number) The memory limit in megabytes (MB).
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).

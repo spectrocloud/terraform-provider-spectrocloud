@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Backup Location"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -11,10 +11,6 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_backup_storage_location" "example" {
-  name = "default-backup-location"
-}
-```
+{{ tffile "examples/Infrastructure/Backup Location/data-source/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}

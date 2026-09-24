@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_backup_storage_location Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Backup Location"
 description: |-
   Data source for looking up a backup storage location by ID or name.
 ---
@@ -12,8 +12,23 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Looks up a backup storage location by name or by ID.
+#
+# Lookup keys (exactly one of `id`/`name` required, both also Computed):
+#   name - Name of the backup storage location.
+#   id   - ID of the backup storage location.
 data "spectrocloud_backup_storage_location" "example" {
-  name = "default-backup-location"
+  name = "my-backup-location"
+  # id = "657ec9a27afca71b0dc98027"
+}
+
+# Computed.
+output "backup_storage_location_id" {
+  value = data.spectrocloud_backup_storage_location.example.id
+}
+
+output "backup_storage_location_name" {
+  value = data.spectrocloud_backup_storage_location.example.name
 }
 ```
 

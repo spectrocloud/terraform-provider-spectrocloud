@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Cluster Policy"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -11,20 +11,7 @@ description: |-
 
 ## Example Usage
 
-```terraform
-data "spectrocloud_cluster_config_policy" "policy" {
-  name    = "weekly-maintenance-policy"
-  context = "project"
-}
-
-output "policy_schedules" {
-  value = data.spectrocloud_cluster_config_policy.policy.schedules
-}
-
-output "policy_tags" {
-  value = data.spectrocloud_cluster_config_policy.policy.tags
-}
-```
+{{ tffile "examples/Cluster Configuration/Cluster Policy/data-source/data-source.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}
 

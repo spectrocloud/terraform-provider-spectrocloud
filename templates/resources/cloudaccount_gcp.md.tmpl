@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -11,12 +11,7 @@ description: |-
 
 ## Example Usage
 
-```terraform
-resource "spectrocloud_cloudaccount_gcp" "gcp-1" {
-  name                 = "gcp-1"
-  gcp_json_credentials = var.gcp_serviceaccount_json
-}
-```
+{{ tffile "examples/Infrastructure/Cloud Accounts/resource/Google Cloud/resource.tf" }}
 
 ## Import
 

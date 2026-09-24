@@ -1,0 +1,93 @@
+# A VM with a second, multus-backed network interface (sr-iov style: two interface/network pairs
+# with distinct binding methods and models) alongside the default pod network.
+#
+# Intentionally named .tf1, not .tf: it re-declares the same data "spectrocloud_cluster" block as
+# resource.tf in this folder, so Terraform would fail with duplicate-declaration errors if both
+# were loaded together. Copy this file's content into its own directory (renamed to .tf) to
+# actually run it, rather than renaming it in place here.
+
+data "spectrocloud_cluster" "vm_enabled_base_cluster" {
+  name    = "tenant-cluster-002"
+  context = "project"
+}
+
+resource "spectrocloud_virtual_machine" "tf-test-vm-multi-networks" {
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
+  name            = "tf-test-vm-multi-network-interface"
+  namespace       = "default"
+  run_on_launch   = true
+  labels = {
+    "key1" = "value1"
+  }
+  volume {
+    name = "test-vm-containerdisk1"
+    volume_source {
+      container_disk {
+        image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+      }
+    }
+  }
+  volume {
+    name = "cloudintdisk"
+    volume_source {
+      cloud_init_config_drive {
+        user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+      }
+    }
+  }
+
+  resources {
+    requests = {
+      memory = "2G"
+      cpu    = 1
+    }
+  }
+
+  disk {
+    name = "test-vm-containerdisk1"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+  disk {
+    name = "cloudintdisk"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+
+  # interface (main): model defaults to "virtio" when unset - shown explicitly here.
+  interface {
+    name                     = "main"
+    interface_binding_method = "InterfaceMasquerade"
+    model                    = "virtio"
+  }
+  # interface (additional): a second NIC using a different binding method and model, paired with
+  # the multus network below.
+  interface {
+    name                     = "additional"
+    interface_binding_method = "InterfaceBridge"
+    model                    = "e1000e"
+  }
+
+  network {
+    name = "main"
+    network_source {
+      pod {}
+    }
+  }
+  network {
+    name = "additional"
+    network_source {
+      multus {
+        network_name = "macvlan-conf"
+        default      = false
+      }
+    }
+  }
+}

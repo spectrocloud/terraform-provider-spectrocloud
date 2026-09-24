@@ -1,0 +1,96 @@
+data "spectrocloud_cloudaccount_aws" "account" {
+  # id = <uid>
+  name = var.cluster_cloud_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  # id = <uid>
+  name = var.cluster_cluster_profile_name
+}
+
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
+
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two
+# are ConflictsWith each other - use only one.
+resource "spectrocloud_cluster_eks" "cluster" {
+  name             = var.cluster_name
+  tags             = ["dev", "department:devops", "owner:bob"]
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
+
+  # cloud_config:
+  #   ssh_key_name, region, vpc_id, azs, az_subnets, endpoint_access, and encryption_config_arn -
+  #     ALL ForceNew; changing any of them recreates the cluster.
+  #   endpoint_access - Optional, default "public". Allowed: "public", "private",
+  #     "private_and_public".
+  #   public_access_cidrs, private_access_cidrs - Optional. Restrict public/private API server
+  #     access to these CIDR blocks. Unlike the ForceNew fields above, these (and
+  #     override_cluster_api_config) update in place.
+  cloud_config {
+    ssh_key_name = "default"
+    region       = "us-west-2"
+    # endpoint_access = "public"
+    # public_access_cidrs  = ["203.0.113.0/24"]
+    # private_access_cidrs = ["10.0.0.0/16"]
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
+  }
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+
+    # To override or specify values for a cluster:
+
+    # pack {
+    #   name   = "spectro-byo-manifest"
+    #   tag    = "1.0.x"
+    #   values = <<-EOT
+    #     manifests:
+    #       byo-manifest:
+    #         contents: |
+    #           # Add manifests here
+    #           apiVersion: v1
+    #           kind: Namespace
+    #           metadata:
+    #             labels:
+    #               app: wordpress
+    #               app2: wordpress2
+    #             name: wordpress
+    #   EOT
+    # }
+  }
+
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "prod-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  scan_policy {
+    configuration_scan_schedule = "0 0 * * SUN"
+    penetration_scan_schedule   = "0 0 * * SUN"
+    conformance_scan_schedule   = "0 0 1 * *"
+  }
+
+
+  machine_pool {
+    name          = "worker-basic"
+    count         = 1
+    instance_type = "t3.large"
+    disk_size_gb  = 60
+    az_subnets = {
+      "us-west-2a" = "subnet-0d4978ddbff16c"
+    }
+  }
+
+}

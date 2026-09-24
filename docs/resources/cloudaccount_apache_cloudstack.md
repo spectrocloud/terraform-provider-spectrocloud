@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_apache_cloudstack Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Resource for managing Apache CloudStack cloud accounts in Spectro Cloud.
 ---
@@ -11,77 +11,37 @@ description: |-
 
 ## Example Usage
 
-### Basic Apache CloudStack Account
-
 ```terraform
+# Nothing on this resource is ForceNew - every attribute below updates in place.
+#
+# Attributes:
+#   name                     - Required.
+#   context                  - Optional, default "project". Allowed: "project", "tenant".
+#   private_cloud_gateway_id - Required. The ID of the Private Cloud Gateway used to reach this
+#                              CloudStack environment.
+#   api_url                  - Required. The CloudStack management server's API endpoint.
+#   api_key                  - Required, sensitive. CloudStack API key.
+#   secret_key               - Required, sensitive. CloudStack secret key.
+#   domain                   - Optional, default "" (the ROOT domain). Set for multi-domain
+#                              CloudStack environments.
+#   insecure                 - Optional, default false. Skips SSL certificate verification - only
+#                              use this for development/testing; CloudStack must have valid
+#                              CA-signed certificates otherwise.
+
 data "spectrocloud_private_cloud_gateway" "pcg" {
-  name = "my-pcg"
+  name = "System Private Gateway"
 }
 
 resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_account" {
-  name    = "apache-cloudstack-account-1"
-  context = "project"  # Allowed values: "project" or "tenant". Default is "project"
-
-  # Private Cloud Gateway (Required)
-  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
-
-  # CloudStack API Configuration
-  api_url    = var.cloudstack_api_url     # e.g., "https://cloudstack.example.com:8080/client/api"
-  api_key    = var.cloudstack_api_key     # gitleaks:allow
-  secret_key = var.cloudstack_secret_key  # gitleaks:allow
-
-  # Optional: CloudStack domain (defaults to ROOT domain if not specified)
-  domain = var.cloudstack_domain  # e.g., "ROOT"
-
-  # Optional: Skip SSL certificate verification (not recommended for production)
-  insecure = false
-}
-```
-
-### Apache CloudStack Account with Custom Domain
-
-```terraform
-data "spectrocloud_private_cloud_gateway" "pcg" {
-  name = "production-pcg"
-}
-
-resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_domain_account" {
-  name                     = "apache-cloudstack-production"
+  name                     = "ran-tf-cloudstack-account"
   context                  = "project"
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
 
-  api_url    = var.cloudstack_api_url
-  api_key    = var.cloudstack_api_key     # gitleaks:allow
-  secret_key = var.cloudstack_secret_key  # gitleaks:allow
+  api_url    = var.cloudstack_api_url    # gitleaks:allow
+  api_key    = var.cloudstack_api_key    # gitleaks:allow
+  secret_key = var.cloudstack_secret_key # gitleaks:allow
 
-  # Specify a custom CloudStack domain for multi-tenant environments
-  domain = var.cloudstack_domain  # e.g., "Production"
-
-  insecure = false
-}
-```
-
-### Apache CloudStack Account with Insecure Connection
-
-```terraform
-# Note: Use insecure mode only in development/testing environments
-# Not recommended for production use
-
-data "spectrocloud_private_cloud_gateway" "dev_pcg" {
-  name = "dev-pcg"
-}
-
-resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_insecure" {
-  name                     = "apache-cloudstack-dev"
-  context                  = "project"
-  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.dev_pcg.id
-
-  api_url    = var.cloudstack_api_url
-  api_key    = var.cloudstack_api_key     # gitleaks:allow
-  secret_key = var.cloudstack_secret_key  # gitleaks:allow
-  domain     = var.cloudstack_domain
-
-  # Skip SSL certificate verification (for self-signed certificates)
+  domain   = "ROOT"
   insecure = true
 }
 ```

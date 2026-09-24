@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_eks Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing EKS clusters in Spectro Cloud through Palette.
 ---
@@ -29,14 +29,28 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two
+# are ConflictsWith each other - use only one.
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
+  # cloud_config:
+  #   ssh_key_name, region, vpc_id, azs, az_subnets, endpoint_access, and encryption_config_arn -
+  #     ALL ForceNew; changing any of them recreates the cluster.
+  #   endpoint_access - Optional, default "public". Allowed: "public", "private",
+  #     "private_and_public".
+  #   public_access_cidrs, private_access_cidrs - Optional. Restrict public/private API server
+  #     access to these CIDR blocks. Unlike the ForceNew fields above, these (and
+  #     override_cluster_api_config) update in place.
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
+    # endpoint_access = "public"
+    # public_access_cidrs  = ["203.0.113.0/24"]
+    # private_access_cidrs = ["10.0.0.0/16"]
     override_cluster_api_config = <<-EOT
       spec:
         controlPlaneConfiguration:
@@ -50,6 +64,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     id = data.spectrocloud_cluster_profile.profile.id
 
     # To override or specify values for a cluster:
+
     # pack {
     #   name   = "spectro-byo-manifest"
     #   tag    = "1.0.x"
@@ -84,6 +99,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+
   machine_pool {
     name          = "worker-basic"
     count         = 1
@@ -92,8 +108,8 @@ resource "spectrocloud_cluster_eks" "cluster" {
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }
-    encryption_config_arn = "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab"
   }
+
 }
 ```
 ## Import
@@ -158,7 +174,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
@@ -201,6 +217,7 @@ Optional:
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
 - `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
+- `dedicate_node_pool_for_system_pods` (Boolean) If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the matching toleration. Custom taints cannot be set on a dedicated pool.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
 - `max` (Number) Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_maas Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing MAAS clusters in Spectro Cloud through Palette.
 ---
@@ -26,16 +26,39 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew. `update_worker_pools_in_parallel`
+# (optional, default false; true updates all worker pools simultaneously, false updates them one
+# at a time), `pause_agent_upgrades` (controls automatic upgrades of the Palette agent/components
+# on this cluster - "lock" pauses them, e.g. while stepping through Canonical K8s LTS versions and
+# you want to gate the agent bump; "unlock", the default, lets them flow automatically),
+# cloud_config (domain, enable_lxd_vm, ntp_servers, ssh_keys), and machine_pool all update in
+# place. The optional hyper_shift_config block (not shown here - for running HyperShift/OpenShift
+# hosted control planes on MAAS) has both of its fields (cluster_deployment_type,
+# host_cluster_uid) ForceNew.
 resource "spectrocloud_cluster_maas" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
+  # update_worker_pools_in_parallel = false
+
+  pause_agent_upgrades = "unlock"
+
+  # cloud_config:
+  #   override_cluster_api_config - Optional. YAML passthrough for CAPMAAS properties not yet
+  #     first-class in Palette. Overrides pack-level and Palette-managed values. Palette does not
+  #     pre-validate keys/types/values; the API surfaces any errors.
   cloud_config {
     domain        = "maas.mycompany.com"
     enable_lxd_vm = false
     ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
     ssh_keys      = var.cluster_ssh_public_keys
+
+    # override_cluster_api_config = <<-EOT
+    #   MaasCluster:
+    #     spec:
+    #       failureDomains: ["az1", "az2"]
+    # EOT
   }
 
   cluster_profile {
@@ -78,30 +101,59 @@ resource "spectrocloud_cluster_maas" "cluster" {
   }
 
   machine_pool {
-    name          = "control-plane"
-    count         = 1
-    control_plane = true
-    instance_type {
-      min_cpu       = 8
-      min_memory_mb = 16000
-    }
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = "cp-pool"
+    count                   = 1
+
     placement {
-      resource_pool = "Production-Compute-Pool-1"
+      resource_pool = "Medium-Generic"
     }
+
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az1"]
   }
 
+  # machine_pool (worker pool "worker-basic"):
+  #   skip_k8s_upgrade - Optional, default "disabled". Decouples this worker pool's Kubernetes
+  #     upgrade from the control plane: "disabled" upgrades the pool with the cluster profile;
+  #     "enabled" keeps the pool on its current K8s version when the profile is upgraded,
+  #     allowing up to N-3 minor-version skew from the control plane. Useful for Canonical K8s
+  #     LTS upgrade paths (e.g. 1.36 LTS -> 1.42 LTS) where you want to advance the control plane
+  #     first and roll workers later.
+  #   override_cluster_api_config - Optional. YAML passthrough for pool-level CAPMAAS properties.
+  #     Same no-pre-validation posture as the cluster-level attribute.
+  #   override_health_check_configuration - Optional. Overrides Machine Health Check settings for
+  #     this node pool.
   machine_pool {
-    name      = "worker-basic"
-    count     = 1
-    instance_type {
-      min_cpu       = 8
-      min_memory_mb = 32000
-    }
+    name  = "worker-basic"
+    count = 1
+
     placement {
-      resource_pool = "Production-Compute-Pool-2"
+      resource_pool = "Medium-Generic"
     }
 
-    # Optional: override Machine Health Check settings for this node pool
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az2"]
+
+    skip_k8s_upgrade = "disabled"
+
+    # override_cluster_api_config = <<-EOT
+    #   MaasMachineTemplate:
+    #     spec:
+    #       template:
+    #         spec:
+    #           minCPU: 4
+    # EOT
+
     override_health_check_configuration = <<-EOT
       maxUnhealthy: 40%
       nodeStartupTimeout: 10m
@@ -185,7 +237,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `maas`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 

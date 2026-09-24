@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_aks Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing AKS clusters in Spectro Cloud through Palette.
 ---
@@ -26,16 +26,37 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. cluster_profile, backup_policy, scan_policy, machine_pool, and tags update in place;
+# see cloud_config's own header below for its mutability.
 resource "spectrocloud_cluster_aks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
+  # cloud_config:
+  #   subscription_id, resource_group, ssh_key, region - ForceNew, along with private_cluster and
+  #     all vnet/subnet/CIDR fields below. Changing any of these recreates the cluster, since
+  #     they describe the underlying Azure infrastructure the cluster is provisioned onto.
+  #   override_cluster_api_config - Optional, the one field here that is NOT ForceNew; can be
+  #     changed without recreating the cluster. Raw Cluster API config overrides, merged into the
+  #     generated cluster spec.
+  #   Other optional, ForceNew fields not shown here: private_cluster (bool), vnet_name/
+  #     vnet_resource_group/vnet_cidr_block (bring-your-own VNet), control_plane_cidr/
+  #     control_plane_subnet_name/control_plane_subnet_security_group_name, worker_cidr/
+  #     worker_subnet_name/worker_subnet_security_group_name (bring-your-own subnets).
   cloud_config {
-    subscription_id = "subscription-id"
-    resource_group  = "dev"
-    ssh_key         = "ssh key value"
-    region          = "centralus"
+    subscription_id             = "subscription-id"
+    resource_group              = "dev"
+    ssh_key                     = "ssh key value"
+    region                      = "centralus"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {
@@ -77,6 +98,11 @@ resource "spectrocloud_cluster_aks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+  # machine_pool:
+  #   os_sku - Optional. Allowed: "Ubuntu", "AzureLinux", "Windows2022". The description marks
+  #     this immutable after creation, though it is not a ForceNew schema field.
+  #   Other optional fields not shown: additional_labels/additional_annotations (key:value maps),
+  #     taints, node (per-node overrides), min/max (autoscaling bounds), update_strategy, os_type.
   machine_pool {
     name                 = "worker-basic"
     count                = 1
@@ -84,6 +110,7 @@ resource "spectrocloud_cluster_aks" "cluster" {
     disk_size_gb         = 60
     is_system_node_pool  = true
     storage_account_type = "Standard_LRS"
+    # os_sku = "Ubuntu"
   }
 }
 ```
@@ -148,7 +175,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))

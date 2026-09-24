@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry_helm Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Resource for managing Helm registries in Spectro Cloud.
 ---
@@ -23,25 +23,49 @@ Use `is_synchronization` to control this:
 ## Example Usage
 
 ```terraform
+# Day-2 mutability: only `name` is ForceNew - changing it recreates the registry. `endpoint`,
+# `is_synchronization`, `credentials` (including nested tls_config), and `wait_for_sync` all
+# update in place.
+#
+# Attributes:
+#   name               - Required, ForceNew. Must be unique across Helm registries.
+#   endpoint            - Required. URL of the Helm chart repository.
+#   is_synchronization - Optional/Computed, mutually exclusive with the deprecated `is_private`
+#                        (set only one). false = private/not synchronized by Palette (requires
+#                        auth, as configured below); true = public and synchronized by Palette.
+#   wait_for_sync      - Optional, default false. If true, Terraform waits for the registry's
+#                        initial synchronization to complete before marking create/update as done.
+#
+# credentials block (required, at most one):
+#   credential_type - Required. "noAuth" (no credentials), "basic" (username/password, used
+#                     here), or "token".
+#   username         - Required when credential_type = "basic".
+#   password         - Required when credential_type = "basic" (credential material).
+#   token            - Required when credential_type = "token" instead of "basic" (credential
+#                      material, omit username/password in that case).
+#   tls_config       - Optional nested block: TLS configuration for the connection to the
+#                      registry (enabled, ca, certificate, key, insecure_skip_verify - the last
+#                      only for trusted networks with self-signed certs).
 resource "spectrocloud_registry_helm" "r1" {
   name               = "us-artifactory"
   endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_synchronization = false # private registry, not reachable/synchronized by Palette; inverse of the deprecated is_private
+  is_synchronization = false
+
   credentials {
-    credential_type = "noAuth"
+    credential_type = "basic"
     username        = "abc"
     password        = "def"
-    # Optional: TLS configuration. Omit the block to send no TLS configuration.
-    # Certificates are PEM content, not paths - use file() to read them from disk.
+    # token = var.registry_token
+
     # tls_config {
-    #   enabled              = true
-    #   ca                   = file("${path.module}/ca.pem")
-    #   certificate          = file("${path.module}/client.pem")
-    #   key                  = file("${path.module}/client-key.pem")
-    #   insecure_skip_verify = false
+    #   enabled     = true
+    #   ca          = file("ca.pem")
+    #   certificate = file("client-cert.pem")
+    #   key         = file("client-key.pem")
+    #   # insecure_skip_verify = true  # only for trusted networks with self-signed certs
     # }
   }
-  # Optional: Wait for the registry to complete synchronization
+
   # wait_for_sync = true
 }
 ```

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_vsphere Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   A resource to manage a vSphere cloud account in Palette.
 ---
@@ -12,22 +12,32 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Nothing on this resource is ForceNew - every attribute below updates in place.
+#
+# Attributes:
+#   name                          - Required.
+#   context                       - Optional, default "project". Allowed: "project", "tenant".
+#   private_cloud_gateway_id      - Required. Connects this account to the underlying vSphere
+#                                   environment through a PCG.
+#   vsphere_vcenter               - Required. The vCenter server address.
+#   vsphere_username              - Required.
+#   vsphere_password              - Required, sensitive.
+#   vsphere_ignore_insecure_error - Optional, default false. Skips TLS verification against
+#                                   vCenter - only for development/testing with self-signed
+#                                   certificates.
+
+data "spectrocloud_private_cloud_gateway" "gateway" {
+  name = var.vsphere_pcg_name
+}
+
 resource "spectrocloud_cloudaccount_vsphere" "account" {
   name                          = "vs"
   context                       = "tenant"
-  private_cloud_gateway_id      = var.private_cloud_gateway_id
+  private_cloud_gateway_id      = data.spectrocloud_private_cloud_gateway.gateway.id
   vsphere_vcenter               = var.vsphere_vcenter
   vsphere_username              = var.vsphere_username
   vsphere_password              = var.vsphere_password
   vsphere_ignore_insecure_error = true
-}
-
-variable "private_cloud_gateway_id" {
-  type = string
-}
-
-output "same" {
-  value = spectrocloud_cloudaccount_vsphere.account.id
 }
 ```
 ## Import
