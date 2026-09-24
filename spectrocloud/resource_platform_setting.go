@@ -229,11 +229,11 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 		d.SetId(fmt.Sprintf("platformsetting-%s", tenantUID))
 	} else {
 		// cluster node remediation for project
-		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
+		err = c.UpdateClusterAutoRemediationForProject(getProviderProjectUID(m), remediationSettings)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		d.SetId(fmt.Sprintf("platformsetting-%s", ProviderInitProjectUid))
+		d.SetId(fmt.Sprintf("platformsetting-%s", getProviderProjectUID(m)))
 	}
 	// pause agent upgrade setting according to context
 	err = c.UpdatePlatformClusterUpgradeSetting(&models.V1ClusterUpgradeSettingsEntity{
@@ -361,7 +361,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	} else {
 		// get cluster_auto_remediation project
 		var respProjectRemediation *models.V1ProjectClusterSettings
-		respProjectRemediation, err = c.GetClusterAutoRemediationForProject(ProviderInitProjectUid)
+		respProjectRemediation, err = c.GetClusterAutoRemediationForProject(getProviderProjectUID(m))
 		if err != nil {
 			return handleReadError(d, err, diags)
 		}
@@ -488,7 +488,7 @@ func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, 
 	} else {
 		// cluster node remediation for project
 		if d.HasChanges("cluster_auto_remediation", "enable_auto_remediation") {
-			err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
+			err = c.UpdateClusterAutoRemediationForProject(getProviderProjectUID(m), remediationSettings)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -567,7 +567,7 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 		}
 	} else {
 		// cluster node remediation for project
-		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
+		err = c.UpdateClusterAutoRemediationForProject(getProviderProjectUID(m), remediationSettings)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -620,13 +620,13 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 		}
 		d.SetId(fmt.Sprintf("platformsetting-%s", actualTenantId))
 	} else {
-		if resolvedID != ProviderInitProjectUid {
-			return nil, fmt.Errorf("invalid import: given project %q and provider project UID %q are different — project must match the provider configuration", uid, ProviderInitProjectUid)
+		if resolvedID != getProviderProjectUID(m) {
+			return nil, fmt.Errorf("invalid import: given project %q and provider project UID %q are different — project must match the provider configuration", uid, getProviderProjectUID(m))
 		}
 		if err = d.Set("context", "project"); err != nil {
 			return nil, err
 		}
-		d.SetId(fmt.Sprintf("platformsetting-%s", ProviderInitProjectUid))
+		d.SetId(fmt.Sprintf("platformsetting-%s", getProviderProjectUID(m)))
 	}
 
 	diags := resourcePlatformSettingRead(ctx, d, m)

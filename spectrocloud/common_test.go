@@ -89,20 +89,24 @@ func unitTestProviderConfigure(ctx context.Context) (interface{}, diag.Diagnosti
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	c := client.New(
+	clientOpts := []func(*client.V1Client){
 		client.WithPaletteURI(host),
 		client.WithAPIKey(apiKey),
 		client.WithRetries(retryAttempts),
 		client.WithInsecureSkipVerify(true),
-		client.WithRetries(1))
+		client.WithRetries(1),
+	}
 
-	//// comment to trace flag
-	//client.WithTransportDebug()(c)
-
+	tenantClient := client.New(clientOpts...)
 	uid := projectUID
-	ProviderInitProjectUid = uid
-	client.WithScopeProject(uid)(c)
-	return c, diags
+	projectClient := client.New(clientOpts...)
+	client.WithScopeProject(uid)(projectClient)
+
+	return &ProviderMeta{
+		Project:    projectClient,
+		Tenant:     tenantClient,
+		ProjectUID: uid,
+	}, diags
 }
 
 func unitTestNegativeCaseProviderConfigure(ctx context.Context) (interface{}, diag.Diagnostics) {
@@ -112,20 +116,24 @@ func unitTestNegativeCaseProviderConfigure(ctx context.Context) (interface{}, di
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	c := client.New(
+	clientOpts := []func(*client.V1Client){
 		client.WithPaletteURI(negativeHost),
 		client.WithAPIKey(apiKey),
 		client.WithRetries(retryAttempts),
 		client.WithInsecureSkipVerify(true),
-		client.WithRetries(1))
+		client.WithRetries(1),
+	}
 
-	//// comment to trace flag
-	//client.WithTransportDebug()(c)
-
+	tenantClient := client.New(clientOpts...)
 	uid := projectUID
-	ProviderInitProjectUid = uid
-	client.WithScopeProject(uid)(c)
-	return c, diags
+	projectClient := client.New(clientOpts...)
+	client.WithScopeProject(uid)(projectClient)
+
+	return &ProviderMeta{
+		Project:    projectClient,
+		Tenant:     tenantClient,
+		ProjectUID: uid,
+	}, diags
 }
 
 func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {

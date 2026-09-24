@@ -20,10 +20,11 @@ func mustUnitClient(t *testing.T, negative bool) *client.V1Client {
 		raw = unitTestMockAPIClient
 	}
 
-	c, ok := raw.(*client.V1Client)
-	require.True(t, ok, "expected mock client to be *client.V1Client")
-	require.NotNil(t, c)
-	return c
+	pm, ok := raw.(*ProviderMeta)
+	require.True(t, ok, "expected mock client to be *ProviderMeta")
+	require.NotNil(t, pm)
+	require.NotNil(t, pm.Project)
+	return pm.Project
 }
 
 func setChangedClusterProfiles(t *testing.T, d *schema.ResourceData, oldProfiles, newProfiles []interface{}) {

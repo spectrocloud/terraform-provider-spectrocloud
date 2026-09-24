@@ -38,7 +38,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack).",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

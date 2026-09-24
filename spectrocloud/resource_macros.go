@@ -60,7 +60,7 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	contextUid := ""
 	var err error
 	if macrosContext == "project" {
-		contextUid = ProviderInitProjectUid
+		contextUid = getProviderProjectUID(m)
 	}
 	macroUID, err := c.CreateMacros(contextUid, toMacros(d))
 	if err != nil {
@@ -78,7 +78,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 	var err error
 	contextUid := ""
 	if macrosContext == "project" {
-		contextUid = ProviderInitProjectUid
+		contextUid = getProviderProjectUID(m)
 	}
 	macros, err = c.GetTFMacrosV2(d.Get("macros").(map[string]interface{}), contextUid)
 	if err != nil {
@@ -114,7 +114,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 	var err error
 	contextUid := ""
 	if macrosContext == "project" {
-		contextUid = ProviderInitProjectUid
+		contextUid = getProviderProjectUID(m)
 	}
 	if d.HasChange("macros") {
 		oldMacros, _ := d.GetChange("macros")
@@ -143,7 +143,7 @@ func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interfa
 	var err error
 	contextUid := ""
 	if macrosContext == "project" {
-		contextUid = ProviderInitProjectUid
+		contextUid = getProviderProjectUID(m)
 	}
 	err = c.DeleteMacros(contextUid, toMacros(d))
 	if err != nil {
@@ -230,18 +230,14 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 		return nil, err
 	}
 
-	// Re-acquire the client with the correct scope after name resolution.
-	// resolveUidorNameToContextID internally calls getV1ClientWithResourceContext(m, "tenant")
-	// which mutates the shared client pointer — so we must reset it back to the intended scope.
-	c = getV1ClientWithResourceContext(m, macrosContext)
-
 	var macros []*models.V1Macro
 
 	if macrosContext == "project" {
-		if contextID != ProviderInitProjectUid {
-			return nil, fmt.Errorf("invalid import: given project UID {%s} and provider project UID {%s} are different — cross-project resource imports are not allowed; project UID must match the provider configuration", contextID, ProviderInitProjectUid)
+		projectUID := getProviderProjectUID(m)
+		if contextID != projectUID {
+			return nil, fmt.Errorf("invalid import: given project UID {%s} and provider project UID {%s} are different — cross-project resource imports are not allowed; project UID must match the provider configuration", contextID, projectUID)
 		}
-		macros, err = c.GetMacros(ProviderInitProjectUid)
+		macros, err = c.GetMacros(projectUID)
 		if err != nil {
 			return nil, err
 		}

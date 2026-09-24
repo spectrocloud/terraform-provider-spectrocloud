@@ -11,7 +11,7 @@ import (
 func dataSourceClusterConfigTemplate() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceClusterConfigTemplateRead,
-		Description: "Data source for retrieving information about a cluster config template. **Tech Preview**: This data source is in tech preview and may undergo changes.",
+		Description: "Data source for retrieving information about a cluster config template.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
