@@ -459,7 +459,10 @@ func resourceClusterEks() *schema.Resource {
 	}
 }
 
-func resourceClusterEksCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+func resourceClusterEksCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	if err := validateClusterTemplateAttachTransition(ctx, diff, m); err != nil {
+		return err
+	}
 	return validateEksMachinePoolsAutoscalingCount(diff.Get("machine_pool"))
 }
 
