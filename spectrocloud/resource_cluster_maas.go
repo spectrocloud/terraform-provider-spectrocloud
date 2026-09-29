@@ -43,6 +43,7 @@ func resourceClusterMaas() *schema.Resource {
 				Version: 2,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

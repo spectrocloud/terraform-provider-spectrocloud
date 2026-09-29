@@ -219,17 +219,38 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
-	if d.HasChange("cluster_template") {
-		if err := updateClusterTemplateVariables(c, d); err != nil {
+	// Day 2 cluster_template attach (PLT-2410): cluster_profile removed and
+	// cluster_template newly added in this apply. Handled as a single attach
+	// call instead of the ordinary template-variable/profile update paths
+	// below - those assume cluster_template was already attached, and running
+	// them here would delete the outgoing profiles via the addon-deployment
+	// API before anything ever calls the attach endpoint. The reverse
+	// (detach) transition is already rejected at plan time by
+	// validateClusterTemplateAttachTransition; the detach branch here is a
+	// defense-in-depth fallback in case that CustomizeDiff isn't wired on some
+	// caller.
+	attach, detach := classifyClusterTemplateTransition(d)
+	switch {
+	case detach:
+		return diag.FromErr(errors.New("removing cluster_template and adding cluster_profile is not supported: " +
+			"detaching a cluster from a cluster template has no backend API yet")), true
+	case attach:
+		if err := attachClusterToTemplate(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
-	}
+	default:
+		// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
+		if d.HasChange("cluster_template") {
+			if err := updateClusterTemplateVariables(c, d); err != nil {
+				return diag.FromErr(err), true
+			}
+		}
 
-	// Handle cluster_profile changes using the existing profile update flow
-	if d.HasChanges("cluster_profile", "packs", "manifests") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err), true
+		// Handle cluster_profile changes using the existing profile update flow
+		if d.HasChanges("cluster_profile", "packs", "manifests") {
+			if err := updateProfiles(c, d); err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	}
 

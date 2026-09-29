@@ -48,6 +48,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Version: 3,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -159,7 +160,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
@@ -642,6 +642,16 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
+	if d.HasChange("cloud_config") {
+		clusterConfig, err := toClusterConfigEdgeNativeUpdate(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := c.UpdateCloudConfigEdgeNative(cloudConfigId, clusterConfig); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChange("machine_pool") {
 		// Validate override_Scaling configuration
 		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -1041,6 +1051,34 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 	}
 
 	return controlPlaneEndpoint, overlayConfig, nil
+}
+
+// toClusterConfigEdgeNativeUpdate builds the Day-2 cloud config update payload
+// (ssh_keys, vip, ntp_servers, overlay network, two-node) sent to
+// PUT /v1/cloudconfigs/edge-native/{uid}/clusterConfig. Backend enforces its own
+// validation on this call (e.g. VIP format, VIP immutability post-create per PEM-10966),
+// so any rejection is surfaced to the user via diag.FromErr instead of being silently dropped.
+func toClusterConfigEdgeNativeUpdate(d *schema.ResourceData) (*models.V1EdgeNativeCloudClusterConfigEntity, error) {
+	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	controlPlaneEndpoint, overlayConfig, err := toOverlayNetworkConfigAndVip(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.V1EdgeNativeCloudClusterConfigEntity{
+		ClusterConfig: &models.V1EdgeNativeClusterConfig{
+			NtpServers:                  toNtpServers(cloudConfig),
+			SSHKeys:                     sshKeys,
+			ControlPlaneEndpoint:        controlPlaneEndpoint,
+			OverlayNetworkConfiguration: overlayConfig,
+			IsTwoNodeCluster:            cloudConfig["is_two_node_cluster"].(bool),
+		},
+	}, nil
 }
 
 func getFirstIPRange(cidr string) (string, error) {

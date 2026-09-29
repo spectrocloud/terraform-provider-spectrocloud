@@ -162,5 +162,13 @@ func ClusterConfigTemplateRoutes() []Route {
 				StatusCode: 204,
 			},
 		},
+		{
+			// PLT-2410: Day 2 attach — binds an existing cluster to a cluster template.
+			Method: "POST",
+			Path:   "/v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach",
+			Response: ResponseData{
+				StatusCode: 204,
+			},
+		},
 	}
 }
