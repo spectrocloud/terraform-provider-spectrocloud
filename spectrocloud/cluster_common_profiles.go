@@ -38,11 +38,35 @@ func normalizeInterfaceSliceFromListOrSet(v interface{}) []interface{} {
 	}
 }
 
+// filterEntriesWithID drops phantom zero-value entries from a normalized
+// cluster_profile/cluster_template slice. cluster_profile is a TypeSet
+// (schema.HashResource-hashed); Terraform can leave a leftover element with
+// an empty "id" instead of shrinking the set to zero elements when a set
+// element is fully removed in the same apply that also changes other
+// top-level fields (confirmed against a live apply - see PLT-2410 follow-up).
+// Without this filter, that phantom entry makes a removed cluster_profile
+// look non-empty to callers, which both misses the PLT-2410 attach
+// transition and spuriously trips the "cannot specify both" mutual-
+// exclusivity check.
+func filterEntriesWithID(entries []interface{}) []interface{} {
+	filtered := make([]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		m, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id, ok := m["id"].(string); ok && id != "" {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
 func validateProfileSource(d *schema.ResourceData) error {
 	// cluster_template may not exist in all schemas (e.g., cluster_group)
-	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
-	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	clusterTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template")))
+	clusterProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
 
 	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
 		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
@@ -64,10 +88,10 @@ func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, det
 	oldProfileRaw, newProfileRaw := d.GetChange("cluster_profile")
 	oldTemplateRaw, newTemplateRaw := d.GetChange("cluster_template")
 
-	oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
-	newProfile := normalizeInterfaceSliceFromListOrSet(newProfileRaw)
-	oldTemplate := normalizeInterfaceSliceFromListOrSet(oldTemplateRaw)
-	newTemplate := normalizeInterfaceSliceFromListOrSet(newTemplateRaw)
+	oldProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(oldProfileRaw))
+	newProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(newProfileRaw))
+	oldTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(oldTemplateRaw))
+	newTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(newTemplateRaw))
 
 	attach = len(oldProfile) > 0 && len(newProfile) == 0 && len(oldTemplate) == 0 && len(newTemplate) > 0
 	detach = len(oldTemplate) > 0 && len(newTemplate) == 0 && len(oldProfile) == 0 && len(newProfile) > 0
@@ -268,8 +292,8 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 		return nil, "", err
 	}
 
-	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
-	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	clusterTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template")))
+	clusterProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
 
 	// Check cluster_template first
 	if len(clusterTemplate) > 0 {
@@ -283,19 +307,8 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 
 	// Fall back to cluster_profile
 	if len(clusterProfile) > 0 {
-		// Fall back to cluster_profile — filter out TypeSet zero-value artefacts (empty id)
-		filtered := clusterProfile[:0]
-		for _, p := range clusterProfile {
-			if entry, ok := p.(map[string]interface{}); ok {
-				if id, _ := entry["id"]; id != nil && id.(string) != "" {
-					filtered = append(filtered, p)
-				}
-			}
-		}
-		if len(filtered) > 0 {
-			log.Printf("Using profiles from cluster_profile")
-			return filtered, "cluster_profile", nil
-		}
+		log.Printf("Using profiles from cluster_profile")
+		return clusterProfile, "cluster_profile", nil
 	}
 
 	return []interface{}{}, "", nil
