@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Audit Trails"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -15,65 +15,7 @@ CloudWatch audit trails are managed via `POST /v1/tenants/{tenantUID}/assets/dat
 
 ## Example Usage
 
-### CloudWatch with access keys
-
-This example mirrors the tenant settings UI payload: log group `dev-hubble-audits` in `us-east-1` with secret credentials. Omit `stream` to write to the log group without a dedicated log stream.
-
-```hcl
-resource "spectrocloud_audit_trail" "cloudwatch" {
-  name = "rag"
-  type = "cloudwatch"
-
-  cloudwatch {
-    group  = "dev-hubble-audits"
-    region = "us-east-1"
-
-    credential_type = "secret"
-    access_key      = var.aws_access_key
-    secret_key      = var.aws_secret_key
-    partition       = "aws"
-  }
-}
-```
-
-### CloudWatch with STS
-
-```hcl
-resource "spectrocloud_audit_trail" "cloudwatch_sts" {
-  name = "rag-sts"
-  type = "cloudwatch"
-
-  cloudwatch {
-    group  = "dev-hubble-audits"
-    region = "us-east-1"
-
-    credential_type = "sts"
-    arn             = var.aws_sts_role_arn
-    external_id     = var.aws_external_id
-    partition       = "aws"
-  }
-}
-```
-
-### Splunk HEC
-
-```hcl
-resource "spectrocloud_audit_trail" "splunk" {
-  name = "test-tf"
-  type = "splunk"
-
-  splunk {
-    hec_url = "https://http-inputs-example.splunkcloud.com:443"
-    token   = var.splunk_hec_token
-    index   = "main"
-    source  = "palette"
-
-    tls_config {
-      insecure_skip_verify = false
-    }
-  }
-}
-```
+{{ tffile "examples/Infrastructure/Audit Trails/resource/resource.tf" }}
 
 ## Import
 

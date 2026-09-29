@@ -25,6 +25,7 @@ func dataSourceCloudAccountMaas() *schema.Resource {
 			"maas_api_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
+				Sensitive:   true,
 				Description: "The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.",
 			},
 			"id": {

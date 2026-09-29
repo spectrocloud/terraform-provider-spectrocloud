@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_registry_oci Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Registries"
 description: |-
   Data source for looking up an OCI registry by name.
 ---
@@ -12,8 +12,18 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_registry_oci" "example" {
+# Looks up an OCI registry by name.
+#
+# Lookup keys:
+#   name - Required.
+data "spectrocloud_registry_oci" "my_oci_registry" {
   name = "my-oci-registry"
+}
+
+# Computed outputs:
+#   oci_registry_id
+output "oci_registry_id" {
+  value = data.spectrocloud_registry_oci.my_oci_registry.id
 }
 ```
 

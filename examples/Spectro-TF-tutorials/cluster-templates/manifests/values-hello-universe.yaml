@@ -1,0 +1,13 @@
+pack:
+  content:
+    images:
+      - image: ghcr.io/spectrocloud/hello-universe:1.3.0
+
+manifests:
+  hello-universe:
+    images:
+      hellouniverse: ghcr.io/spectrocloud/hello-universe:1.3.0
+    apiEnabled: false
+    namespace: hello-universe
+    port: ${port}
+    replicas: "{{.spectro.var.app_replicas}}"
