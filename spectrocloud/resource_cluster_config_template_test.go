@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 type fakeChangeGetter map[string][2]interface{}
@@ -225,6 +227,72 @@ func TestUpdateCommonFields_AttachWarnsAboutMaintenanceWindow(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "expected a Warning diagnostic about the maintenance window, got: %+v", diags)
+}
+
+// baseEksTemplateUpdateRaw builds a cluster_template-only raw config (no
+// cluster_profile), reusing the EKS update-diff harness for cluster_template
+// id-switch tests.
+func baseEksTemplateUpdateRaw(templateID string) map[string]interface{} {
+	raw := baseEksUpdateRaw(eksCloudConfigRaw(nil), []interface{}{}, []interface{}{})
+	raw["cluster_template"] = []interface{}{
+		map[string]interface{}{"id": templateID},
+	}
+	return raw
+}
+
+// TestUpdateCommonFields_TemplateIDSwitchCallsAttach is the regression for
+// the "changing cluster_template.id while already attached is silently
+// absorbed into the variables-only patch" bug: an id change (not just a
+// nested cluster_profile variable edit) must call attachClusterToTemplate
+// again, not updateClusterTemplateVariables, so Hubble's own validation
+// (ClusterNotEligibleForAttach today, since a cluster can only ever be
+// attached once) surfaces as a real error instead of being silently dropped.
+func TestUpdateCommonFields_TemplateIDSwitchCallsAttach(t *testing.T) {
+	oldRaw := baseEksTemplateUpdateRaw("old-template-id")
+	newRaw := baseEksTemplateUpdateRaw(routes.ClusterTemplateAttachRejectUID)
+
+	d := buildEksUpdateResourceData(t, oldRaw, newRaw, eksCloudConfigUID)
+	require.True(t, d.HasChange("cluster_template.0.id"))
+
+	attach, detach := classifyClusterTemplateTransition(d)
+	assert.False(t, attach)
+	assert.False(t, detach)
+
+	diags, errorSet := updateCommonFields(d, mustUnitClient(t, false))
+	require.True(t, errorSet, "expected the id-switch attach attempt to surface Hubble's rejection")
+	require.NotEmpty(t, diags)
+	assert.Contains(t, diags[0].Summary, "not eligible for attach")
+}
+
+// TestUpdateCommonFields_TemplateVariablesOnlyEditSkipsAttach confirms the
+// existing "already attached, only editing per-profile variable overrides"
+// path is unaffected: same cluster_template.id both sides, only the nested
+// cluster_profile/variables changed - must still go through
+// updateClusterTemplateVariables, not attachClusterToTemplate (which would
+// be rejected by Hubble as a redundant attach).
+func TestUpdateCommonFields_TemplateVariablesOnlyEditSkipsAttach(t *testing.T) {
+	oldRaw := baseEksTemplateUpdateRaw("test-cluster-config-template-id")
+	newRaw := baseEksTemplateUpdateRaw("test-cluster-config-template-id")
+	newRaw["cluster_template"] = []interface{}{
+		map[string]interface{}{
+			"id": "test-cluster-config-template-id",
+			"cluster_profile": []interface{}{
+				map[string]interface{}{
+					"id": "test-profile-uid-1",
+					"variables": map[string]interface{}{
+						"region": "us-west-2",
+					},
+				},
+			},
+		},
+	}
+
+	d := buildEksUpdateResourceData(t, oldRaw, newRaw, eksCloudConfigUID)
+	require.False(t, d.HasChange("cluster_template.0.id"))
+	require.True(t, d.HasChange("cluster_template"))
+
+	diags, errorSet := updateCommonFields(d, mustUnitClient(t, false))
+	assert.False(t, errorSet, "diags: %+v", diags)
 }
 
 func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {

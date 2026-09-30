@@ -260,8 +260,21 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 			),
 		})
 	default:
-		// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
-		if d.HasChange("cluster_template") {
+		// cluster_template.id itself changing (while already attached) is not
+		// the same as editing per-profile variable overrides within the same
+		// template - it's an attempt to switch templates. There is no backend
+		// "switch" API; the only way to find out whether/how that's handled is
+		// to call attach again and let Hubble's own validation (today:
+		// ClusterNotEligibleForAttach, since a cluster can only ever be
+		// attached once) surface as a real apply-time error, instead of
+		// silently falling through to the variables-only patch below, which
+		// never reads or sends cluster_template.id at all.
+		if d.HasChange("cluster_template.0.id") {
+			if err := attachClusterToTemplate(c, d); err != nil {
+				return diag.FromErr(err), true
+			}
+		} else if d.HasChange("cluster_template") {
+			// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
 			if err := updateClusterTemplateVariables(c, d); err != nil {
 				return diag.FromErr(err), true
 			}
