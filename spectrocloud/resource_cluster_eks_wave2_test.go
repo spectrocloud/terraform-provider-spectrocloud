@@ -246,3 +246,28 @@ func TestResourceClusterEksUpdateClusterProfileWithMock(t *testing.T) {
 	diags := resourceClusterEksUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError())
 }
+
+// PLT-2459: machine_pool is a TypeSet keyed by resourceMachinePoolEksHash, so a
+// field that is written and read but not hashed produces no drift. Flipping
+// dedicate_node_pool_for_system_pods must change the pool's set identity.
+func TestResourceMachinePoolEksHash_DedicateNodePoolForSystemPods(t *testing.T) {
+	pool := func(dedicated bool) map[string]interface{} {
+		return map[string]interface{}{
+			"name":                               "worker-basic",
+			"count":                              2,
+			"disk_size_gb":                       60,
+			"instance_type":                      "m5.large",
+			"az_subnets":                         map[string]interface{}{},
+			"dedicate_node_pool_for_system_pods": dedicated,
+		}
+	}
+
+	assert.NotEqual(t, resourceMachinePoolEksHash(pool(false)), resourceMachinePoolEksHash(pool(true)),
+		"toggling dedicate_node_pool_for_system_pods must change the EKS machine pool hash")
+
+	t.Run("absent key does not panic", func(t *testing.T) {
+		m := pool(false)
+		delete(m, "dedicate_node_pool_for_system_pods")
+		assert.NotPanics(t, func() { resourceMachinePoolEksHash(m) })
+	})
+}

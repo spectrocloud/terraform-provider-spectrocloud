@@ -161,3 +161,27 @@ func TestResourceClusterGkeUpdateClusterProfileWithMock(t *testing.T) {
 	diags := resourceClusterGkeUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError())
 }
+
+// PLT-2459: same TypeSet identity gap as EKS — resourceMachinePoolGkeHash also
+// omitted dedicate_node_pool_for_system_pods, so changes to it never surfaced
+// as drift.
+func TestResourceMachinePoolGkeHash_DedicateNodePoolForSystemPods(t *testing.T) {
+	pool := func(dedicated bool) map[string]interface{} {
+		return map[string]interface{}{
+			"name":                               "worker-basic",
+			"count":                              2,
+			"disk_size_gb":                       60,
+			"instance_type":                      "n1-standard-2",
+			"dedicate_node_pool_for_system_pods": dedicated,
+		}
+	}
+
+	assert.NotEqual(t, resourceMachinePoolGkeHash(pool(false)), resourceMachinePoolGkeHash(pool(true)),
+		"toggling dedicate_node_pool_for_system_pods must change the GKE machine pool hash")
+
+	t.Run("absent key does not panic", func(t *testing.T) {
+		m := pool(false)
+		delete(m, "dedicate_node_pool_for_system_pods")
+		assert.NotPanics(t, func() { resourceMachinePoolGkeHash(m) })
+	})
+}
