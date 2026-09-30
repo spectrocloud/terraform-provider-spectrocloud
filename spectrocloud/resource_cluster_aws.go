@@ -730,6 +730,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 	resourceClusterAwsRead(ctx, d, m)
 	return diags
 }

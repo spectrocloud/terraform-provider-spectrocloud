@@ -784,6 +784,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterMaasRead(ctx, d, m)
 

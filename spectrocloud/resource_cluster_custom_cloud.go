@@ -513,6 +513,7 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterCustomCloudRead(ctx, d, m)
 

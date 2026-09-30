@@ -867,6 +867,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterVsphereRead(ctx, d, m)
 

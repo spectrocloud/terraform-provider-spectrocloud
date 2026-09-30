@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -188,6 +189,42 @@ func TestAttachClusterToTemplate_WithMock(t *testing.T) {
 
 	err := attachClusterToTemplate(c, d)
 	require.NoError(t, err)
+}
+
+// TestUpdateCommonFields_AttachWarnsAboutMaintenanceWindow confirms that a
+// successful cluster_profile -> cluster_template attach surfaces a Warning
+// diagnostic (not just a silent success) explaining that the profile set is
+// only applied at the template's next maintenance window, and how to force
+// an immediate update via upgrade_now on spectrocloud_cluster_config_template.
+func TestUpdateCommonFields_AttachWarnsAboutMaintenanceWindow(t *testing.T) {
+	oldRaw := baseEksUpdateRaw(eksCloudConfigRaw(nil), []interface{}{}, []interface{}{})
+	oldRaw["cluster_profile"] = []interface{}{map[string]interface{}{"id": "p1"}}
+
+	newRaw := baseEksUpdateRaw(eksCloudConfigRaw(nil), []interface{}{}, []interface{}{})
+	newRaw["cluster_template"] = []interface{}{
+		map[string]interface{}{"id": "test-cluster-config-template-id"},
+	}
+
+	d := buildEksUpdateResourceData(t, oldRaw, newRaw, eksCloudConfigUID)
+
+	attach, detach := classifyClusterTemplateTransition(d)
+	require.True(t, attach)
+	require.False(t, detach)
+
+	diags, errorSet := updateCommonFields(d, mustUnitClient(t, false))
+	require.False(t, errorSet, "diags: %+v", diags)
+
+	require.NotEmpty(t, diags)
+	found := false
+	for _, dg := range diags {
+		if dg.Severity == diag.Warning {
+			found = true
+			assert.Contains(t, dg.Summary, "maintenance window")
+			assert.Contains(t, dg.Detail, "upgrade_now")
+			assert.Contains(t, dg.Detail, "test-cluster-config-template-id")
+		}
+	}
+	assert.True(t, found, "expected a Warning diagnostic about the maintenance window, got: %+v", diags)
 }
 
 func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {

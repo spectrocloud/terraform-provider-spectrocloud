@@ -191,6 +191,8 @@ func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	var diags diag.Diagnostics
+
 	if err := ValidateUpdateWorkerPoolsInParallelUpdate(d); err != nil {
 		return diag.FromErr(err), true
 	}
@@ -238,6 +240,25 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		if err := attachClusterToTemplate(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
+		templateID := ""
+		if template, ok := d.Get("cluster_template").([]interface{}); ok && len(template) > 0 {
+			if m, ok := template[0].(map[string]interface{}); ok {
+				templateID, _ = m["id"].(string)
+			}
+		}
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Cluster attached to cluster_template — profile changes apply at the template's next maintenance window",
+			Detail: fmt.Sprintf(
+				"This cluster is now attached to cluster_template %q. The attach itself is immediate, but the profile set "+
+					"is applied by the template's batch reconciler only at the maintenance window configured on the cluster "+
+					"template, not synchronously with this apply. To apply immediately: use the \"Update\" action on the "+
+					"cluster template in the Palette UI, or, if the cluster template is itself managed by Terraform, set "+
+					"`upgrade_now` on the spectrocloud_cluster_config_template resource to the current RFC3339 timestamp. "+
+					"Note: triggering an update this way updates every cluster attached to that template, not just this one.",
+				templateID,
+			),
+		})
 	default:
 		// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
 		if d.HasChange("cluster_template") {
@@ -296,11 +317,11 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	if diags := renewK8sCertificatesNow(c, d); diags.HasError() {
-		return diags, true
+	if renewDiags := renewK8sCertificatesNow(c, d); renewDiags.HasError() {
+		return renewDiags, true
 	}
 
-	return diag.Diagnostics{}, false
+	return diags, false
 }
 
 func renewK8sCertificatesNow(c *client.V1Client, d *schema.ResourceData) diag.Diagnostics {

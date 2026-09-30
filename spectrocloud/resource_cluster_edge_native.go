@@ -801,6 +801,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	if errorSet {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	if warningMessageForNodeDeletion {
 		diags = append(diags, diag.Diagnostic{

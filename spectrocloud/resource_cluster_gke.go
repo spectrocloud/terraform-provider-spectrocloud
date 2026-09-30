@@ -505,6 +505,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterGkeRead(ctx, d, m)
 

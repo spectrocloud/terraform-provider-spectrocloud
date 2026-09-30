@@ -957,6 +957,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterEksRead(ctx, d, m)
 
