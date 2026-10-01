@@ -18,6 +18,11 @@ import (
 // package) — GET/PATCH against this UID's variables endpoint returns 500.
 const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
 
+// clusterTemplateVariablesPatchErrorUID mirrors the constant of the same
+// name in tests/mockApiServer/routes/mockCluster.go — PATCH against this
+// clusterUid's cluster_template-scoped variables endpoint returns 500.
+const clusterTemplateVariablesPatchErrorUID = "cluster-template-uid-variables-patch-error"
+
 // ---------------------------------------------------------------------------
 // updateProfiles / rollbackClusterProfileOnUpdateError / computeProfilesToDelete /
 // enrichClusterProfilesWithPacks / toClusterTemplateReference /
@@ -376,7 +381,7 @@ func TestUpdateClusterTemplateVariablesError_RealDiff(t *testing.T) {
 		},
 	}
 
-	d := buildClusterTemplateChangeResourceData(t, clusterVariablesPatchErrorUID, oldTemplate, newTemplate)
+	d := buildClusterTemplateChangeResourceData(t, clusterTemplateVariablesPatchErrorUID, oldTemplate, newTemplate)
 	require.True(t, d.HasChange("cluster_template"))
 
 	err := updateClusterTemplateVariables(c, d)

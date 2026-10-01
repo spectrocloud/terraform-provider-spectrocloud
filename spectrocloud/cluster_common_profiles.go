@@ -1130,7 +1130,7 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 	}
 
 	// Build variable update entities
-	variableEntity := make([]*models.V1SpectroClusterVariableUpdateEntity, 0)
+	variableEntity := make([]*models.V1ClusterTemplateProfileVariable, 0)
 	for _, profile := range profiles {
 		if profile == nil {
 			continue
@@ -1159,17 +1159,21 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 		// Only add if there are variables to update
 		if len(pVars) > 0 {
 			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
-			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-				ProfileUID: StringPtr(profileID.(string)),
-				Variables:  pVars,
+			variableEntity = append(variableEntity, &models.V1ClusterTemplateProfileVariable{
+				UID:       profileID.(string),
+				Variables: pVars,
 			})
 		}
 	}
 
-	// Patch variables using the variables API (not full cluster update)
+	// Patch variables using the cluster_template-scoped variables API (not
+	// UpdateClusterProfileVariableInCluster, which targets a cluster governed
+	// directly by cluster_profile and is not aware of the template's profile set).
 	if len(variableEntity) > 0 {
-		log.Printf("Patching %d profile variables using variables API", len(variableEntity))
-		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		log.Printf("Patching %d profile variables using cluster_template variables API", len(variableEntity))
+		err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
+			Profiles: variableEntity,
+		})
 		if err != nil {
 			// Rollback on error
 			oldTemplate, _ := d.GetChange("cluster_template")
