@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,6 +16,52 @@ const (
 	eksClusterProfile  = "cluster-profile-import-1"
 	eksClusterID       = "test-eks-cluster-id"
 )
+
+// PLT-2435: adds a `dedicate_node_pool_for_system_pods` attribute to EKS and
+// GKE machine pools, wired straight through to the SDK's
+// V1MachinePoolConfigEntity.DedicateNodePoolForSystemPods field. AKS already
+// covers this via its existing is_system_node_pool attribute, so it needs no
+// changes here.
+
+func TestToMachinePoolEks_DedicateNodePoolForSystemPods(t *testing.T) {
+	t.Run("true is passed through", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":                               "system-pool",
+			"count":                              1,
+			"disk_size_gb":                       20,
+			"dedicate_node_pool_for_system_pods": true,
+			"az_subnets":                         map[string]interface{}{},
+		}
+		got := toMachinePoolEks(m)
+		require.NotNil(t, got.PoolConfig)
+		assert.True(t, got.PoolConfig.DedicateNodePoolForSystemPods)
+	})
+
+	t.Run("absent key defaults to false rather than panicking", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":         "regular-pool",
+			"count":        1,
+			"disk_size_gb": 20,
+			"az_subnets":   map[string]interface{}{},
+		}
+		got := toMachinePoolEks(m)
+		require.NotNil(t, got.PoolConfig)
+		assert.False(t, got.PoolConfig.DedicateNodePoolForSystemPods)
+	})
+}
+
+func TestFlattenMachinePoolConfigsEks_DedicateNodePoolForSystemPods(t *testing.T) {
+	machinePools := []*models.V1EksMachinePoolConfig{
+		{
+			Name:                          "system-pool",
+			DedicateNodePoolForSystemPods: true,
+		},
+	}
+	result := flattenMachinePoolConfigsEks(machinePools)
+	require.Len(t, result, 1)
+	oi := result[0].(map[string]interface{})
+	assert.Equal(t, true, oi["dedicate_node_pool_for_system_pods"])
+}
 
 func defaultEksMachinePool(overrides map[string]interface{}) map[string]interface{} {
 	pool := map[string]interface{}{
@@ -198,4 +245,29 @@ func TestResourceClusterEksUpdateClusterProfileWithMock(t *testing.T) {
 
 	diags := resourceClusterEksUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError())
+}
+
+// PLT-2459: machine_pool is a TypeSet keyed by resourceMachinePoolEksHash, so a
+// field that is written and read but not hashed produces no drift. Flipping
+// dedicate_node_pool_for_system_pods must change the pool's set identity.
+func TestResourceMachinePoolEksHash_DedicateNodePoolForSystemPods(t *testing.T) {
+	pool := func(dedicated bool) map[string]interface{} {
+		return map[string]interface{}{
+			"name":                               "worker-basic",
+			"count":                              2,
+			"disk_size_gb":                       60,
+			"instance_type":                      "m5.large",
+			"az_subnets":                         map[string]interface{}{},
+			"dedicate_node_pool_for_system_pods": dedicated,
+		}
+	}
+
+	assert.NotEqual(t, resourceMachinePoolEksHash(pool(false)), resourceMachinePoolEksHash(pool(true)),
+		"toggling dedicate_node_pool_for_system_pods must change the EKS machine pool hash")
+
+	t.Run("absent key does not panic", func(t *testing.T) {
+		m := pool(false)
+		delete(m, "dedicate_node_pool_for_system_pods")
+		assert.NotPanics(t, func() { resourceMachinePoolEksHash(m) })
+	})
 }

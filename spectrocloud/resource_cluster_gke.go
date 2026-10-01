@@ -44,6 +44,7 @@ func resourceClusterGke() *schema.Resource {
 				Version: 2,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -210,6 +211,14 @@ func resourceClusterGke() *schema.Resource {
 						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"node":                        schemas.NodeSchema(),
 						"taints":                      schemas.ClusterTaintsSchema(),
+						"dedicate_node_pool_for_system_pods": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+							Description: "If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved " +
+								"taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the " +
+								"matching toleration. Custom taints cannot be set on a dedicated pool.",
+						},
 					},
 				},
 			},
@@ -496,6 +505,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterGkeRead(ctx, d, m)
 
@@ -562,6 +572,7 @@ func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig)
 		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		oi["dedicate_node_pool_for_system_pods"] = machinePool.DedicateNodePoolForSystemPods
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -643,18 +654,20 @@ func toCloudConfigGke(cloudConfig map[string]interface{}) *models.V1GcpCloudClus
 func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
+	dedicateNodePoolForSystemPods, _ := m["dedicate_node_pool_for_system_pods"].(bool)
 	mp := &models.V1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 			InstanceType:   types.Ptr(m["instance_type"].(string)),
 			RootDeviceSize: SafeInt64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels:      toAdditionalNodePoolLabels(m),
-			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
-			Taints:                toClusterTaints(m),
-			Name:                  types.Ptr(m["name"].(string)),
-			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
-			UpdateStrategy:        toUpdateStrategy(m),
+			AdditionalLabels:              toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations:         toAdditionalNodePoolAnnotations(m),
+			Taints:                        toClusterTaints(m),
+			DedicateNodePoolForSystemPods: dedicateNodePoolForSystemPods,
+			Name:                          types.Ptr(m["name"].(string)),
+			Size:                          types.Ptr(SafeInt32(m["count"].(int))),
+			UpdateStrategy:                toUpdateStrategy(m),
 		},
 	}
 	if !mp.PoolConfig.IsControlPlane {

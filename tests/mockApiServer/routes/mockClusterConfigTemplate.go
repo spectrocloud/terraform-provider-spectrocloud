@@ -1,8 +1,34 @@
 package routes
 
 import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// ClusterTemplateAttachRejectUID drives the AttachClusterTemplate API-error
+// branch, simulating Hubble's real ClusterNotEligibleForAttach rejection
+// (HTTP 400) for a cluster that's already attached to a different template -
+// e.g. when a user changes cluster_template.id while already attached.
+const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
+
+// clusterTemplateAttachHandler serves POST
+// /v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach,
+// dispatching on the target templateUid so the Hubble rejection can be
+// simulated.
+func clusterTemplateAttachHandler(w http.ResponseWriter, r *http.Request) {
+	templateUID := mux.Vars(r)["templateUid"]
+	if templateUID == ClusterTemplateAttachRejectUID {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("ClusterNotEligibleForAttach",
+			"Cluster is not eligible for attach: Cluster is already attached to cluster template 'test-cluster-config-template'"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func getClusterConfigTemplateResponse() *models.V1ClusterTemplate {
 	return &models.V1ClusterTemplate{
@@ -161,6 +187,14 @@ func ClusterConfigTemplateRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 204,
 			},
+		},
+		{
+			// PLT-2410: Day 2 attach — binds an existing cluster to a cluster
+			// template. templateUid-dispatched — see clusterTemplateAttachHandler
+			// for the ClusterTemplateAttachRejectUID branch.
+			Method:  "POST",
+			Path:    "/v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach",
+			Handler: clusterTemplateAttachHandler,
 		},
 	}
 }

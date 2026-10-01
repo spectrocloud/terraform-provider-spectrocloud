@@ -45,6 +45,7 @@ func resourceClusterVsphere() *schema.Resource {
 				Version: 0,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -866,6 +867,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterVsphereRead(ctx, d, m)
 

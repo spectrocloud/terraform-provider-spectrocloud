@@ -48,6 +48,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Version: 3,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -159,7 +160,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MinItems: 1,
 				MaxItems: 1,
@@ -327,6 +327,18 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
 										Optional:     true,
 										ValidateFunc: validation.StringInSlice([]string{"primary", "secondary"}, false),
+									},
+									"taints": schemas.ClusterTaintsSchema(),
+									"additional_labels": {
+										Type:     schema.TypeMap,
+										Optional: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Description: "Per-host labels for this edge host, merged with the machine pool's `additional_labels` " +
+											"(this host's values win on key collision). Combined with `taints`, this lets a single node " +
+											"within a pool be marked as a witness/arbiter node - e.g. schedulable primary nodes plus a " +
+											"non-schedulable witness for etcd quorum - without splitting the pool.",
 									},
 								},
 							},
@@ -556,6 +568,12 @@ func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interfa
 	if host.TwoNodeCandidatePriority != "" {
 		rawHost["two_node_role"] = host.TwoNodeCandidatePriority
 	}
+	if taints := flattenClusterTaints(host.Taints); len(taints) > 0 {
+		rawHost["taints"] = taints
+	}
+	if len(host.AdditionalLabels) > 0 {
+		rawHost["additional_labels"] = host.AdditionalLabels
+	}
 	return rawHost
 }
 
@@ -623,6 +641,16 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+	if d.HasChange("cloud_config") {
+		clusterConfig, err := toClusterConfigEdgeNativeUpdate(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := c.UpdateCloudConfigEdgeNative(cloudConfigId, clusterConfig); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	if d.HasChange("machine_pool") {
 		// Validate override_Scaling configuration
@@ -773,6 +801,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	if errorSet {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	if warningMessageForNodeDeletion {
 		diags = append(diags, diag.Diagnostic{
@@ -955,6 +984,15 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 			edgeHost.Nic.Subnet = v.(string)
 		}
 
+		edgeHost.Taints = toClusterTaints(host.(map[string]interface{}))
+		if v, ok := host.(map[string]interface{})["additional_labels"].(map[string]interface{}); ok && len(v) > 0 {
+			additionalLabels := make(map[string]string, len(v))
+			for k, val := range v {
+				additionalLabels[k] = val.(string)
+			}
+			edgeHost.AdditionalLabels = additionalLabels
+		}
+
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
 			if v != "" {
 				if _, ok := twoNodeHostRoles[v]; ok {
@@ -1014,6 +1052,34 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 	}
 
 	return controlPlaneEndpoint, overlayConfig, nil
+}
+
+// toClusterConfigEdgeNativeUpdate builds the Day-2 cloud config update payload
+// (ssh_keys, vip, ntp_servers, overlay network, two-node) sent to
+// PUT /v1/cloudconfigs/edge-native/{uid}/clusterConfig. Backend enforces its own
+// validation on this call (e.g. VIP format, VIP immutability post-create per PEM-10966),
+// so any rejection is surfaced to the user via diag.FromErr instead of being silently dropped.
+func toClusterConfigEdgeNativeUpdate(d *schema.ResourceData) (*models.V1EdgeNativeCloudClusterConfigEntity, error) {
+	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	controlPlaneEndpoint, overlayConfig, err := toOverlayNetworkConfigAndVip(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.V1EdgeNativeCloudClusterConfigEntity{
+		ClusterConfig: &models.V1EdgeNativeClusterConfig{
+			NtpServers:                  toNtpServers(cloudConfig),
+			SSHKeys:                     sshKeys,
+			ControlPlaneEndpoint:        controlPlaneEndpoint,
+			OverlayNetworkConfiguration: overlayConfig,
+			IsTwoNodeCluster:            cloudConfig["is_two_node_cluster"].(bool),
+		},
+	}, nil
 }
 
 func getFirstIPRange(cidr string) (string, error) {
