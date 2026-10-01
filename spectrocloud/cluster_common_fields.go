@@ -270,7 +270,15 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		// silently falling through to the variables-only patch below, which
 		// never reads or sends cluster_template.id at all.
 		if d.HasChange("cluster_template.0.id") {
+			oldTemplateRaw, _ := d.GetChange("cluster_template")
 			if err := attachClusterToTemplate(c, d); err != nil {
+				// Hubble rejected the switch (e.g. ClusterNotEligibleForAttach) -
+				// the cluster is still attached to the OLD template on the
+				// backend. Terraform persists whatever is in ResourceData when
+				// Update returns, error or not, so without this the rejected
+				// new id would be written to state despite the attach never
+				// actually happening (PLT-2460).
+				_ = d.Set("cluster_template", oldTemplateRaw)
 				return diag.FromErr(err), true
 			}
 		} else if d.HasChange("cluster_template") {
