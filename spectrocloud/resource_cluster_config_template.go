@@ -416,6 +416,16 @@ func resourceClusterConfigTemplateProfileHash(v interface{}) int {
 	if id, ok := m["id"].(string); ok {
 		buf.WriteString(fmt.Sprintf("%s-", id))
 	}
+	if variablesSet, ok := m["variables"].(*schema.Set); ok && variablesSet.Len() > 0 {
+		hashes := make([]int, 0, variablesSet.Len())
+		for _, v := range variablesSet.List() {
+			hashes = append(hashes, resourceClusterConfigTemplateVariableHash(v))
+		}
+		sort.Ints(hashes)
+		for _, h := range hashes {
+			buf.WriteString(fmt.Sprintf("%d-", h))
+		}
+	}
 
 	return schema.HashString(buf.String())
 }

@@ -111,6 +111,81 @@ func diffClusterConfigTemplate(t *testing.T, raw map[string]interface{}) error {
 	return err
 }
 
+// buildClusterConfigTemplateUpdateResourceData builds a real InstanceState +
+// config diff via Resource.Diff, the same real-diff pattern used throughout
+// this suite (e.g. buildEksUpdateResourceData), so HasChange behaves the way
+// Terraform's own apply pipeline would produce it - a bare Set()-then-Set()
+// on schema.TestResourceData never fires HasChange for nested Set fields.
+func buildClusterConfigTemplateUpdateResourceData(t *testing.T, oldRaw, newRaw map[string]interface{}) *schema.ResourceData {
+	t.Helper()
+	res := resourceClusterConfigTemplate()
+
+	oldRD := schema.TestResourceDataRaw(t, res.Schema, oldRaw)
+	oldRD.SetId("test-template-id")
+	oldState := oldRD.State()
+	require.NotNil(t, oldState)
+
+	newConfig := terraform.NewResourceConfigRaw(newRaw)
+
+	diff, err := res.Diff(context.Background(), oldState, newConfig, nil)
+	require.NoError(t, err)
+
+	finalRD, err := schema.InternalMap(res.Schema).Data(oldState, diff)
+	require.NoError(t, err)
+	finalRD.SetId("test-template-id")
+	return finalRD
+}
+
+// TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable is a
+// regression test for a real customer-reported bug: adding a new variable
+// to an EXISTING cluster_profile (same id) in spectrocloud_cluster_config_template
+// was not detected by terraform plan/apply at all - d.HasChange("cluster_profile")
+// stayed false, so resourceClusterConfigTemplateUpdate's entire variables-
+// update branch never ran.
+//
+// Root cause: resourceClusterConfigTemplateProfileHash hashed only the
+// profile's "id", excluding its nested "variables" set entirely. Since the
+// outer cluster_profile set matches old/new elements by hash, and the hash
+// never changed (same id), Terraform's nested Set-within-Set diffing never
+// recursed into the differing "variables" content. Fixed by folding each
+// variable's own hash into the profile hash.
+func TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable(t *testing.T) {
+	oldRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{
+				"id":        "profile-1",
+				"variables": []interface{}{},
+			},
+		},
+	}
+	newRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{
+				"id": "profile-1",
+				"variables": []interface{}{
+					map[string]interface{}{
+						"name":            "region",
+						"value":           "us-west-2",
+						"assign_strategy": "all",
+					},
+				},
+			},
+		},
+	}
+
+	d := buildClusterConfigTemplateUpdateResourceData(t, oldRaw, newRaw)
+	assert.True(t, d.HasChange("cluster_profile"),
+		"adding a variable to an existing cluster_profile must be detected as a change")
+
+	oldProfiles, newProfiles := d.GetChange("cluster_profile")
+	assert.False(t, profileStructureChanged(oldProfiles, newProfiles),
+		"same profile id on both sides must still route to the variables-only PATCH path, not the PUT path")
+}
+
 func TestValidateClusterConfigTemplateVariableAssignment_RejectsMissingClusterIDs(t *testing.T) {
 	err := diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
 		"name":            "region",
