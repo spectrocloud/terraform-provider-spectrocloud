@@ -247,6 +247,12 @@ func baseEksTemplateUpdateRaw(templateID string) map[string]interface{} {
 // again, not updateClusterTemplateVariables, so Hubble's own validation
 // (ClusterNotEligibleForAttach today, since a cluster can only ever be
 // attached once) surfaces as a real error instead of being silently dropped.
+//
+// It also covers PLT-2460: when Hubble rejects the switch, the cluster is
+// still attached to the OLD template on the backend, so cluster_template
+// must be rolled back to its pre-apply value in ResourceData - otherwise
+// Terraform persists the rejected new id to state anyway (it writes back
+// whatever is in ResourceData on Update's return, error or not).
 func TestUpdateCommonFields_TemplateIDSwitchCallsAttach(t *testing.T) {
 	oldRaw := baseEksTemplateUpdateRaw("old-template-id")
 	newRaw := baseEksTemplateUpdateRaw(routes.ClusterTemplateAttachRejectUID)
@@ -262,6 +268,11 @@ func TestUpdateCommonFields_TemplateIDSwitchCallsAttach(t *testing.T) {
 	require.True(t, errorSet, "expected the id-switch attach attempt to surface Hubble's rejection")
 	require.NotEmpty(t, diags)
 	assert.Contains(t, diags[0].Summary, "not eligible for attach")
+
+	template := d.Get("cluster_template").([]interface{})
+	require.Len(t, template, 1)
+	assert.Equal(t, "old-template-id", template[0].(map[string]interface{})["id"],
+		"cluster_template must be rolled back to the pre-apply id after a rejected switch (PLT-2460)")
 }
 
 // TestUpdateCommonFields_TemplateVariablesOnlyEditSkipsAttach confirms the
