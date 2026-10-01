@@ -407,19 +407,40 @@ func TestFlattenClusterTemplateVariables_NoTemplate(t *testing.T) {
 }
 
 // TestFlattenClusterTemplateVariables_VariablesAPIError exercises the "Error
-// fetching cluster variables" branch: the negative mock server has no route
-// for GET /v1/spectroclusters/{uid}/variables, so GetClusterVariables errors,
-// and flattenClusterTemplateVariables must swallow it (return nil) rather
-// than fail the read/update.
+// fetching cluster_template profile variables" branch: the negative mock
+// server has no route for GET /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables,
+// so GetClusterTemplateProfileVariables errors for the configured profile,
+// and flattenClusterTemplateVariables must swallow it (log and continue)
+// rather than fail the read/update.
 func TestFlattenClusterTemplateVariables_VariablesAPIError(t *testing.T) {
 	cNeg := castV1Client(t, unitTestMockAPINegativeClient)
 	d := resourceClusterEks().TestResourceData()
 	d.SetId("test-cluster-id")
 	require.NoError(t, d.Set("cluster_template", []interface{}{
-		map[string]interface{}{"id": "template-uid-1"},
+		map[string]interface{}{
+			"id": "template-uid-1",
+			"cluster_profile": []interface{}{
+				map[string]interface{}{
+					"id": "cluster-profile-import-1",
+					"variables": map[string]interface{}{
+						"region": "us-west-2",
+					},
+				},
+			},
+		},
 	}))
 
 	require.NoError(t, flattenClusterTemplateVariables(cNeg, d, d.Id()))
+
+	tmpl := d.Get("cluster_template").([]interface{})
+	require.Len(t, tmpl, 1)
+	profSet, ok := tmpl[0].(map[string]interface{})["cluster_profile"].(*schema.Set)
+	require.True(t, ok)
+	require.Equal(t, 1, profSet.Len())
+	prof := profSet.List()[0].(map[string]interface{})
+	assert.Equal(t, "cluster-profile-import-1", prof["id"])
+	vars, _ := prof["variables"].(map[string]interface{})
+	assert.Empty(t, vars, "a failed variables fetch must not populate variables, but must not error either")
 }
 
 // ---------------------------------------------------------------------------
