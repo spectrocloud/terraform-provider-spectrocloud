@@ -1130,7 +1130,7 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 	}
 
 	// Build variable update entities
-	variableEntity := make([]*models.V1SpectroClusterVariableUpdateEntity, 0)
+	variableEntity := make([]*models.V1ClusterTemplateProfileVariable, 0)
 	for _, profile := range profiles {
 		if profile == nil {
 			continue
@@ -1159,17 +1159,21 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 		// Only add if there are variables to update
 		if len(pVars) > 0 {
 			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
-			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-				ProfileUID: StringPtr(profileID.(string)),
-				Variables:  pVars,
+			variableEntity = append(variableEntity, &models.V1ClusterTemplateProfileVariable{
+				UID:       profileID.(string),
+				Variables: pVars,
 			})
 		}
 	}
 
-	// Patch variables using the variables API (not full cluster update)
+	// Patch variables using the cluster_template-scoped variables API (not
+	// UpdateClusterProfileVariableInCluster, which targets a cluster governed
+	// directly by cluster_profile and is not aware of the template's profile set).
 	if len(variableEntity) > 0 {
-		log.Printf("Patching %d profile variables using variables API", len(variableEntity))
-		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		log.Printf("Patching %d profile variables using cluster_template variables API", len(variableEntity))
+		err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
+			Profiles: variableEntity,
+		})
 		if err != nil {
 			// Rollback on error
 			oldTemplate, _ := d.GetChange("cluster_template")
@@ -1201,29 +1205,6 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 	clusterTemplate := clusterTemplateRaw.([]interface{})
 	if len(clusterTemplate) == 0 {
 		return nil
-	}
-
-	// Get variables from cluster using the variables API
-	clusterVars, err := c.GetClusterVariables(clusterUID)
-	if err != nil {
-		log.Printf("Error fetching cluster variables: %v", err)
-		// Don't fail read if variables API fails, just skip variable updates
-		return nil
-	}
-
-	// Build a map of profileUID -> variables
-	profileVariablesMap := make(map[string]map[string]string)
-	for _, clusterVar := range clusterVars {
-		if clusterVar.ProfileUID != nil && clusterVar.Variables != nil {
-			vars := profileVariablesMapFromAPI(d, *clusterVar.ProfileUID, clusterVar.Variables)
-			stringVars := make(map[string]string, len(vars))
-			for k, v := range vars {
-				stringVars[k] = v.(string)
-			}
-			if len(stringVars) > 0 {
-				profileVariablesMap[*clusterVar.ProfileUID] = stringVars
-			}
-		}
 	}
 
 	// Get configured profile IDs from current state
@@ -1267,14 +1248,21 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 			updatedProfile := make(map[string]interface{})
 			updatedProfile["id"] = profileID
 
-			// Get variables from API response - only include variables that are in config
-			if apiVars, ok := profileVariablesMap[profileID]; ok && len(apiVars) > 0 {
-				// Convert map[string]string to map[string]interface{} for Set compatibility
-				// Only include variables that were in the original config
+			// Fetch this profile's cluster_template-scoped variable
+			// assignments and filter down to this cluster, since the
+			// response covers every cluster attached to the template.
+			if resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID); err != nil {
+				log.Printf("Error fetching cluster_template profile variables for profile %s: %v", profileID, err)
+			} else if resp != nil {
 				variablesInterface := make(map[string]interface{})
-				for k, v := range apiVars {
-					if configuredVarNames[k] {
-						variablesInterface[k] = v
+				for _, v := range resp.Variables {
+					if v == nil || v.Variable == nil || v.Variable.Name == nil || !configuredVarNames[*v.Variable.Name] {
+						continue
+					}
+					for _, assignment := range v.Clusters {
+						if assignment != nil && assignment.UID != nil && *assignment.UID == clusterUID && assignment.AssignedValue != "" {
+							variablesInterface[*v.Variable.Name] = assignment.AssignedValue
+						}
 					}
 				}
 				if len(variablesInterface) > 0 {

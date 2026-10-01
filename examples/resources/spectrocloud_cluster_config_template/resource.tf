@@ -33,7 +33,8 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     variables {
       name            = "environment"
       value           = "production"
-      assign_strategy = "cluster" # Cluster-specific override
+      assign_strategy = "cluster" # Apply only to the clusters listed in cluster_ids
+      cluster_ids     = ["63fdac9a3a1a3a6f2a3b1234", "63fdac9a3a1a3a6f2a3b5678"]
     }
   }
 

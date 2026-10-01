@@ -124,6 +124,7 @@ Required:
 Optional:
 
 - `assign_strategy` (String) Assignment strategy for the variable. Allowed values are `all` or `cluster`. Default is `all`.
+- `cluster_ids` (Set of String) UIDs of the specific clusters `value` applies to. Required when `assign_strategy` is `cluster`; must be empty when `assign_strategy` is `all` (the value applies to every cluster attached to the template).
 - `value` (String) Value of the variable to be applied to all clusters launched from this template. This value is used when assign_strategy is set to 'all'.
 
 

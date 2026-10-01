@@ -14,6 +14,40 @@ import (
 // e.g. when a user changes cluster_template.id while already attached.
 const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
 
+// getClusterTemplateProfileVariablesResponse — canned payload for GET
+// /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
+// variable ("region") assigned to cluster "test-cluster-id", which is the
+// cluster UID every flattenClusterTemplateVariables test in this suite uses.
+func getClusterTemplateProfileVariablesResponse() *models.V1ClusterTemplateProfileVariablesResponse {
+	varName := "region"
+	assignmentState := "Assigned"
+	clusterUID := "test-cluster-id"
+	return &models.V1ClusterTemplateProfileVariablesResponse{
+		Variables: []*models.V1ClusterTemplateProfileVariableWithClusters{
+			{
+				Variable: &models.V1Variable{
+					Name:         &varName,
+					DefaultValue: "us-east-1",
+				},
+				Clusters: []*models.V1ClusterTemplateVariableClusterAssignment{
+					{
+						UID:             &clusterUID,
+						AssignedBy:      "spectrocluster",
+						AssignedValue:   "us-east-1",
+						AssignmentState: &assignmentState,
+					},
+				},
+			},
+		},
+	}
+}
+
+func clusterTemplateProfileVariablesGetHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getClusterTemplateProfileVariablesResponse())
+}
+
 // clusterTemplateAttachHandler serves POST
 // /v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach,
 // dispatching on the target templateUid so the Hubble rejection can be
@@ -122,6 +156,13 @@ func getClusterConfigTemplatesSummaryResponse() *models.V1ClusterTemplatesSummar
 // ClusterConfigTemplateRoutes defines routes for cluster config template operations
 func ClusterConfigTemplateRoutes() []Route {
 	return []Route{
+		{
+			// PLT-2410 follow-up: read side of the per-profile cluster_template
+			// variable assignments, used by flattenClusterTemplateVariables.
+			Method:  "GET",
+			Path:    "/v1/clusterTemplates/{uid}/profiles/{profileUid}/variables",
+			Handler: clusterTemplateProfileVariablesGetHandler,
+		},
 		{
 			Method: "POST",
 			Path:   "/v1/clusterTemplates",
