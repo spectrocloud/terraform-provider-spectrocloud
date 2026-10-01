@@ -86,6 +86,46 @@ func TestBuildProfilesVariablesBatchEntity_ClusterStrategyUsesClusterIDs(t *test
 	assert.Equal(t, "us-west-2", clusters[0].Value)
 }
 
+// TestRefreshProfileVariableValues_OverridesStaleDeclaredValue is the
+// regression for a real customer-reported bug: after a successful Day-2
+// variable update via buildProfilesVariablesBatchEntity, the next Read would
+// write the OLD value straight back into state, making the change look like
+// it never took effect (persistent drift). Root cause: GET
+// /v1/clusterTemplates/{uid} (what flattenClusterTemplateProfiles reads) only
+// ever returns the template's own declared/create-time value - the PATCH
+// writes to a separate per-cluster assignment store this GET never reads
+// from. refreshProfileVariableValues must override that stale value with the
+// live per-cluster assignment from GetClusterTemplateProfileVariables - the
+// mock fixture (getClusterTemplateProfileVariablesResponse) returns
+// "region" assigned "us-east-1" for cluster "test-cluster-id".
+func TestRefreshProfileVariableValues_OverridesStaleDeclaredValue(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := resourceClusterConfigTemplate().TestResourceData()
+	require.NoError(t, d.Set("attached_cluster", []interface{}{
+		map[string]interface{}{"cluster_uid": "test-cluster-id", "name": "c1"},
+	}))
+
+	// "stale" declared value, as if it just came back from GetClusterConfigTemplate
+	staleProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
+				variableWithStrategy("region", "stale-declared-value", "all"),
+			}),
+		},
+	})
+
+	refreshed := refreshProfileVariableValues(c, d, "template-uid-1", staleProfiles)
+
+	require.Equal(t, 1, refreshed.Len())
+	profile := refreshed.List()[0].(map[string]interface{})
+	variables := profile["variables"].(*schema.Set)
+	require.Equal(t, 1, variables.Len())
+	variable := variables.List()[0].(map[string]interface{})
+	assert.Equal(t, "us-east-1", variable["value"],
+		"must reflect the live per-cluster assignment, not the stale declared value")
+}
+
 // ---------------------------------------------------------------------
 // validateClusterConfigTemplateVariableAssignment — CustomizeDiff guard.
 // ---------------------------------------------------------------------

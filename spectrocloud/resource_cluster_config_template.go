@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
@@ -241,16 +243,19 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("cluster_profile", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
+		// Set attached clusters first - refreshProfileVariableValues (below)
+		// needs attached_cluster already populated to resolve "all" strategy
+		// variables' target clusters.
+		if err := d.Set("attached_cluster", flattenAttachedClusters(template.Spec.Clusters)); err != nil {
+			return diag.FromErr(err)
+		}
+
+		profiles := refreshProfileVariableValues(c, d, uid, flattenClusterTemplateProfiles(template.Spec.Profiles))
+		if err := d.Set("cluster_profile", profiles); err != nil {
 			return diag.FromErr(err)
 		}
 
 		if err := d.Set("policy", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
-			return diag.FromErr(err)
-		}
-
-		// Set attached clusters
-		if err := d.Set("attached_cluster", flattenAttachedClusters(template.Spec.Clusters)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -538,6 +543,96 @@ func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
 
 	// Same IDs = only variables changed
 	return false
+}
+
+// refreshProfileVariableValues replaces each variable's "value" with the
+// live per-cluster assigned value from GetClusterTemplateProfileVariables.
+// GET /v1/clusterTemplates/{uid} (which flattenClusterTemplateProfiles reads)
+// only ever returns the template's own declared/create-time value - the Day-2
+// variables PATCH (buildProfilesVariablesBatchEntity) writes to a completely
+// separate per-cluster assignment store that this GET never reads from.
+// Without this refresh, Read would write the stale declared value straight
+// back into state right after a successful variable update, making the
+// change look like it never took effect (persistent drift on the next plan).
+func refreshProfileVariableValues(c *client.V1Client, d *schema.ResourceData, templateID string, profiles *schema.Set) *schema.Set {
+	updated := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{})
+
+	for _, profile := range profiles.List() {
+		p := profile.(map[string]interface{})
+		profileID, _ := p["id"].(string)
+
+		variablesSet, ok := p["variables"].(*schema.Set)
+		if !ok || variablesSet.Len() == 0 {
+			updated.Add(p)
+			continue
+		}
+
+		resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID)
+		if err != nil {
+			log.Printf("Error fetching cluster_config_template profile variables for profile %s: %v", profileID, err)
+			updated.Add(p)
+			continue
+		}
+
+		// varName -> clusterUID -> assigned value
+		assignments := make(map[string]map[string]string)
+		for _, v := range resp.Variables {
+			if v == nil || v.Variable == nil || v.Variable.Name == nil {
+				continue
+			}
+			byCluster := make(map[string]string)
+			for _, assignment := range v.Clusters {
+				if assignment != nil && assignment.UID != nil && assignment.AssignedValue != "" {
+					byCluster[*assignment.UID] = assignment.AssignedValue
+				}
+			}
+			assignments[*v.Variable.Name] = byCluster
+		}
+
+		updatedVars := schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{})
+		for _, v := range variablesSet.List() {
+			varMap := v.(map[string]interface{})
+			varName, _ := varMap["name"].(string)
+			assignStrategy, _ := varMap["assign_strategy"].(string)
+			clusterIDs, _ := varMap["cluster_ids"].(*schema.Set)
+			if clusterIDs == nil {
+				clusterIDs = schema.NewSet(schema.HashString, nil)
+			}
+
+			var targetUIDs []string
+			if assignStrategy == "cluster" && clusterIDs != nil {
+				for _, id := range clusterIDs.List() {
+					targetUIDs = append(targetUIDs, id.(string))
+				}
+			} else {
+				targetUIDs = allAttachedClusterUIDs(d)
+			}
+
+			newValue, _ := varMap["value"].(string)
+			if byCluster, ok := assignments[varName]; ok {
+				for _, uid := range targetUIDs {
+					if val, ok := byCluster[uid]; ok {
+						newValue = val
+						break
+					}
+				}
+			}
+
+			updatedVars.Add(map[string]interface{}{
+				"name":            varName,
+				"value":           newValue,
+				"assign_strategy": assignStrategy,
+				"cluster_ids":     clusterIDs,
+			})
+		}
+
+		updated.Add(map[string]interface{}{
+			"id":        profileID,
+			"variables": updatedVars,
+		})
+	}
+
+	return updated
 }
 
 // allAttachedClusterUIDs reads attached_cluster (Computed, set on Read) and
