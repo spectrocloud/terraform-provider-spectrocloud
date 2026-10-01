@@ -545,16 +545,67 @@ func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
 	return false
 }
 
+// variableTargeting holds assign_strategy/cluster_ids - the two fields that
+// only ever exist as Terraform-side config intent. The backend has no
+// queryable record of them independent of whichever write path last ran:
+// GET /v1/clusterTemplates/{uid} only reflects whatever was declared at
+// create time or a full-profile PUT, and a variables-only PATCH never
+// updates that declaration. So these must come from prior state, not from
+// the backend, or every Read after a PATCH-only update would silently
+// revert the user's targeting back to whatever (if anything) it was
+// before - typically empty.
+type variableTargeting struct {
+	assignStrategy string
+	clusterIDs     *schema.Set
+}
+
+// priorVariableTargeting reads cluster_profile from the current ResourceData
+// (prior state - must be called before d.Set("cluster_profile", ...)) and
+// indexes each variable's targeting by (profile id, variable name).
+func priorVariableTargeting(d *schema.ResourceData) map[[2]string]variableTargeting {
+	meta := make(map[[2]string]variableTargeting)
+	prior, ok := d.Get("cluster_profile").(*schema.Set)
+	if !ok || prior == nil {
+		return meta
+	}
+	for _, p := range prior.List() {
+		pm, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		profileID, _ := pm["id"].(string)
+		variablesSet, ok := pm["variables"].(*schema.Set)
+		if !ok {
+			continue
+		}
+		for _, v := range variablesSet.List() {
+			vm, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			varName, _ := vm["name"].(string)
+			assignStrategy, _ := vm["assign_strategy"].(string)
+			clusterIDs, _ := vm["cluster_ids"].(*schema.Set)
+			meta[[2]string{profileID, varName}] = variableTargeting{assignStrategy, clusterIDs}
+		}
+	}
+	return meta
+}
+
 // refreshProfileVariableValues replaces each variable's "value" with the
-// live per-cluster assigned value from GetClusterTemplateProfileVariables.
-// GET /v1/clusterTemplates/{uid} (which flattenClusterTemplateProfiles reads)
-// only ever returns the template's own declared/create-time value - the Day-2
-// variables PATCH (buildProfilesVariablesBatchEntity) writes to a completely
-// separate per-cluster assignment store that this GET never reads from.
-// Without this refresh, Read would write the stale declared value straight
-// back into state right after a successful variable update, making the
-// change look like it never took effect (persistent drift on the next plan).
+// live per-cluster assigned value from GetClusterTemplateProfileVariables,
+// and restores assign_strategy/cluster_ids from prior state (see
+// variableTargeting). GET /v1/clusterTemplates/{uid} (which
+// flattenClusterTemplateProfiles reads) only ever returns the template's own
+// declared/create-time value - the Day-2 variables PATCH
+// (buildProfilesVariablesBatchEntity) writes to a completely separate
+// per-cluster assignment store that this GET never reads from. Without this
+// refresh, Read would write the stale declared value (and wipe cluster_ids)
+// straight back into state right after a successful variable update, making
+// the change look like it never took effect (persistent drift on the next
+// plan).
 func refreshProfileVariableValues(c *client.V1Client, d *schema.ResourceData, templateID string, profiles *schema.Set) *schema.Set {
+	priorMeta := priorVariableTargeting(d)
 	updated := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{})
 
 	for _, profile := range profiles.List() {
@@ -595,12 +646,21 @@ func refreshProfileVariableValues(c *client.V1Client, d *schema.ResourceData, te
 			varName, _ := varMap["name"].(string)
 			assignStrategy, _ := varMap["assign_strategy"].(string)
 			clusterIDs, _ := varMap["cluster_ids"].(*schema.Set)
+
+			// Prior state is authoritative for targeting (see variableTargeting);
+			// the backend-declared assign_strategy is only a bootstrap fallback
+			// for a variable Terraform has never seen before (e.g. right after
+			// Create, or a full-profile PUT that added it).
+			if meta, ok := priorMeta[[2]string{profileID, varName}]; ok {
+				assignStrategy = meta.assignStrategy
+				clusterIDs = meta.clusterIDs
+			}
 			if clusterIDs == nil {
 				clusterIDs = schema.NewSet(schema.HashString, nil)
 			}
 
 			var targetUIDs []string
-			if assignStrategy == "cluster" && clusterIDs != nil {
+			if assignStrategy == "cluster" {
 				for _, id := range clusterIDs.List() {
 					targetUIDs = append(targetUIDs, id.(string))
 				}

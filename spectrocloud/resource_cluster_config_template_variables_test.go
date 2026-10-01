@@ -126,6 +126,67 @@ func TestRefreshProfileVariableValues_OverridesStaleDeclaredValue(t *testing.T) 
 		"must reflect the live per-cluster assignment, not the stale declared value")
 }
 
+// TestRefreshProfileVariableValues_PreservesClusterIDsFromPriorState is the
+// regression for the reported "cluster_ids shows null/empty after apply,
+// drift persists" bug: GET /v1/clusterTemplates/{uid} (what
+// flattenClusterTemplateProfiles builds "fresh" from) has no concept of
+// cluster_ids at all - it's pure Terraform-side targeting intent, never
+// persisted anywhere the backend can be asked about independent of the
+// PATCH that used it. refreshProfileVariableValues must restore
+// assign_strategy/cluster_ids from prior state (via priorVariableTargeting),
+// not leave them at whatever the backend-sourced "fresh" value carried
+// (nothing, for cluster_ids - or a stale assign_strategy, for a PATCH-only
+// update that never touched the template's own declared Spec).
+func TestRefreshProfileVariableValues_PreservesClusterIDsFromPriorState(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := resourceClusterConfigTemplate().TestResourceData()
+	require.NoError(t, d.Set("attached_cluster", []interface{}{
+		map[string]interface{}{"cluster_uid": "test-cluster-id", "name": "c1"},
+	}))
+
+	// Prior state: what the user actually configured and successfully applied.
+	require.NoError(t, d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"variables": []interface{}{
+				variableWithStrategy("region", "us-east-1", "cluster", "test-cluster-id"),
+			},
+		},
+	}))
+
+	// "fresh" from GET /v1/clusterTemplates/{uid}: no cluster_ids concept at
+	// all (base flatten never sets that key), and assign_strategy may be
+	// stale/whatever the template's own declared Spec says.
+	freshFromBackend := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
+				map[string]interface{}{
+					"name":            "region",
+					"value":           "stale-declared-value",
+					"assign_strategy": "all",
+				},
+			}),
+		},
+	})
+
+	refreshed := refreshProfileVariableValues(c, d, "template-uid-1", freshFromBackend)
+
+	require.Equal(t, 1, refreshed.Len())
+	profile := refreshed.List()[0].(map[string]interface{})
+	variables := profile["variables"].(*schema.Set)
+	require.Equal(t, 1, variables.Len())
+	variable := variables.List()[0].(map[string]interface{})
+
+	assert.Equal(t, "cluster", variable["assign_strategy"],
+		"assign_strategy must come from prior state, not the stale backend declaration")
+	clusterIDs, ok := variable["cluster_ids"].(*schema.Set)
+	require.True(t, ok)
+	assert.Equal(t, []interface{}{"test-cluster-id"}, clusterIDs.List(),
+		"cluster_ids must be preserved from prior state, not wiped to empty")
+	assert.Equal(t, "us-east-1", variable["value"])
+}
+
 // ---------------------------------------------------------------------
 // validateClusterConfigTemplateVariableAssignment — CustomizeDiff guard.
 // ---------------------------------------------------------------------
