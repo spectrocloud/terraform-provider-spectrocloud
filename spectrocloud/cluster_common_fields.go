@@ -191,6 +191,8 @@ func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	var diags diag.Diagnostics
+
 	if err := ValidateUpdateWorkerPoolsInParallelUpdate(d); err != nil {
 		return diag.FromErr(err), true
 	}
@@ -238,9 +240,49 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		if err := attachClusterToTemplate(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
+		templateID := ""
+		if template, ok := d.Get("cluster_template").([]interface{}); ok && len(template) > 0 {
+			if m, ok := template[0].(map[string]interface{}); ok {
+				templateID, _ = m["id"].(string)
+			}
+		}
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Cluster attached to cluster_template — profile changes apply at the template's next maintenance window",
+			Detail: fmt.Sprintf(
+				"This cluster is now attached to cluster_template %q. The attach itself is immediate, but the profile set "+
+					"is applied by the template's batch reconciler only at the maintenance window configured on the cluster "+
+					"template, not synchronously with this apply. To apply immediately: use the \"Update\" action on the "+
+					"cluster template in the Palette UI, or, if the cluster template is itself managed by Terraform, set "+
+					"`upgrade_now` on the spectrocloud_cluster_config_template resource to the current RFC3339 timestamp. "+
+					"Note: triggering an update this way updates every cluster attached to that template, not just this one.",
+				templateID,
+			),
+		})
 	default:
-		// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
-		if d.HasChange("cluster_template") {
+		// cluster_template.id itself changing (while already attached) is not
+		// the same as editing per-profile variable overrides within the same
+		// template - it's an attempt to switch templates. There is no backend
+		// "switch" API; the only way to find out whether/how that's handled is
+		// to call attach again and let Hubble's own validation (today:
+		// ClusterNotEligibleForAttach, since a cluster can only ever be
+		// attached once) surface as a real apply-time error, instead of
+		// silently falling through to the variables-only patch below, which
+		// never reads or sends cluster_template.id at all.
+		if d.HasChange("cluster_template.0.id") {
+			oldTemplateRaw, _ := d.GetChange("cluster_template")
+			if err := attachClusterToTemplate(c, d); err != nil {
+				// Hubble rejected the switch (e.g. ClusterNotEligibleForAttach) -
+				// the cluster is still attached to the OLD template on the
+				// backend. Terraform persists whatever is in ResourceData when
+				// Update returns, error or not, so without this the rejected
+				// new id would be written to state despite the attach never
+				// actually happening (PLT-2460).
+				_ = d.Set("cluster_template", oldTemplateRaw)
+				return diag.FromErr(err), true
+			}
+		} else if d.HasChange("cluster_template") {
+			// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
 			if err := updateClusterTemplateVariables(c, d); err != nil {
 				return diag.FromErr(err), true
 			}
@@ -296,11 +338,11 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	if diags := renewK8sCertificatesNow(c, d); diags.HasError() {
-		return diags, true
+	if renewDiags := renewK8sCertificatesNow(c, d); renewDiags.HasError() {
+		return renewDiags, true
 	}
 
-	return diag.Diagnostics{}, false
+	return diags, false
 }
 
 func renewK8sCertificatesNow(c *client.V1Client, d *schema.ResourceData) diag.Diagnostics {

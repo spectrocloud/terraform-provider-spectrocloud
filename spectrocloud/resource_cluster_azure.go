@@ -773,6 +773,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterAzureRead(ctx, d, m)
 

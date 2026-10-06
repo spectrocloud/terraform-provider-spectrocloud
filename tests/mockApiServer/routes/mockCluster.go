@@ -273,6 +273,25 @@ func clusterVariablesPatchHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// clusterTemplateVariablesPatchErrorUID drives the
+// UpdateClusterTemplateVariablesForCluster error branch inside
+// updateClusterTemplateVariables (cluster_common_profiles.go) — any other
+// clusterUid gets a blanket 204 success. Distinct endpoint/handler from
+// clusterVariablesPatchHandler above: that one is the generic cluster_profile
+// variables API, this one is the cluster_template-scoped one.
+const clusterTemplateVariablesPatchErrorUID = "cluster-template-uid-variables-patch-error"
+
+func clusterTemplateVariablesPatchHandler(w http.ResponseWriter, r *http.Request) {
+	clusterUID := mux.Vars(r)["clusterUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if clusterUID == clusterTemplateVariablesPatchErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update cluster template variables"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // overviewHandler serves GET /v1/dashboard/spectroclusters/{uid}/overview.
 // GetClusterOverview is called by resourceClusterStateRefreshFunc after
 // Status.State == "Running" to determine whether to append "-Healthy" to
@@ -629,12 +648,19 @@ func ClusterRoutes() []Route {
 		},
 		{
 			// UID-dispatched so tests can drive the UpdateClusterProfileVariableInCluster
-			// error branch inside updateProfiles/updateClusterTemplateVariables
-			// (cluster_common_profiles.go), which the previous blanket-204 response
-			// could never exercise.
+			// error branch inside updateProfiles (cluster_common_profiles.go), which
+			// the previous blanket-204 response could never exercise.
 			Method:  "PATCH",
 			Path:    "/v1/spectroclusters/{uid}/variables",
 			Handler: clusterVariablesPatchHandler,
+		},
+		{
+			// clusterUid-dispatched — see clusterTemplateVariablesPatchHandler for
+			// the clusterTemplateVariablesPatchErrorUID branch used by
+			// updateClusterTemplateVariables (cluster_common_profiles.go).
+			Method:  "PATCH",
+			Path:    "/v1/clusterTemplates/spectroclusters/{clusterUid}/variables",
+			Handler: clusterTemplateVariablesPatchHandler,
 		},
 		{
 			// UID-dispatched — see clusterFeatureBackupHandler for the

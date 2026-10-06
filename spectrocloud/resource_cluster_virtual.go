@@ -479,6 +479,7 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 	if d.HasChange("resources") {
 		resourcesObj, ok := d.GetOk("resources")
 		if ok {

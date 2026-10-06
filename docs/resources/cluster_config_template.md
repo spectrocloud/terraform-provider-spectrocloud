@@ -55,12 +55,14 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     id = var.infra_profile_id
 
     # variables (environment):
-    #   assign_strategy - "cluster" applies this value only to this cluster (not to all
-    #                     clusters).
+    #   assign_strategy - "cluster" applies this value only to the clusters listed in
+    #                     cluster_ids (not to all clusters). cluster_ids is required when
+    #                     assign_strategy is "cluster" and must be empty when it is "all".
     variables {
       name            = "environment"
       value           = "production"
       assign_strategy = "cluster"
+      cluster_ids     = var.cluster_ids
     }
   }
 
@@ -134,6 +136,7 @@ Required:
 Optional:
 
 - `assign_strategy` (String) Assignment strategy for the variable. Allowed values are `all` or `cluster`. Default is `all`.
+- `cluster_ids` (Set of String) UIDs of the specific clusters `value` applies to. Required when `assign_strategy` is `cluster`; must be empty when `assign_strategy` is `all` (the value applies to every cluster attached to the template).
 - `value` (String) Value of the variable to be applied to all clusters launched from this template. This value is used when assign_strategy is set to 'all'.
 
 

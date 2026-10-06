@@ -407,6 +407,9 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	if val, ok := nodePool["update_strategy"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
+	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
+		buf.WriteString(fmt.Sprintf("%t-", val))
+	}
 
 	return int(hash(buf.String()))
 }
@@ -469,6 +472,10 @@ func resourceMachinePoolGkeHash(v interface{}) int {
 	// Taints (list of maps)
 	if _, ok := nodePool["taints"]; ok {
 		buf.WriteString(HashStringMapList(nodePool["taints"]))
+	}
+
+	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
+		buf.WriteString(fmt.Sprintf("%t-", val))
 	}
 
 	return int(hash(buf.String()))

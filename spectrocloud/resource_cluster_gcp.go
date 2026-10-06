@@ -584,6 +584,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterGcpRead(ctx, d, m)
 

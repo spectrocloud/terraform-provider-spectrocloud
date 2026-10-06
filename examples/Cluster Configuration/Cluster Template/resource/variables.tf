@@ -29,3 +29,8 @@ variable "maintenance_policy_id" {
   description = "UID of the maintenance policy"
   type        = string
 }
+
+variable "cluster_ids" {
+  description = "UIDs of the clusters the \"environment\" variable (assign_strategy = \"cluster\") applies to"
+  type        = list(string)
+}

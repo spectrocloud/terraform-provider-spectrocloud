@@ -643,6 +643,7 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterApacheCloudStackRead(ctx, d, m)
 
