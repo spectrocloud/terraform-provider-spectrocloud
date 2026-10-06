@@ -189,7 +189,7 @@ Required:
 Optional:
 
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.
-- `azs` (List of String) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.
+- `azs` (List of String, Deprecated) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning. Deprecated: this value is never sent to Palette on create and is only read back for a control-plane pool that exists server-side (static provisioning only) - a dynamically placed cluster will always read back as empty here regardless of what was configured, which is a backend limitation this field can't work around. Use `az_subnets` instead, whose keys are the control-plane availability zones.
 - `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
 - `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
