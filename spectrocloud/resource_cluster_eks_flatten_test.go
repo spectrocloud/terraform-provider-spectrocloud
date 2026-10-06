@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
@@ -369,8 +371,9 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 					},
 					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
 						{
-							Name:      "cp-pool",
-							SubnetIds: map[string]string{"subnet-12345678": "subnet-87654321"},
+							Name:           "cp-pool",
+							IsControlPlane: types.Ptr(true),
+							SubnetIds:      map[string]string{"subnet-12345678": "subnet-87654321"},
 						},
 					},
 				},
@@ -393,12 +396,91 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := flattenClusterConfigsEKS(tc.input)
+			d := resourceClusterEks().TestResourceData()
+			result := flattenClusterConfigsEKS(d, tc.input)
 			if !cmp.Equal(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}
 		})
 	}
+}
+
+// ---------------------------------------------------------------------
+// PLT-2463 regression: cloud_config.azs is never sent on create and was
+// never read back on Read (matched the control-plane pool by name
+// "cp-pool", which also misses UI-created clusters named
+// "control-plane-pool"), so a static-placement cluster that sets azs was
+// destroyed and recreated on every single apply with no config change.
+// ---------------------------------------------------------------------
+
+// TestFlattenClusterConfigsEKS_StaticPlacementReadsAzsBack is the
+// regression for the core bug: a control-plane pool (selected by
+// IsControlPlane, not name) that has Azs populated must flatten them into
+// cloud_config.azs, so state matches a static-placement config and no
+// replace is forced.
+func TestFlattenClusterConfigsEKS_StaticPlacementReadsAzsBack(t *testing.T) {
+	config := &models.V1EksCloudConfig{
+		Spec: &models.V1EksCloudConfigSpec{
+			ClusterConfig: &models.V1EksClusterConfig{
+				Region:         types.Ptr("us-west-2"),
+				EndpointAccess: &models.V1EksClusterConfigEndpointAccess{},
+			},
+			MachinePoolConfig: []*models.V1EksMachinePoolConfig{
+				{
+					// UI names this pool "control-plane-pool", not "cp-pool" -
+					// selection must not depend on the name.
+					Name:           "control-plane-pool",
+					IsControlPlane: types.Ptr(true),
+					Azs:            []string{"us-west-2a", "us-west-2b", "us-west-2c"},
+					SubnetIds:      map[string]string{"us-west-2a": "subnet-1"},
+				},
+			},
+		},
+	}
+
+	d := resourceClusterEks().TestResourceData()
+	result := flattenClusterConfigsEKS(d, config).([]interface{})
+	require.Len(t, result, 1)
+	assert.Equal(t,
+		[]interface{}{"us-west-2a", "us-west-2b", "us-west-2c"},
+		result[0].(map[string]interface{})["azs"],
+	)
+}
+
+// TestFlattenClusterConfigsEKS_DynamicPlacementPreservesPriorAzs is the
+// regression for the fallback: a dynamically placed cluster has no
+// control-plane pool entry at all server-side (optic only adds one for
+// static placement) - there is genuinely nowhere to read azs back from.
+// Without preserving prior state here, Read would write back an empty list
+// every time, which reads as "the configured azs were removed" and forces
+// a replace on every subsequent plan despite no real change.
+func TestFlattenClusterConfigsEKS_DynamicPlacementPreservesPriorAzs(t *testing.T) {
+	config := &models.V1EksCloudConfig{
+		Spec: &models.V1EksCloudConfigSpec{
+			ClusterConfig: &models.V1EksClusterConfig{
+				Region:         types.Ptr("us-west-2"),
+				EndpointAccess: &models.V1EksClusterConfigEndpointAccess{},
+			},
+			MachinePoolConfig: []*models.V1EksMachinePoolConfig{
+				{Name: "worker", IsControlPlane: types.Ptr(false)},
+			},
+		},
+	}
+
+	d := resourceClusterEks().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"azs": []interface{}{"us-west-2a", "us-west-2b", "us-west-2c"},
+		},
+	}))
+
+	result := flattenClusterConfigsEKS(d, config).([]interface{})
+	require.Len(t, result, 1)
+	assert.Equal(t,
+		[]interface{}{"us-west-2a", "us-west-2b", "us-west-2c"},
+		result[0].(map[string]interface{})["azs"],
+		"azs must be preserved from prior state when no control-plane pool exists to read it from",
+	)
 }
 
 func TestFlattenFargateProfilesEks(t *testing.T) {
@@ -553,8 +635,9 @@ func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 					},
 					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
 						{
-							Name:      "cp-pool",
-							SubnetIds: map[string]string{"subnet-12345678": "subnet-87654321"},
+							Name:           "cp-pool",
+							IsControlPlane: types.Ptr(true),
+							SubnetIds:      map[string]string{"subnet-12345678": "subnet-87654321"},
 						},
 					},
 				},
@@ -576,7 +659,8 @@ func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := flattenClusterConfigsEKS(tc.input)
+			d := resourceClusterEks().TestResourceData()
+			result := flattenClusterConfigsEKS(d, tc.input)
 			if !cmp.Equal(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}

@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_eks Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Clusters"
 description: |-
   Resource for managing EKS clusters in Spectro Cloud through Palette.
 ---
@@ -29,14 +29,28 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
+# Day-2 mutability: `name` and `cloud_account_id` are ForceNew - changing either recreates the
+# cluster. `tags` (list form) is slated for deprecation in favor of `tags_map` (a map); the two
+# are ConflictsWith each other - use only one.
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
+  # cloud_config:
+  #   ssh_key_name, region, vpc_id, azs, az_subnets, endpoint_access, and encryption_config_arn -
+  #     ALL ForceNew; changing any of them recreates the cluster.
+  #   endpoint_access - Optional, default "public". Allowed: "public", "private",
+  #     "private_and_public".
+  #   public_access_cidrs, private_access_cidrs - Optional. Restrict public/private API server
+  #     access to these CIDR blocks. Unlike the ForceNew fields above, these (and
+  #     override_cluster_api_config) update in place.
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
+    # endpoint_access = "public"
+    # public_access_cidrs  = ["203.0.113.0/24"]
+    # private_access_cidrs = ["10.0.0.0/16"]
     override_cluster_api_config = <<-EOT
       spec:
         controlPlaneConfiguration:
@@ -50,6 +64,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     id = data.spectrocloud_cluster_profile.profile.id
 
     # To override or specify values for a cluster:
+
     # pack {
     #   name   = "spectro-byo-manifest"
     #   tag    = "1.0.x"
@@ -84,6 +99,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+
   machine_pool {
     name          = "worker-basic"
     count         = 1
@@ -92,8 +108,8 @@ resource "spectrocloud_cluster_eks" "cluster" {
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }
-    encryption_config_arn = "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab"
   }
+
 }
 ```
 ## Import
@@ -158,7 +174,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
@@ -173,7 +189,7 @@ Required:
 Optional:
 
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.
-- `azs` (List of String) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.
+- `azs` (List of String, Deprecated) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning. Deprecated: this value is never sent to Palette on create and is only read back for a control-plane pool that exists server-side (static provisioning only) - a dynamically placed cluster will always read back as empty here regardless of what was configured, which is a backend limitation this field can't work around. Use `az_subnets` instead, whose keys are the control-plane availability zones.
 - `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
 - `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
