@@ -1,6 +1,6 @@
 ---
 page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
-subcategory: ""
+subcategory: "Virtual Machines"
 description: |-
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 ---
@@ -11,7 +11,7 @@ description: |-
 
 ## Example Usage
 
-{{ tffile (printf "examples/resources/%s/resource-vm-all-type-config.tf" .Name)}}
+{{ tffile "examples/Virtual Machines/resource/resource.tf" }}
 
 
 {{ .SchemaMarkdown | trimspace }}

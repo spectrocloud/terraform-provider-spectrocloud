@@ -1,6 +1,5 @@
 ---
 page_title: "Spectro Cloud Provider"
-subcategory: ""
 description: |-
   The Spectro Cloud provider provides resources to interact with the Spectro Cloud management API (whether SaaS or on-prem).
 ---
@@ -46,9 +45,7 @@ provider "spectrocloud" {
 Copy `terraform.template.tfvars` file to a `terraform.tfvars` file and modify its content:
 
 ```terraform
-##################################################################################
-# Spectro Cloud credentials
-##################################################################################
+# See provider.tf's inline comments for what each of these means.
 sc_host         = "{Enter Spectro Cloud API Host}" #e.g: api.spectrocloud.com (for SaaS)
 sc_api_key      = "{Enter Spectro Cloud API Key}"
 sc_project_name = "{Enter Spectro Cloud Project Name}" #e.g: Default

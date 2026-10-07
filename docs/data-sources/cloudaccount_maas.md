@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cloudaccount_maas Data Source - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cloud Accounts"
 description: |-
   Data source for looking up a MaaS cloud account by ID or name.
 ---
@@ -12,9 +12,47 @@ description: |-
 ## Example Usage
 
 ```terraform
+# Looks up an existing MAAS cloud account registered in Palette, by name or by ID.
+#
+# Lookup keys:
+#   name    - Exactly one of `id`/`name` required, also Computed.
+#   context - Optional. Allowed: "project", "tenant", "" (default). Required only to
+#             disambiguate when more than one account shares the same `name` across scopes.
 data "spectrocloud_cloudaccount_maas" "example" {
-  name    = "maas-account"
+  name    = "example-maas-account"
   context = "project"
+}
+
+# Alternative: look up by ID instead of name.
+#
+# Lookup keys:
+#   id - Exactly one of `id`/`name` required, also Computed.
+data "spectrocloud_cloudaccount_maas" "by_id" {
+  id = "123e4567-e89b-12d3-a456-426614174000"
+}
+
+output "maas_account_id" {
+  value = data.spectrocloud_cloudaccount_maas.example.id
+}
+
+output "maas_account_name" {
+  value = data.spectrocloud_cloudaccount_maas.example.name
+}
+
+# Computed.
+output "maas_api_endpoint" {
+  value = data.spectrocloud_cloudaccount_maas.example.maas_api_endpoint
+}
+
+# Computed. Credential material - the schema marks this Sensitive, but Terraform still
+# requires the output itself to be marked sensitive to suppress it from CLI output.
+output "maas_api_key" {
+  value     = data.spectrocloud_cloudaccount_maas.example.maas_api_key
+  sensitive = true
+}
+
+output "private_cloud_gateway_id" {
+  value = data.spectrocloud_cloudaccount_maas.example.private_cloud_gateway_id
 }
 ```
 
@@ -30,5 +68,5 @@ data "spectrocloud_cloudaccount_maas" "example" {
 ### Read-Only
 
 - `maas_api_endpoint` (String) The API endpoint of the MaaS account. This value is computed based on the cloud account's configuration and is used for interaction with the MaaS service.
-- `maas_api_key` (String) The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.
+- `maas_api_key` (String, Sensitive) The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.
 - `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this MaaS cloud account.

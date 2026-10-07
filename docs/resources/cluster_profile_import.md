@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_cluster_profile_import Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Cluster Profiles"
 description: |-
   Resource for importing a cluster profile definition from a local file into Spectro Cloud.
 ---
@@ -11,11 +11,24 @@ description: |-
 
 ## Example Usage
 
-
 ```terraform
+# Imports a cluster profile definition (exported from Palette: Profile > ... > Export) as a new
+# cluster profile. Nothing on this resource is ForceNew, but note the provider only accepts a
+# path that resolves within Terraform's own working directory (no absolute paths outside it, no
+# "..") - keep the export file alongside your .tf files, as shown below.
+#
+# Attributes:
+#   import_file - Required. Path to the exported cluster profile file, resolved relative to the
+#                 directory `terraform apply` is run from.
+#   context     - Optional, default "project". Allowed: "project", "tenant", "system".
 resource "spectrocloud_cluster_profile_import" "import" {
-  import_file = "/tmp/profile_import.json"
+  import_file = "./profile_import.json"
+  context     = "project"
 }
+
+# Note: this resource does not support `terraform import` - it only creates a new cluster
+# profile from a local export file. To manage an existing cluster profile with Terraform
+# instead, use the spectrocloud_cluster_profile resource (which does support import).
 ```
 
 Using `terraform import`, import the cluster profile using the `cluster_profile_name` or `id` colon separated with `context` and `version`. For example:

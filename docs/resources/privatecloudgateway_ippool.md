@@ -1,6 +1,6 @@
 ---
 page_title: "spectrocloud_privatecloudgateway_ippool Resource - terraform-provider-spectrocloud"
-subcategory: ""
+subcategory: "Private Cloud Gateway"
 description: |-
   A Resource to manage IP pools for Private Cloud Gateway.
 ---
@@ -13,43 +13,63 @@ You can learn more about Private Cloud Gateways IP Pools by revewing the [Create
 
 ## Example Usage
 
-An example of creating an IP Pool for a Private Cloud Gateway using a range of IP addresses and restricting the IP Pool to a single cluster.
+An example of creating an IP Pool for a Private Cloud Gateway using a range of IP addresses, and another using a subnet of IP addresses.
 
-```hcl
- data "spectrocloud_private_cloud_gateway" "pcg" {
-   name = "wst-1-pcg"
- }
+```terraform
+data "spectrocloud_private_cloud_gateway" "pcg" {
+  name = var.private_cloud_gateway_name
+}
 
- resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
-   gateway                  = "192.168.1.1"
-   name                     = "primary-compute-pool-1"
-   network_type             = "range"
-   prefix                   = "24"
-   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
-   ip_start_range           = "192.168.1.10"
-   ip_end_range             = "192.168.1.100"
-   nameserver_addresses     = ["192.168.1.8"]
-   restrict_to_single_cluster = true
- }
-```
+# Day-2 mutability: `name` and `private_cloud_gateway_id` are ForceNew - changing either
+# recreates the IP pool. `network_type`, `ip_start_range`/`ip_end_range`/`subnet_cidr`, `prefix`,
+# `gateway`, `nameserver_addresses`, `nameserver_search_suffix`, and
+# `restrict_to_single_cluster` all update in place.
+#
+# Attributes:
+#   name                        - Required, ForceNew.
+#   private_cloud_gateway_id    - Required, ForceNew.
+#   network_type                - Required. Allowed: "range" or "subnet" - selects which of the
+#                                  fields below is used.
+#   ip_start_range/ip_end_range - Required when network_type = "range". Mutually exclusive with
+#                                  subnet_cidr in practice.
+#   subnet_cidr                 - Required when network_type = "subnet". Mutually exclusive with
+#                                  ip_start_range/ip_end_range.
+#   prefix                      - Required. Prefix length for the pool's network range, e.g. 24
+#                                  for a /24.
+#   gateway                     - Required. Network gateway IP for this pool - typically the
+#                                  subnet's default gateway.
+#   nameserver_addresses        - Optional.
+#   nameserver_search_suffix    - Optional.
+#   restrict_to_single_cluster  - Optional, default false. Recommended true for production -
+#                                  restricts this pool to a single cluster instead of being shared
+#                                  across clusters.
+resource "spectrocloud_privatecloudgateway_ippool" "range_example" {
+  name                     = "ippool-range-example"
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
 
+  network_type   = "range"
+  ip_start_range = "10.10.10.100"
+  ip_end_range   = "10.10.10.200"
 
-An example of creating an IP Pool for a Private Cloud Gateway using a subnet of IP addresses.
+  prefix  = 24
+  gateway = "10.10.10.1"
 
-```hcl
- data "spectrocloud_private_cloud_gateway" "pcg" {
-   name = "east-3-pcg"
- }
+  nameserver_addresses     = ["10.10.10.2", "10.10.10.3"]
+  nameserver_search_suffix = ["example.org"]
 
- resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
-   gateway                  = "10.10.192.1"
-   name                     = "backup-compute-pool"
-   network_type             = "subnet"
-   prefix                   = "24"
-   subnet_cidr              = "10.10.100.0/24"
-   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
-   nameserver_addresses     = ["192.168.1.8"]
- }
+  restrict_to_single_cluster = true
+}
+
+resource "spectrocloud_privatecloudgateway_ippool" "subnet_example" {
+  name                     = "ippool-subnet-example"
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
+
+  network_type = "subnet"
+  subnet_cidr  = "10.10.20.0/24"
+
+  prefix  = 24
+  gateway = "10.10.20.1"
+}
 ```
 
 ## Import

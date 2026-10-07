@@ -1,0 +1,157 @@
+# A VM showing every Day-2 scheduling/affinity attribute the resource supports (all commented out
+# below, ForceNew: none - each updates in place when uncommented and changed):
+#   priority_class_name, scheduler_name, node_selector, eviction_strategy,
+#   termination_grace_period_seconds, hostname, subdomain - flat, no further constraints.
+#   dns_policy - Allowed: "ClusterFirstWithHostNet", "ClusterFirst", "Default", "None".
+#
+#   tolerations block, repeatable:
+#     effect   - Allowed: "NoSchedule", "PreferNoSchedule", "NoExecute".
+#     operator - Allowed: "Exists", "Equal".
+#
+#   pod_dns_config block (at most one), with nested repeatable `option` blocks.
+#
+#   affinity block (at most one), with deeply nested pod_anti_affinity ->
+#   preferred_during_scheduling_ignored_during_execution -> pod_affinity_term -> label_selector.
+#
+# Intentionally named .tf1, not .tf: it re-declares the same data "spectrocloud_cluster" block as
+# resource.tf in this folder, so Terraform would fail with duplicate-declaration errors if both
+# were loaded together. Copy this file's content into its own directory (renamed to .tf) to
+# actually run it, rather than renaming it in place here.
+
+data "spectrocloud_cluster" "vm_enabled_base_cluster" {
+  name    = "tenant-cluster-002"
+  context = "project"
+}
+
+resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
+  name            = "tf-test-vm-all-option-spec-day2"
+  namespace       = "default"
+  run_on_launch   = true
+  labels = {
+    "key1" = "value1"
+  }
+
+  #  priority_class_name = "high"
+  #  scheduler_name = "test"
+  #  node_selector = {
+  #    "test_vmi" = "node_labels"
+  #  }
+  #  eviction_strategy = "LiveMigrate"
+  #  termination_grace_period_seconds = 60
+  #  hostname = "spectro-com"
+  #  subdomain = "test-spectro-com"
+  #  dns_policy = "Default"
+  #  tolerations {
+  #    effect = "NoExecute"
+  #    key = "tolerationKey"
+  #    operator = "Equal"
+  #    toleration_seconds = "60"
+  #    value = "taintValue"
+  #  }
+  #  pod_dns_config {
+  #    nameservers = ["10.0.0.10", "10.0.0.11"]
+  #    option {
+  #      name = "test_dns_name"
+  #      value = "dns_value"
+  #    }
+  #    searches = ["policy1", "policy2"]
+  #  }
+  #  affinity {
+  #    pod_anti_affinity {
+  #      preferred_during_scheduling_ignored_during_execution {
+  #        weight = 10
+  #        pod_affinity_term {
+  #          label_selector {
+  #            match_labels = {
+  #              anti-affinity-key = "anti-affinity-val"
+  #            }
+  #          }
+  #          topology_key = "kubernetes.io/hostname"
+  #        }
+  #      }
+  #    }
+  #  }
+
+  volume {
+    name = "test-vm-containerdisk1"
+    volume_source {
+      container_disk {
+        image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+      }
+    }
+  }
+  volume {
+    name = "cloudintdisk"
+    volume_source {
+      cloud_init_config_drive {
+        user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+      }
+    }
+  }
+
+  resources {
+    requests = {
+      memory = "2G"
+      cpu    = 1
+    }
+    # limits = {
+    #   "test_limit" = "10"
+    # }
+    over_commit_guest_overhead = false
+  }
+
+  disk {
+    name = "test-vm-containerdisk1"
+    disk_device {
+      disk {
+        bus = "virtio"
+      }
+    }
+  }
+  disk {
+    name = "cloudintdisk"
+    disk_device {
+      disk {
+        bus       = "virtio"
+        read_only = false
+        # pci_address = "0000:03:07.0"
+      }
+    }
+    serial = "1"
+  }
+
+  # Allowed interface_binding_method values: "InterfaceBridge", "InterfaceSlirp",
+  # "InterfaceMasquerade", "InterfaceSRIOV".
+  interface {
+    name                     = "main"
+    interface_binding_method = "InterfaceMasquerade"
+    model                    = "virtio"
+  }
+
+  # interface (additional), commented out - allowed model values: "", "e1000", "e1000e",
+  # "ne2k_pci", "pcnet", "rtl8139", "virtio".
+  #  interface {
+  #    name                     = "additional"
+  #    interface_binding_method = "InterfaceBridge"
+  #    model                    = "e1000e"
+  #  }
+
+  network {
+    name = "main"
+    network_source {
+      pod {}
+    }
+  }
+
+  #  network {
+  #    name = "additional"
+  #    network_source {
+  #      multus {
+  #        network_name = "macvlan-conf"
+  #        default      = false
+  #      }
+  #    }
+  #  }
+}

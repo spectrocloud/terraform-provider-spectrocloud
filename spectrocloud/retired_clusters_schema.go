@@ -270,7 +270,7 @@ func resourceClusterEksResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -634,7 +634,7 @@ func resourceClusterEksResourceV3() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -1001,7 +1001,7 @@ func resourceClusterAksResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -1284,7 +1284,7 @@ func resourceClusterAksResourceV3() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -1572,7 +1572,7 @@ func resourceClusterGkeResourceV1() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 
@@ -1774,7 +1774,7 @@ func resourceClusterEdgeNativeResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -2065,7 +2065,7 @@ func resourceClusterAwsResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -2376,7 +2376,7 @@ func resourceClusterGcpResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -2623,7 +2623,7 @@ func resourceClusterAzureResourceV0() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -2973,7 +2973,7 @@ func resourceClusterVsphereResourceV0() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -3327,7 +3327,7 @@ func resourceClusterMaasResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `maas`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -3664,7 +3664,7 @@ func resourceClusterApacheCloudStackResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `cloudstack`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -4316,7 +4316,7 @@ func resourceClusterGkeResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"cloud_config": {
@@ -4540,7 +4540,7 @@ func resourceClusterEdgeNativeResourceV3() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -4831,7 +4831,7 @@ func resourceClusterEdgeVsphereResourceV0() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -5519,7 +5519,7 @@ func resourceClusterVirtualResourceV2() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {

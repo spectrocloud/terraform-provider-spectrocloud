@@ -1,0 +1,38 @@
+# Copyright (c) Spectro Cloud
+# SPDX-License-Identifier: Apache-2.0
+
+pack:
+  content:
+    images:
+      - image: ghcr.io/spectrocloud/hello-universe:1.2.0
+
+manifests:
+  hello-universe:
+    images:
+      hellouniverse: ghcr.io/spectrocloud/hello-universe:1.2.0-proxy
+      hellouniverseapi: ghcr.io/spectrocloud/hello-universe-api:1.1.0
+      hellouniversedb: ghcr.io/spectrocloud/hello-universe-db:1.1.0
+    apiEnabled: true
+    namespace: ${namespace}
+    port: ${port}
+    replicas: ${replicas}
+    dbPassword: ${db_password} # Add base64 encoded password
+    authToken: ${auth_token} # Add base64 encoded token
+    ui:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: ui
+    api:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: api
+    postgres:
+      useTolerations: false
+      tolerations:
+        effect: PreferNoSchedule
+        key: app
+        value: postgres

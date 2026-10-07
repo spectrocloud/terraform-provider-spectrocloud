@@ -31,7 +31,7 @@ check-diff: reviewable ## Execute branch is clean
 # (or tfplugindocs) cannot leave go.mod/go.sum dirty before tidy.
 GO_MOD_READONLY ?= GOFLAGS=-mod=readonly
 
-reviewable: fmt vet lint generate docs-score-check ## Ensure code is ready for review
+reviewable: fmt vet lint generate docs-score-check docs-validate ## Ensure code is ready for review
 	git submodule update --remote
 	$(GO_MOD_READONLY) go mod tidy
 
@@ -50,6 +50,10 @@ generate:
 docs-score-check: ## Fail when docs score has unresolved defects
 	python3 tools/docs_score/score.py --json-only
 	@python3 -c 'import json,sys; d=json.load(open("tools/docs_score/score.json")); ts=d.get("total_score",0); pf=d.get("pages_failing",0); print(f"docs score check: total_score={ts}, pages_failing={pf}"); sys.exit(1 if (ts > 0 and pf > 0) else 0)'
+
+docs-validate: ## Validate generated docs, including subcategory frontmatter against the allow-list
+	$(GO_MOD_READONLY) go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs validate \
+		--allowed-resource-subcategories-file tools/docs_score/allowed_subcategories.txt
 
 ##@ Test Targets
 # Note: despite the historical `testacc` name, nothing in this repo uses the
