@@ -240,6 +240,7 @@ func DefaultPositiveRoutes() []routes.Route {
 		routes.DeveloperSettingRoutes,
 		routes.ResourceLimitRoutes,
 		routes.AuditTrailRoutes,
+		routes.RateConfigRoutes,
 	)
 }
 
@@ -267,6 +268,7 @@ func DefaultNegativeRoutes() []routes.Route {
 		routes.DeveloperSettingNegativeRoutes,
 		routes.ResourceLimitNegativeRoutes,
 		routes.AuditTrailNegativeRoutes,
+		routes.RateConfigNegativeRoutes,
 	)
 }
 
