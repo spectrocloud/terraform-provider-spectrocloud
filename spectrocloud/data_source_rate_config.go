@@ -95,14 +95,14 @@ func dataSourceRateConfig() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRateConfigRead,
 		Description: "Provides the tenant-level cloud rate config, the unit prices Palette uses to estimate cluster cloud cost and usage cost.",
+		// `edge` and `edgeNative` are omitted to match the resource; neither
+		// is surfaced by Palette.
 		Schema: map[string]*schema.Schema{
 			"aws":               publicCloudRateDataAttribute("AWS"),
 			"azure":             publicCloudRateDataAttribute("Azure"),
 			"gcp":               publicCloudRateDataAttribute("GCP"),
 			"vsphere":           privateCloudRateDataAttribute("VMware vSphere"),
 			"maas":              privateCloudRateDataAttribute("MAAS"),
-			"edge":              privateCloudRateDataAttribute("Edge"),
-			"edge_native":       privateCloudRateDataAttribute("Edge Native"),
 			"generic":           privateCloudRateDataAttribute("generic cloud"),
 			"apache_cloudstack": privateCloudRateDataAttribute("Apache CloudStack"),
 			"custom": {

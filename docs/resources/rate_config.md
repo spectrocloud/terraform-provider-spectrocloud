@@ -9,7 +9,7 @@ description: |-
 
   Resource for managing the tenant-level cloud rate config in Spectro Cloud. The rate config defines the unit prices Palette uses to estimate cluster cloud cost and usage cost.
 
-The rate config is a tenant-level singleton. Public clouds (AWS, Azure, GCP) are priced by splitting each instance's price into compute and memory proportions, while private clouds (vSphere, MAAS, Edge, Edge Native, Apache CloudStack, generic and custom clouds) are priced per resource unit in US dollars. See the [Cloud Cost](https://docs.spectrocloud.com/clusters/cluster-management/cloud-cost/) guide for how Palette applies these rates.
+The rate config is a tenant-level singleton. Public clouds (AWS, Azure, GCP) are priced by splitting each instance's price into compute and memory proportions, while private clouds (vSphere, MAAS, Apache CloudStack, generic and custom clouds) are priced per resource unit in US dollars. See the [Cloud Cost](https://docs.spectrocloud.com/clusters/cluster-management/cloud-cost/) guide for how Palette applies these rates.
 
 ~> Every cloud omitted from the configuration is reset to Palette's built-in rates by the platform, and omitting a cloud block does not preserve a value set outside Terraform. Destroying the `spectrocloud_rate_config` resource restores Palette defaults for every cloud.
 
@@ -77,8 +77,6 @@ terraform import spectrocloud_rate_config.example <organization_name>
 - `aws` (Block List, Max: 1) Rate proportions used to estimate the cost of AWS instances. When omitted, Palette applies its built-in proportions. (see [below for nested schema](#nestedblock--aws))
 - `azure` (Block List, Max: 1) Rate proportions used to estimate the cost of Azure instances. When omitted, Palette applies its built-in proportions. (see [below for nested schema](#nestedblock--azure))
 - `custom` (Block List) Unit prices applied to custom cloud types registered in the tenant. Each block configures one custom cloud. (see [below for nested schema](#nestedblock--custom))
-- `edge` (Block List, Max: 1) Unit prices used to estimate the cost of Edge resources. When omitted, Palette applies its built-in rates. (see [below for nested schema](#nestedblock--edge))
-- `edge_native` (Block List, Max: 1) Unit prices used to estimate the cost of Edge Native resources. When omitted, Palette applies its built-in rates. (see [below for nested schema](#nestedblock--edge_native))
 - `gcp` (Block List, Max: 1) Rate proportions used to estimate the cost of GCP instances. When omitted, Palette applies its built-in proportions. (see [below for nested schema](#nestedblock--gcp))
 - `generic` (Block List, Max: 1) Unit prices used to estimate the cost of generic cloud resources. When omitted, Palette applies its built-in rates. (see [below for nested schema](#nestedblock--generic))
 - `maas` (Block List, Max: 1) Unit prices used to estimate the cost of MAAS resources. When omitted, Palette applies its built-in rates. (see [below for nested schema](#nestedblock--maas))
@@ -172,28 +170,6 @@ Optional:
 - `memory_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of memory per hour.
 - `storage_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of storage per hour.
 
-
-
-<a id="nestedblock--edge"></a>
-### Nested Schema for `edge`
-
-Optional:
-
-- `cpu_unit_price_per_hour` (Number) Price in US dollars charged for one CPU core per hour.
-- `gpu_unit_price_per_hour` (Number) Price in US dollars charged for one GPU per hour.
-- `memory_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of memory per hour.
-- `storage_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of storage per hour.
-
-
-<a id="nestedblock--edge_native"></a>
-### Nested Schema for `edge_native`
-
-Optional:
-
-- `cpu_unit_price_per_hour` (Number) Price in US dollars charged for one CPU core per hour.
-- `gpu_unit_price_per_hour` (Number) Price in US dollars charged for one GPU per hour.
-- `memory_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of memory per hour.
-- `storage_unit_price_gib_per_hour` (Number) Price in US dollars charged for one GiB of storage per hour.
 
 
 <a id="nestedblock--gcp"></a>

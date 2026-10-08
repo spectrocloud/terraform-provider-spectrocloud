@@ -149,14 +149,15 @@ func resourceRateConfig() *schema.Resource {
 		},
 		SchemaVersion: 1,
 
+		// The API model also carries `edge` and `edgeNative` rate configs.
+		// Neither is exposed here: Palette surfaces neither in the UI, and
+		// `edge` is dropped on update entirely.
 		Schema: map[string]*schema.Schema{
 			"aws":               publicCloudRateAttribute("AWS"),
 			"azure":             publicCloudRateAttribute("Azure"),
 			"gcp":               publicCloudRateAttribute("GCP"),
 			"vsphere":           privateCloudRateAttribute("VMware vSphere"),
 			"maas":              privateCloudRateAttribute("MAAS"),
-			"edge":              privateCloudRateAttribute("Edge"),
-			"edge_native":       privateCloudRateAttribute("Edge Native"),
 			"generic":           privateCloudRateAttribute("generic cloud"),
 			"apache_cloudstack": privateCloudRateAttribute("Apache CloudStack"),
 			"custom": {
@@ -231,8 +232,6 @@ func toRateConfig(d *schema.ResourceData) *models.V1RateConfig {
 		Gcp:              toPublicCloudRateConfig(d.Get("gcp")),
 		Vsphere:          toPrivateCloudRateConfig(d.Get("vsphere")),
 		Maas:             toPrivateCloudRateConfig(d.Get("maas")),
-		Edge:             toPrivateCloudRateConfig(d.Get("edge")),
-		EdgeNative:       toPrivateCloudRateConfig(d.Get("edge_native")),
 		Generic:          toPrivateCloudRateConfig(d.Get("generic")),
 		ApacheCloudstack: toPrivateCloudRateConfig(d.Get("apache_cloudstack")),
 		Custom:           toCustomCloudRateConfigs(d.Get("custom")),
@@ -269,8 +268,6 @@ func toRateConfigDefault() *models.V1RateConfig {
 		Gcp:              publicCloud(),
 		Vsphere:          privateCloud(),
 		Maas:             privateCloud(),
-		Edge:             privateCloud(),
-		EdgeNative:       privateCloud(),
 		Generic:          privateCloud(),
 		ApacheCloudstack: privateCloud(),
 		Custom:           []*models.V1CustomCloudRateConfig{},
@@ -375,8 +372,6 @@ func flattenRateConfig(rateConfig *models.V1RateConfig, d *schema.ResourceData) 
 	privateClouds := map[string]*models.V1PrivateCloudRateConfig{
 		"vsphere":           rateConfig.Vsphere,
 		"maas":              rateConfig.Maas,
-		"edge":              rateConfig.Edge,
-		"edge_native":       rateConfig.EdgeNative,
 		"generic":           rateConfig.Generic,
 		"apache_cloudstack": rateConfig.ApacheCloudstack,
 	}

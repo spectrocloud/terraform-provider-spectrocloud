@@ -38,8 +38,6 @@ func mockRateConfigPayload() *models.V1RateConfig {
 		Gcp:              mockPublicCloudRateConfigPayload(),
 		Vsphere:          mockPrivateCloudRateConfigPayload(),
 		Maas:             mockPrivateCloudRateConfigPayload(),
-		Edge:             mockPrivateCloudRateConfigPayload(),
-		EdgeNative:       mockPrivateCloudRateConfigPayload(),
 		Generic:          mockPrivateCloudRateConfigPayload(),
 		ApacheCloudstack: mockPrivateCloudRateConfigPayload(),
 		Custom: []*models.V1CustomCloudRateConfig{

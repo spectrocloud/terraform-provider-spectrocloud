@@ -9,7 +9,7 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-The rate config is a tenant-level singleton. Public clouds (AWS, Azure, GCP) are priced by splitting each instance's price into compute and memory proportions, while private clouds (vSphere, MAAS, Edge, Edge Native, Apache CloudStack, generic and custom clouds) are priced per resource unit in US dollars. See the [Cloud Cost](https://docs.spectrocloud.com/clusters/cluster-management/cloud-cost/) guide for how Palette applies these rates.
+The rate config is a tenant-level singleton. Public clouds (AWS, Azure, GCP) are priced by splitting each instance's price into compute and memory proportions, while private clouds (vSphere, MAAS, Apache CloudStack, generic and custom clouds) are priced per resource unit in US dollars. See the [Cloud Cost](https://docs.spectrocloud.com/clusters/cluster-management/cloud-cost/) guide for how Palette applies these rates.
 
 ~> Every cloud omitted from the configuration is reset to Palette's built-in rates by the platform, and omitting a cloud block does not preserve a value set outside Terraform. Destroying the `spectrocloud_rate_config` resource restores Palette defaults for every cloud.
 

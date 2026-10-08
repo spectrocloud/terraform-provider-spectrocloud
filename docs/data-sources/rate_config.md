@@ -32,8 +32,6 @@ output "vsphere_cpu_unit_price_per_hour" {
 - `aws` (List of Object) Rate proportions used to estimate the cost of AWS instances. (see [below for nested schema](#nestedatt--aws))
 - `azure` (List of Object) Rate proportions used to estimate the cost of Azure instances. (see [below for nested schema](#nestedatt--azure))
 - `custom` (List of Object) Unit prices applied to the custom cloud types registered in the tenant. One block per custom cloud. (see [below for nested schema](#nestedatt--custom))
-- `edge` (List of Object) Unit prices used to estimate the cost of Edge resources. (see [below for nested schema](#nestedatt--edge))
-- `edge_native` (List of Object) Unit prices used to estimate the cost of Edge Native resources. (see [below for nested schema](#nestedatt--edge_native))
 - `gcp` (List of Object) Rate proportions used to estimate the cost of GCP instances. (see [below for nested schema](#nestedatt--gcp))
 - `generic` (List of Object) Unit prices used to estimate the cost of generic cloud resources. (see [below for nested schema](#nestedatt--generic))
 - `id` (String) The ID of this resource.
@@ -123,28 +121,6 @@ Read-Only:
 - `memory_unit_price_gib_per_hour` (Number)
 - `storage_unit_price_gib_per_hour` (Number)
 
-
-
-<a id="nestedatt--edge"></a>
-### Nested Schema for `edge`
-
-Read-Only:
-
-- `cpu_unit_price_per_hour` (Number)
-- `gpu_unit_price_per_hour` (Number)
-- `memory_unit_price_gib_per_hour` (Number)
-- `storage_unit_price_gib_per_hour` (Number)
-
-
-<a id="nestedatt--edge_native"></a>
-### Nested Schema for `edge_native`
-
-Read-Only:
-
-- `cpu_unit_price_per_hour` (Number)
-- `gpu_unit_price_per_hour` (Number)
-- `memory_unit_price_gib_per_hour` (Number)
-- `storage_unit_price_gib_per_hour` (Number)
 
 
 <a id="nestedatt--gcp"></a>

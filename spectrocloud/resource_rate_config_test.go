@@ -111,8 +111,8 @@ func TestToRateConfigDefault(t *testing.T) {
 		assert.Equal(t, float32(75), cloud.MemoryOptimized.MemoryRateProportion, name)
 	}
 	for name, cloud := range map[string]*models.V1PrivateCloudRateConfig{
-		"vsphere": rateConfig.Vsphere, "maas": rateConfig.Maas, "edge": rateConfig.Edge,
-		"edge_native": rateConfig.EdgeNative, "generic": rateConfig.Generic,
+		"vsphere": rateConfig.Vsphere, "maas": rateConfig.Maas,
+		"generic":           rateConfig.Generic,
 		"apache_cloudstack": rateConfig.ApacheCloudstack,
 	} {
 		require.NotNil(t, cloud, name)
