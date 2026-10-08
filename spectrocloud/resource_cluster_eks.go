@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -210,6 +211,18 @@ func resourceClusterEks() *schema.Resource {
 							Deprecated: "azs is never sent to Palette on create and only reads back for statically-placed clusters; use az_subnets instead, whose keys are the control-plane availability zones.",
 							Optional:   true,
 							ForceNew:   true,
+							// The backend's control-plane pool returns its Azs in whatever
+							// order it happens to store them, not necessarily the order the
+							// user declared them in config. Since this is logically an
+							// unordered set of zones (not a sequence), suppress diffs that
+							// are a pure reorder of the same set - otherwise a cosmetic
+							// ordering difference would force a destructive replace on every
+							// plan for any statically-placed cluster that explicitly sets
+							// azs, via no fault of the user's config.
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								oldRaw, newRaw := d.GetChange("cloud_config.0.azs")
+								return stringSlicesEqualUnordered(oldRaw, newRaw)
+							},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -709,6 +722,35 @@ func flattenClusterConfigsEKS(d *schema.ResourceData, cloudConfig *models.V1EksC
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
+}
+
+// stringSlicesEqualUnordered reports whether old and new (each either
+// []interface{} or nil, as returned by d.GetChange for a TypeList of
+// strings) contain the same strings, ignoring order and duplicate count
+// differences introduced purely by reordering.
+func stringSlicesEqualUnordered(old, new interface{}) bool {
+	toSortedStrings := func(v interface{}) []string {
+		raw, _ := v.([]interface{})
+		out := make([]string, 0, len(raw))
+		for _, item := range raw {
+			s, _ := item.(string)
+			out = append(out, s)
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	oldSorted := toSortedStrings(old)
+	newSorted := toSortedStrings(new)
+	if len(oldSorted) != len(newSorted) {
+		return false
+	}
+	for i := range oldSorted {
+		if oldSorted[i] != newSorted[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // isKarpenterManagedPool checks if a machine pool is managed by Karpenter
