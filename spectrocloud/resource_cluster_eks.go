@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -114,7 +113,7 @@ func resourceClusterEks() *schema.Resource {
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.",
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"review_repave_state": {
@@ -201,28 +200,10 @@ func resourceClusterEks() *schema.Resource {
 							Description: "VPC ID used to provision the EKS cluster.",
 						},
 						"azs": {
-							Type:     schema.TypeList,
-							Computed: true,
-							Description: "List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning. " +
-								"Deprecated: this value is never sent to Palette on create and is only read back for a control-plane pool " +
-								"that exists server-side (static provisioning only) - a dynamically placed cluster will always read back " +
-								"as empty here regardless of what was configured, which is a backend limitation this field can't work around. " +
-								"Use `az_subnets` instead, whose keys are the control-plane availability zones.",
-							Deprecated: "azs is never sent to Palette on create and only reads back for statically-placed clusters; use az_subnets instead, whose keys are the control-plane availability zones.",
-							Optional:   true,
-							ForceNew:   true,
-							// The backend's control-plane pool returns its Azs in whatever
-							// order it happens to store them, not necessarily the order the
-							// user declared them in config. Since this is logically an
-							// unordered set of zones (not a sequence), suppress diffs that
-							// are a pure reorder of the same set - otherwise a cosmetic
-							// ordering difference would force a destructive replace on every
-							// plan for any statically-placed cluster that explicitly sets
-							// azs, via no fault of the user's config.
-							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-								oldRaw, newRaw := d.GetChange("cloud_config.0.azs")
-								return stringSlicesEqualUnordered(oldRaw, newRaw)
-							},
+							Type:        schema.TypeList,
+							Description: "List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.",
+							Optional:    true,
+							ForceNew:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -590,7 +571,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
 		return diag.FromErr(err)
 	}
-	cloudConfigFlatten := flattenClusterConfigsEKS(d, config)
+	cloudConfigFlatten := flattenClusterConfigsEKS(config)
 	if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
 		return diag.FromErr(err)
 	}
@@ -641,27 +622,10 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	return diags
 }
 
-// flattenClusterConfigsEKS flattens the EKS cloud config into cloud_config
-// state. d is used solely to preserve "azs" (see PLT-2463) when no
-// control-plane pool entry is returned for this cluster at all - which is
-// the normal case for dynamic placement, where the control-plane's zones
-// genuinely aren't represented as a pool server-side (a backend limitation,
-// not something this provider can read around). Without the fallback, Read
-// would write back an empty list every time, which reads as "the configured
-// azs were removed" and force-replaces the cluster on every subsequent plan.
-func flattenClusterConfigsEKS(d *schema.ResourceData, cloudConfig *models.V1EksCloudConfig) interface{} {
+func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} {
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
 		return cloudConfigFlatten
-	}
-
-	var priorAzs []interface{}
-	if cc, ok := d.Get("cloud_config").([]interface{}); ok && len(cc) > 0 {
-		if ccMap, ok := cc[0].(map[string]interface{}); ok {
-			if azs, ok := ccMap["azs"].([]interface{}); ok {
-				priorAzs = azs
-			}
-		}
 	}
 
 	ret := make(map[string]interface{})
@@ -678,25 +642,10 @@ func flattenClusterConfigsEKS(d *schema.ResourceData, cloudConfig *models.V1EksC
 		ret["private_access_cidrs"] = cloudConfig.Spec.ClusterConfig.EndpointAccess.PrivateCIDRs
 	}
 
-	// Select the control-plane pool by IsControlPlane, not by name - hubble
-	// stores pool names verbatim, and UI-created clusters name this pool
-	// "control-plane-pool", not "cp-pool", so a name match silently misses
-	// them (affects az_subnets round-tripping too, pre-existing).
 	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
-		if pool.IsControlPlane != nil && *pool.IsControlPlane {
+		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
-			if len(pool.Azs) > 0 {
-				azs := make([]interface{}, len(pool.Azs))
-				for i, az := range pool.Azs {
-					azs[i] = az
-				}
-				ret["azs"] = azs
-			}
-			break
 		}
-	}
-	if _, ok := ret["azs"]; !ok && len(priorAzs) > 0 {
-		ret["azs"] = priorAzs
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -722,35 +671,6 @@ func flattenClusterConfigsEKS(d *schema.ResourceData, cloudConfig *models.V1EksC
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
-}
-
-// stringSlicesEqualUnordered reports whether old and new (each either
-// []interface{} or nil, as returned by d.GetChange for a TypeList of
-// strings) contain the same strings, ignoring order and duplicate count
-// differences introduced purely by reordering.
-func stringSlicesEqualUnordered(old, new interface{}) bool {
-	toSortedStrings := func(v interface{}) []string {
-		raw, _ := v.([]interface{})
-		out := make([]string, 0, len(raw))
-		for _, item := range raw {
-			s, _ := item.(string)
-			out = append(out, s)
-		}
-		sort.Strings(out)
-		return out
-	}
-
-	oldSorted := toSortedStrings(old)
-	newSorted := toSortedStrings(new)
-	if len(oldSorted) != len(newSorted) {
-		return false
-	}
-	for i := range oldSorted {
-		if oldSorted[i] != newSorted[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // isKarpenterManagedPool checks if a machine pool is managed by Karpenter

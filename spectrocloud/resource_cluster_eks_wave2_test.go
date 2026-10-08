@@ -138,13 +138,12 @@ func TestResourceClusterEksReadWithMock(t *testing.T) {
 
 func TestFlattenClusterConfigsEKSWithMock(t *testing.T) {
 	c := mustUnitClient(t, false)
-	d := prepareEksClusterResourceData(t)
 
 	config, err := c.GetCloudConfigEks(eksCloudConfigUID)
 	require.NoError(t, err)
 	require.NotNil(t, config)
 
-	flattened := flattenClusterConfigsEKS(d, config).([]interface{})
+	flattened := flattenClusterConfigsEKS(config).([]interface{})
 	require.Len(t, flattened, 1)
 	assert.Equal(t, "us-east-1", flattened[0].(map[string]interface{})["region"])
 	assert.Equal(t, "vpc-test123", flattened[0].(map[string]interface{})["vpc_id"])
