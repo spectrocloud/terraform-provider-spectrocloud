@@ -256,8 +256,8 @@ github.com/sirupsen/logrus v1.9.4 h1:TsZE7l11zFCLZnZ+teH4Umoq5BhEIfIzfRDZ1Uzql2w
 github.com/sirupsen/logrus v1.9.4/go.mod h1:ftWc9WdOfJ0a92nsE2jF5u5ZwH8Bv2zdeOC42RjbV2g=
 github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnBY8=
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20261008043922-b39f5ca35817 h1:5q4H7Rc2JV19R4GZ3WapExsF4uxSWXpN3sa7HrVVfjw=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20261008043922-b39f5ca35817/go.mod h1:djmcCfOgP51uXr+mvt+2t210enEITAiaCC2SDu5e88o=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20261008052512-2028b0e1fbb9 h1:F1T/pqW/pmeBtGuw5p9e6TXzwxqksRqwa1xpMxHIcPA=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20261008052512-2028b0e1fbb9/go.mod h1:djmcCfOgP51uXr+mvt+2t210enEITAiaCC2SDu5e88o=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
