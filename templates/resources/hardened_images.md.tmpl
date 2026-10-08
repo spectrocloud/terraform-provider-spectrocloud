@@ -1,0 +1,60 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+Starting with Palette 4.9.b, Spectro Cloud ships hardened, minimal, continuously patched container images for system components, binaries, and packs. Pulling those images requires the Spectro Cloud registry image pull secret, which Palette distributes from the management appliance to every managed workload cluster in the tenant. See the [hardened images announcement](https://www.spectrocloud.com/blog/hardened-images-are-coming-to-palette-whats-changing-why-and-what-to-do) for background on the rollout.
+
+Hardened image adoption is a tenant-level singleton, so declare at most one `spectrocloud_hardened_images` resource per tenant. Every cluster in the tenant is enrolled by default; list a cluster in `excluded_cluster_uids` to hold it back, and remove it from that list to enroll it again.
+
+~> This resource is authoritative over the whole tenant. A cluster that someone opts out through the Palette console is picked up on the next refresh, and the following plan proposes re-enrolling it because it is absent from `excluded_cluster_uids`. Keep the full exclusion list in the configuration.
+
+~> Palette has no operation that removes hardened image propagation, so destroying this resource only drops it from Terraform state. Clusters that were opted out stay opted out. To re-enroll a cluster, remove it from `excluded_cluster_uids` and apply before destroying the resource.
+
+## Example Usage
+
+An example of holding two clusters back from the hardened image rollout while every other cluster in the tenant is enrolled.
+
+```hcl
+resource "spectrocloud_hardened_images" "hardened_images" {
+  excluded_cluster_uids = [
+    "6512f1a3b0e4d8c7a9f21b40",
+    "6512f1a3b0e4d8c7a9f21b57",
+  ]
+}
+
+# Surface the clusters Palette could not deliver the image pull secret to
+output "failed_hardened_image_clusters" {
+  value = [
+    for cluster in spectrocloud_hardened_images.hardened_images.clusters :
+    cluster.name if cluster.state == "Failed"
+  ]
+}
+```
+
+## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using the tenant `id`. For example:
+
+```terraform
+import {
+  to = spectrocloud_hardened_images.hardened_images
+  id = "tenant_uid"
+}
+```
+
+Using `terraform import`, import the hardened image configuration using the `tenant_uid` or the organization name. For example:
+
+```console
+terraform import {{ .Name }}.example <tenant_uid>
+terraform import {{ .Name }}.example <organization_name>
+```
+
+{{ .SchemaMarkdown | trimspace }}

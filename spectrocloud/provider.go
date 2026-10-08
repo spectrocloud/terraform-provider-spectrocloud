@@ -189,11 +189,14 @@ func New(version string) func() *schema.Provider {
 				"spectrocloud_audit_trail":        resourceAuditTrail(),
 				"spectrocloud_sso":                resourceSSO(),
 				"spectrocloud_rate_config":        resourceRateConfig(),
+				"spectrocloud_hardened_images":    resourceHardenedImages(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_permission": dataSourcePermission(),
 
 				"spectrocloud_rate_config": dataSourceRateConfig(),
+
+				"spectrocloud_hardened_images": dataSourceHardenedImages(),
 
 				"spectrocloud_team": dataSourceTeam(),
 
