@@ -113,7 +113,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. (see [below for nested schema](#nestedblock--cluster_template))
+- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `context` (String) The context of the Edge cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
@@ -186,13 +186,25 @@ Required:
 
 Optional:
 
+- `additional_labels` (Map of String) Per-host labels for this edge host, merged with the machine pool's `additional_labels` (this host's values win on key collision). Combined with `taints`, this lets a single node within a pool be marked as a witness/arbiter node - e.g. schedulable primary nodes plus a non-schedulable witness for etcd quorum - without splitting the pool.
 - `default_gateway` (String) Default gateway IP address for the edge host network interface.
 - `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
 - `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
 - `static_ip` (String) Static IP address assigned to the edge host.
 - `subnet_mask` (String) Subnet mask for the edge host network interface.
+- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--edge_host--taints))
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
+
+<a id="nestedblock--machine_pool--edge_host--taints"></a>
+### Nested Schema for `machine_pool.edge_host.taints`
+
+Required:
+
+- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+- `key` (String) The key of the taint.
+- `value` (String) The value of the taint.
+
 
 
 <a id="nestedblock--machine_pool--node"></a>

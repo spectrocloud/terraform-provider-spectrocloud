@@ -46,6 +46,7 @@ func resourceClusterAks() *schema.Resource {
 				Version: 3,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -732,6 +733,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterAksRead(ctx, d, m)
 

@@ -12,6 +12,12 @@ import (
 // API-error branch in flattenCloudConfigEdgeNative.
 const EdgeNativeCloudConfigErrorUID = "edge-native-cloud-config-error"
 
+// EdgeNativeCloudConfigUpdateRejectUID drives the UpdateCloudConfigEdgeNative
+// API-error branch (simulating Hubble's PEM-10966 VIP validation) so
+// resourceClusterEdgeNativeUpdate's cloud_config error propagation can be
+// exercised.
+const EdgeNativeCloudConfigUpdateRejectUID = "edge-native-cloud-config-update-reject"
+
 // EdgeNativePoolMachinesFoundHostName / UID is the host name the mock
 // machines-list handler reports for the "pool-to-change" and
 // "pool-to-remove" machine pool names used by
@@ -89,6 +95,20 @@ func edgeNativeCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(getMockEdgeNativeCloudConfig())
 }
 
+// edgeNativeCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/edge-native/{configUid}/clusterConfig, dispatching on the
+// config UID so Hubble's PEM-10966 VIP validation rejection can be simulated.
+func edgeNativeCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	if configUID == EdgeNativeCloudConfigUpdateRejectUID {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("400", "control plane VIP cannot be changed after cluster creation"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // getMockEdgeNativeCloudConfig — payload for GET
 // /v1/cloudconfigs/edge-native/{configUid}. Structure includes at least
 // one CP pool with a host and a small worker pool.
@@ -138,12 +158,11 @@ func EdgeNativeClusterRoutes() []Route {
 			Handler: edgeNativeCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/edge-native/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see edgeNativeCloudConfigUpdateHandler for the
+			// EdgeNativeCloudConfigUpdateRejectUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/edge-native/{configUid}/clusterConfig",
+			Handler: edgeNativeCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

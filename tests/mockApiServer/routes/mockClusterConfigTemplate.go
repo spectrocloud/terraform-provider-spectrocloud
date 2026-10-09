@@ -1,8 +1,68 @@
 package routes
 
 import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// ClusterTemplateAttachRejectUID drives the AttachClusterTemplate API-error
+// branch, simulating Hubble's real ClusterNotEligibleForAttach rejection
+// (HTTP 400) for a cluster that's already attached to a different template -
+// e.g. when a user changes cluster_template.id while already attached.
+const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
+
+// getClusterTemplateProfileVariablesResponse — canned payload for GET
+// /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
+// variable ("region") assigned to cluster "test-cluster-id", which is the
+// cluster UID every flattenClusterTemplateVariables test in this suite uses.
+func getClusterTemplateProfileVariablesResponse() *models.V1ClusterTemplateProfileVariablesResponse {
+	varName := "region"
+	assignmentState := "Assigned"
+	clusterUID := "test-cluster-id"
+	return &models.V1ClusterTemplateProfileVariablesResponse{
+		Variables: []*models.V1ClusterTemplateProfileVariableWithClusters{
+			{
+				Variable: &models.V1Variable{
+					Name:         &varName,
+					DefaultValue: "us-east-1",
+				},
+				Clusters: []*models.V1ClusterTemplateVariableClusterAssignment{
+					{
+						UID:             &clusterUID,
+						AssignedBy:      "spectrocluster",
+						AssignedValue:   "us-east-1",
+						AssignmentState: &assignmentState,
+					},
+				},
+			},
+		},
+	}
+}
+
+func clusterTemplateProfileVariablesGetHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getClusterTemplateProfileVariablesResponse())
+}
+
+// clusterTemplateAttachHandler serves POST
+// /v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach,
+// dispatching on the target templateUid so the Hubble rejection can be
+// simulated.
+func clusterTemplateAttachHandler(w http.ResponseWriter, r *http.Request) {
+	templateUID := mux.Vars(r)["templateUid"]
+	if templateUID == ClusterTemplateAttachRejectUID {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("ClusterNotEligibleForAttach",
+			"Cluster is not eligible for attach: Cluster is already attached to cluster template 'test-cluster-config-template'"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func getClusterConfigTemplateResponse() *models.V1ClusterTemplate {
 	return &models.V1ClusterTemplate{
@@ -97,6 +157,13 @@ func getClusterConfigTemplatesSummaryResponse() *models.V1ClusterTemplatesSummar
 func ClusterConfigTemplateRoutes() []Route {
 	return []Route{
 		{
+			// PLT-2410 follow-up: read side of the per-profile cluster_template
+			// variable assignments, used by flattenClusterTemplateVariables.
+			Method:  "GET",
+			Path:    "/v1/clusterTemplates/{uid}/profiles/{profileUid}/variables",
+			Handler: clusterTemplateProfileVariablesGetHandler,
+		},
+		{
 			Method: "POST",
 			Path:   "/v1/clusterTemplates",
 			Response: ResponseData{
@@ -161,6 +228,14 @@ func ClusterConfigTemplateRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 204,
 			},
+		},
+		{
+			// PLT-2410: Day 2 attach — binds an existing cluster to a cluster
+			// template. templateUid-dispatched — see clusterTemplateAttachHandler
+			// for the ClusterTemplateAttachRejectUID branch.
+			Method:  "POST",
+			Path:    "/v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach",
+			Handler: clusterTemplateAttachHandler,
 		},
 	}
 }

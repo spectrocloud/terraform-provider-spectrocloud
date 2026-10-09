@@ -280,3 +280,57 @@ func TestResourceClusterGroupCRUD(t *testing.T) {
 	}, unitTestMockAPIClient,
 		resourceClusterGroupCreate, resourceClusterGroupRead, resourceClusterGroupUpdate, resourceClusterGroupDelete)
 }
+
+// PLT-2327: k8s_distribution = "k3s" is deprecated (PPD-1605) and must be
+// rejected at Create time for new cluster groups, without ever reaching the
+// API. Existing k3s cluster groups must remain updatable, which is why the
+// check lives only in resourceClusterGroupCreate.
+func TestResourceClusterGroupCreate_RejectsK3s(t *testing.T) {
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := d.Get("config").([]interface{})[0].(map[string]interface{})
+	config["k8s_distribution"] = "k3s"
+	if err := d.Set("config", []map[string]interface{}{config}); err != nil {
+		t.Fatal(err)
+	}
+
+	testResourceCRUDNegative(t, "Create", func() *schema.ResourceData { return d }, unitTestMockAPIClient,
+		resourceClusterGroupCreate, resourceClusterGroupRead, resourceClusterGroupUpdate, resourceClusterGroupDelete,
+		false, "k3s")
+}
+
+// Sanity check: the default k8s_distribution ("vcluster-generic") and the
+// other still-supported value must not trip the guard.
+func TestValidateClusterGroupK8sDistribution(t *testing.T) {
+	for _, distro := range []string{"", "vcluster-generic", "cncf_k8s"} {
+		t.Run(distro, func(t *testing.T) {
+			d, err := prepareClusterGroupTestData()
+			if err != nil {
+				t.Fatal(err)
+			}
+			config := d.Get("config").([]interface{})[0].(map[string]interface{})
+			config["k8s_distribution"] = distro
+			if err := d.Set("config", []map[string]interface{}{config}); err != nil {
+				t.Fatal(err)
+			}
+			assert.NoError(t, validateClusterGroupK8sDistribution(d))
+		})
+	}
+
+	t.Run("k3s is rejected", func(t *testing.T) {
+		d, err := prepareClusterGroupTestData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		config := d.Get("config").([]interface{})[0].(map[string]interface{})
+		config["k8s_distribution"] = "k3s"
+		if err := d.Set("config", []map[string]interface{}{config}); err != nil {
+			t.Fatal(err)
+		}
+		err = validateClusterGroupK8sDistribution(d)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "k3s")
+	})
+}

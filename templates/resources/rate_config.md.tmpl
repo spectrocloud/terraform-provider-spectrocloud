@@ -1,0 +1,71 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+The rate config is a tenant-level singleton. Public clouds (AWS, Azure, GCP) are priced by splitting each instance's price into compute and memory proportions, while private clouds (vSphere, MAAS, Apache CloudStack, generic and custom clouds) are priced per resource unit in US dollars. See the [Cloud Cost](https://docs.spectrocloud.com/clusters/cluster-management/cloud-cost/) guide for how Palette applies these rates.
+
+~> Every cloud omitted from the configuration is reset to Palette's built-in rates by the platform, and omitting a cloud block does not preserve a value set outside Terraform. Destroying the `spectrocloud_rate_config` resource restores Palette defaults for every cloud.
+
+## Example Usage
+
+An example of managing the tenant cloud rate config in Palette.
+
+```hcl
+resource "spectrocloud_rate_config" "rate_config" {
+  aws {
+    compute_optimized {
+      compute_rate_proportion = 65
+      memory_rate_proportion  = 35
+    }
+    memory_optimized {
+      compute_rate_proportion = 25
+      memory_rate_proportion  = 75
+    }
+  }
+
+  vsphere {
+    cpu_unit_price_per_hour         = 0.025
+    gpu_unit_price_per_hour         = 3.100
+    memory_unit_price_gib_per_hour  = 0.003
+    storage_unit_price_gib_per_hour = 0.00003
+  }
+
+  custom {
+    cloud_type = "my-custom-cloud"
+    rate_config {
+      cpu_unit_price_per_hour         = 0.030
+      gpu_unit_price_per_hour         = 3.500
+      memory_unit_price_gib_per_hour  = 0.004
+      storage_unit_price_gib_per_hour = 0.00004
+    }
+  }
+}
+```
+
+## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using the tenant `id`. For example:
+
+```terraform
+import {
+  to = spectrocloud_rate_config.rate_config
+  id = "tenant_uid"
+}
+```
+
+Using `terraform import`, import the rate config using the `tenant_uid` or the organization name. For example:
+
+```console
+terraform import {{ .Name }}.example <tenant_uid>
+terraform import {{ .Name }}.example <organization_name>
+```
+
+{{ .SchemaMarkdown | trimspace }}

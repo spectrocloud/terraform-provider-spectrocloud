@@ -15,6 +15,13 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
+// resourceChangeGetter is satisfied by both *schema.ResourceData (apply time)
+// and *schema.ResourceDiff (plan time / CustomizeDiff), letting
+// classifyClusterTemplateTransition run identically at either stage.
+type resourceChangeGetter interface {
+	GetChange(key string) (interface{}, interface{})
+}
+
 func normalizeInterfaceSliceFromListOrSet(v interface{}) []interface{} {
 	switch t := v.(type) {
 	case nil:
@@ -31,14 +38,152 @@ func normalizeInterfaceSliceFromListOrSet(v interface{}) []interface{} {
 	}
 }
 
+// filterEntriesWithID drops phantom zero-value entries from a normalized
+// cluster_profile/cluster_template slice. cluster_profile is a TypeSet
+// (schema.HashResource-hashed); Terraform can leave a leftover element with
+// an empty "id" instead of shrinking the set to zero elements when a set
+// element is fully removed in the same apply that also changes other
+// top-level fields (confirmed against a live apply - see PLT-2410 follow-up).
+// Without this filter, that phantom entry makes a removed cluster_profile
+// look non-empty to callers, which both misses the PLT-2410 attach
+// transition and spuriously trips the "cannot specify both" mutual-
+// exclusivity check.
+func filterEntriesWithID(entries []interface{}) []interface{} {
+	filtered := make([]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		m, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id, ok := m["id"].(string); ok && id != "" {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
+}
+
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
 func validateProfileSource(d *schema.ResourceData) error {
 	// cluster_template may not exist in all schemas (e.g., cluster_group)
-	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
-	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	clusterTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template")))
+	clusterProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
 
 	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
 		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
+	}
+
+	return nil
+}
+
+// classifyClusterTemplateTransition detects a Day 2 cluster_template attach
+// (PLT-2410): cluster_profile populated -> empty and cluster_template empty ->
+// populated, in the same apply/plan. It also flags the unsupported reverse
+// (detach) so callers can reject it explicitly, since there is no backend
+// detach-from-template API yet - silently falling through to the ordinary
+// cluster_profile/cluster_template update paths would leave the cluster's
+// server-side template reference stale instead of actually detaching it.
+// Neither flag can be true on Create, since GetChange's "old" value is always
+// empty there.
+func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, detach bool) {
+	oldProfileRaw, newProfileRaw := d.GetChange("cluster_profile")
+	oldTemplateRaw, newTemplateRaw := d.GetChange("cluster_template")
+
+	oldProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(oldProfileRaw))
+	newProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(newProfileRaw))
+	oldTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(oldTemplateRaw))
+	newTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(newTemplateRaw))
+
+	attach = len(oldProfile) > 0 && len(newProfile) == 0 && len(oldTemplate) == 0 && len(newTemplate) > 0
+	detach = len(oldTemplate) > 0 && len(newTemplate) == 0 && len(oldProfile) == 0 && len(newProfile) > 0
+	return attach, detach
+}
+
+// validateClusterTemplateAttachTransition is a CustomizeDiff guard (PLT-2410):
+// it rejects the cluster_template -> cluster_profile "detach" transition at
+// plan time, before apply ever runs. Attach (the supported direction) is
+// intentionally allowed through here; it's handled in updateCommonFields.
+func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	if _, detach := classifyClusterTemplateTransition(diff); detach {
+		return errors.New("removing cluster_template and adding cluster_profile is not supported: " +
+			"detaching a cluster from a cluster template has no backend API yet. " +
+			"The cluster must remain governed by cluster_template once attached")
+	}
+	return nil
+}
+
+// attachClusterToTemplate binds the cluster to the template in the new
+// cluster_template value (Day 2 attach, PLT-2410). Per-profile variables set
+// in cluster_template are sent inline with the attach request itself -
+// profile application is deferred to the template's batch reconciler at the
+// next maintenance window, so this call does not wait for reconciliation.
+func attachClusterToTemplate(c *client.V1Client, d *schema.ResourceData) error {
+	newTemplate, ok := d.Get("cluster_template").([]interface{})
+	if !ok || len(newTemplate) == 0 {
+		return errors.New("cluster_template is required to attach a cluster to a template")
+	}
+
+	templateData, ok := newTemplate[0].(map[string]interface{})
+	if !ok {
+		return errors.New("invalid cluster_template data")
+	}
+	templateID, _ := templateData["id"].(string)
+	if templateID == "" {
+		return errors.New("cluster_template.id is required to attach a cluster to a template")
+	}
+
+	profiles, err := extractProfilesFromTemplateData(newTemplate)
+	if err != nil {
+		return err
+	}
+
+	entityProfiles := make([]*models.V1SpectroClusterAttachTemplateProfileEntity, 0, len(profiles))
+	for _, profile := range profiles {
+		p, ok := profile.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		profileID, _ := p["id"].(string)
+		if profileID == "" {
+			continue
+		}
+
+		var pVars []*models.V1SpectroClusterVariable
+		if pv, ok := p["variables"]; ok && pv != nil {
+			if variables, ok := pv.(map[string]interface{}); ok {
+				for key, value := range variables {
+					val, _ := value.(string)
+					pVars = append(pVars, &models.V1SpectroClusterVariable{
+						Name:  StringPtr(key),
+						Value: val,
+					})
+				}
+			}
+		}
+
+		entityProfiles = append(entityProfiles, &models.V1SpectroClusterAttachTemplateProfileEntity{
+			ProfileUID: StringPtr(profileID),
+			Variables:  pVars,
+		})
+	}
+
+	body := &models.V1SpectroClusterAttachTemplateEntity{
+		Spec: &models.V1SpectroClusterAttachTemplateEntitySpec{
+			Profiles: entityProfiles,
+		},
+	}
+
+	log.Printf("Attaching cluster %s to cluster template %s (%d profiles)", d.Id(), templateID, len(entityProfiles))
+	if err := c.AttachClusterTemplate(d.Id(), templateID, body); err != nil {
+		return err
+	}
+
+	// Refresh cluster_template state (resolved variables) after attach. Profile
+	// application itself is asynchronous (next maintenance window), so this
+	// only reflects the variables accepted at attach time, not a converged
+	// profile set - that's expected, matching the async nature documented on
+	// the attach API.
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		log.Printf("Warning: failed to refresh cluster_template after attach: %v", err)
 	}
 
 	return nil
@@ -147,8 +292,8 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 		return nil, "", err
 	}
 
-	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
-	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	clusterTemplate := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template")))
+	clusterProfile := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
 
 	// Check cluster_template first
 	if len(clusterTemplate) > 0 {
@@ -162,19 +307,8 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 
 	// Fall back to cluster_profile
 	if len(clusterProfile) > 0 {
-		// Fall back to cluster_profile — filter out TypeSet zero-value artefacts (empty id)
-		filtered := clusterProfile[:0]
-		for _, p := range clusterProfile {
-			if entry, ok := p.(map[string]interface{}); ok {
-				if id, _ := entry["id"]; id != nil && id.(string) != "" {
-					filtered = append(filtered, p)
-				}
-			}
-		}
-		if len(filtered) > 0 {
-			log.Printf("Using profiles from cluster_profile")
-			return filtered, "cluster_profile", nil
-		}
+		log.Printf("Using profiles from cluster_profile")
+		return clusterProfile, "cluster_profile", nil
 	}
 
 	return []interface{}{}, "", nil
@@ -996,7 +1130,7 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 	}
 
 	// Build variable update entities
-	variableEntity := make([]*models.V1SpectroClusterVariableUpdateEntity, 0)
+	variableEntity := make([]*models.V1ClusterTemplateProfileVariable, 0)
 	for _, profile := range profiles {
 		if profile == nil {
 			continue
@@ -1025,17 +1159,21 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 		// Only add if there are variables to update
 		if len(pVars) > 0 {
 			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
-			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-				ProfileUID: StringPtr(profileID.(string)),
-				Variables:  pVars,
+			variableEntity = append(variableEntity, &models.V1ClusterTemplateProfileVariable{
+				UID:       profileID.(string),
+				Variables: pVars,
 			})
 		}
 	}
 
-	// Patch variables using the variables API (not full cluster update)
+	// Patch variables using the cluster_template-scoped variables API (not
+	// UpdateClusterProfileVariableInCluster, which targets a cluster governed
+	// directly by cluster_profile and is not aware of the template's profile set).
 	if len(variableEntity) > 0 {
-		log.Printf("Patching %d profile variables using variables API", len(variableEntity))
-		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		log.Printf("Patching %d profile variables using cluster_template variables API", len(variableEntity))
+		err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
+			Profiles: variableEntity,
+		})
 		if err != nil {
 			// Rollback on error
 			oldTemplate, _ := d.GetChange("cluster_template")
@@ -1067,29 +1205,6 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 	clusterTemplate := clusterTemplateRaw.([]interface{})
 	if len(clusterTemplate) == 0 {
 		return nil
-	}
-
-	// Get variables from cluster using the variables API
-	clusterVars, err := c.GetClusterVariables(clusterUID)
-	if err != nil {
-		log.Printf("Error fetching cluster variables: %v", err)
-		// Don't fail read if variables API fails, just skip variable updates
-		return nil
-	}
-
-	// Build a map of profileUID -> variables
-	profileVariablesMap := make(map[string]map[string]string)
-	for _, clusterVar := range clusterVars {
-		if clusterVar.ProfileUID != nil && clusterVar.Variables != nil {
-			vars := profileVariablesMapFromAPI(d, *clusterVar.ProfileUID, clusterVar.Variables)
-			stringVars := make(map[string]string, len(vars))
-			for k, v := range vars {
-				stringVars[k] = v.(string)
-			}
-			if len(stringVars) > 0 {
-				profileVariablesMap[*clusterVar.ProfileUID] = stringVars
-			}
-		}
 	}
 
 	// Get configured profile IDs from current state
@@ -1133,14 +1248,21 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 			updatedProfile := make(map[string]interface{})
 			updatedProfile["id"] = profileID
 
-			// Get variables from API response - only include variables that are in config
-			if apiVars, ok := profileVariablesMap[profileID]; ok && len(apiVars) > 0 {
-				// Convert map[string]string to map[string]interface{} for Set compatibility
-				// Only include variables that were in the original config
+			// Fetch this profile's cluster_template-scoped variable
+			// assignments and filter down to this cluster, since the
+			// response covers every cluster attached to the template.
+			if resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID); err != nil {
+				log.Printf("Error fetching cluster_template profile variables for profile %s: %v", profileID, err)
+			} else if resp != nil {
 				variablesInterface := make(map[string]interface{})
-				for k, v := range apiVars {
-					if configuredVarNames[k] {
-						variablesInterface[k] = v
+				for _, v := range resp.Variables {
+					if v == nil || v.Variable == nil || v.Variable.Name == nil || !configuredVarNames[*v.Variable.Name] {
+						continue
+					}
+					for _, assignment := range v.Clusters {
+						if assignment != nil && assignment.UID != nil && *assignment.UID == clusterUID && assignment.AssignedValue != "" {
+							variablesInterface[*v.Variable.Name] = assignment.AssignedValue
+						}
 					}
 				}
 				if len(variablesInterface) > 0 {

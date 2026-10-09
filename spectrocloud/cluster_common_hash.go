@@ -407,6 +407,9 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	if val, ok := nodePool["update_strategy"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
+	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
+		buf.WriteString(fmt.Sprintf("%t-", val))
+	}
 
 	return int(hash(buf.String()))
 }
@@ -469,6 +472,10 @@ func resourceMachinePoolGkeHash(v interface{}) int {
 	// Taints (list of maps)
 	if _, ok := nodePool["taints"]; ok {
 		buf.WriteString(HashStringMapList(nodePool["taints"]))
+	}
+
+	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
+		buf.WriteString(fmt.Sprintf("%t-", val))
 	}
 
 	return int(hash(buf.String()))
@@ -1033,6 +1040,13 @@ func resourceEdgeHostHash(v interface{}) int {
 
 	if twoNodeRole, ok := host["two_node_role"]; ok && twoNodeRole != nil && twoNodeRole.(string) != "" {
 		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+	}
+
+	if _, ok := host["taints"]; ok {
+		buf.WriteString(HashStringMapList(host["taints"]))
+	}
+	if _, ok := host["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(host["additional_labels"]))
 	}
 
 	return int(hash(buf.String()))

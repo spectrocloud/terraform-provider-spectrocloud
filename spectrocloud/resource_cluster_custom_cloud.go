@@ -50,6 +50,7 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Version: 3,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -512,6 +513,7 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterCustomCloudRead(ctx, d, m)
 

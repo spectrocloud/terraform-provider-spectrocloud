@@ -133,7 +133,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. (see [below for nested schema](#nestedblock--cluster_template))
+- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `context` (String) The context of the EKS cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
@@ -201,6 +201,7 @@ Optional:
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
 - `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
+- `dedicate_node_pool_for_system_pods` (Boolean) If enabled, this node pool is dedicated to Palette system pods. Palette applies the reserved taint `node.spectrocloud.com/dedicated=true:NoExecute` to the pool and its system pods carry the matching toleration. Custom taints cannot be set on a dedicated pool.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
 - `max` (Number) Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.

@@ -50,6 +50,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				Version: 2,
 			},
 		},
+		CustomizeDiff: validateClusterTemplateAttachTransition,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -642,6 +643,7 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 	if done {
 		return diagnostics
 	}
+	diags = append(diags, diagnostics...)
 
 	resourceClusterApacheCloudStackRead(ctx, d, m)
 

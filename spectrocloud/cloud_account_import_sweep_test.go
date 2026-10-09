@@ -132,13 +132,15 @@ func TestFlattenClusterConfigPolicySchedulesForDataSource(t *testing.T) {
 
 // TestBuildProfilesVariablesBatchEntity — pure entity-builder helper.
 func TestBuildProfilesVariablesBatchEntity(t *testing.T) {
+	d := resourceClusterConfigTemplate().TestResourceData()
+
 	// Empty input → single-profile empty entity.
-	got := buildProfilesVariablesBatchEntity(nil)
+	got := buildProfilesVariablesBatchEntity(d, nil)
 	require.NotNil(t, got)
 	assert.Empty(t, got.Profiles)
 
 	// Profile with no variables set → skipped by the len==0 guard.
-	got = buildProfilesVariablesBatchEntity([]interface{}{
+	got = buildProfilesVariablesBatchEntity(d, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": schema.NewSet(schema.HashString, nil),
@@ -152,7 +154,7 @@ func TestBuildProfilesVariablesBatchEntity(t *testing.T) {
 	}, []interface{}{
 		map[string]interface{}{"name": "replicas"},
 	})
-	got = buildProfilesVariablesBatchEntity([]interface{}{
+	got = buildProfilesVariablesBatchEntity(d, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": varsSet,
