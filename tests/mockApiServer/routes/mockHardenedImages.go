@@ -68,7 +68,7 @@ func hardenedImagesClusterStatus(n int, excluded bool) *models.V1ImagePullSecret
 func hardenedImagesStatusHandler(w http.ResponseWriter, r *http.Request) {
 	limit := hardenedImagesPageSize
 	if raw := r.URL.Query().Get("limit"); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 && parsed <= hardenedImagesPageSize {
 			limit = parsed
 		}
 	}
