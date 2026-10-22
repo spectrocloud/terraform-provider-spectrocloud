@@ -455,3 +455,37 @@ func validateOverrideScaling(d *schema.ResourceData, machinePoolKey string) erro
 	}
 	return nil
 }
+
+// warnDeprecatedOverrideKubeadmConfigurationForManagedCluster warns when any
+// machine_pool entry sets override_kubeadm_configuration on a managed
+// cluster type (EKS, GKE, AKS). Palette does not support this option for
+// managed control planes (the UI already hides it there - PCP-6073), so the
+// value has no effect; it's deprecated rather than hard-removed to give
+// existing users a migration window before it's dropped from the schema
+// entirely in a future release.
+func warnDeprecatedOverrideKubeadmConfigurationForManagedCluster(d *schema.ResourceData, resourceType string) diag.Diagnostics {
+	set, ok := d.Get("machine_pool").(*schema.Set)
+	if !ok || set == nil {
+		return nil
+	}
+	for _, item := range set.List() {
+		mp, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if val, ok := mp["override_kubeadm_configuration"].(string); ok && val != "" {
+			return diag.Diagnostics{{
+				Severity: diag.Warning,
+				Summary:  "override_kubeadm_configuration is deprecated for managed clusters and will be removed",
+				Detail: fmt.Sprintf(
+					"override_kubeadm_configuration is not supported by Palette for managed clusters (%s) - it has no "+
+						"effect today and will be removed from this resource's schema in a future release. Remove it "+
+						"from your configuration; override_cluster_api_config remains supported if you need to "+
+						"customize CAPI properties.",
+					resourceType,
+				),
+			}}
+		}
+	}
+	return nil
+}
