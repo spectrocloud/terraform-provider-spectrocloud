@@ -204,9 +204,11 @@ func resourceClusterGke() *schema.Resource {
 						},
 						"override_scaling": schemas.OverrideScalingSchema(),
 						"override_kubeadm_configuration": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
+							Type:     schema.TypeString,
+							Optional: true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only. " +
+								"Deprecated: not supported by Palette for managed GKE clusters and will be removed in a future release.",
+							Deprecated: "override_kubeadm_configuration is not supported by Palette for managed GKE clusters and will be removed in a future release.",
 						},
 						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"node":                        schemas.NodeSchema(),
@@ -324,6 +326,7 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	diags = append(diags, warnDeprecatedOverrideKubeadmConfigurationForManagedCluster(d, "GKE")...)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -394,6 +397,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
+	diags = append(diags, warnDeprecatedOverrideKubeadmConfigurationForManagedCluster(d, "GKE")...)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
