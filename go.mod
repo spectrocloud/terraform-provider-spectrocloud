@@ -1,10 +1,10 @@
 module github.com/spectrocloud/terraform-provider-spectrocloud
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/go-openapi/strfmt v0.27.2
+	github.com/go-openapi/strfmt v0.27.3
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-cty v1.5.0
