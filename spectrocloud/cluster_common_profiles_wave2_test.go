@@ -23,6 +23,21 @@ const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
 // clusterUid's cluster_template-scoped variables endpoint returns 500.
 const clusterTemplateVariablesPatchErrorUID = "cluster-template-uid-variables-patch-error"
 
+// clusterVariableUpdateForbiddenFallbackSucceedsUID mirrors the constant of
+// the same name in tests/mockApiServer/routes/mockCluster.go — the direct
+// variables endpoint returns ClusterVariableUpdateForbidden for this UID,
+// but the cluster_template-scoped endpoint succeeds.
+const clusterVariableUpdateForbiddenFallbackSucceedsUID = "cluster-uid-variable-update-forbidden-fallback-succeeds"
+
+// clusterEffectiveValueDivergesFromStagedUID and
+// profileEffectiveValueDivergesFromStagedUID mirror the constants of the
+// same names in tests/mockApiServer/routes/mockCluster.go and
+// mockClusterConfigTemplate.go — together they make the cluster's live
+// variable value and its cluster_template-scoped staged assignment disagree
+// on purpose, for TestFlattenClusterTemplateVariables_ReadsEffectiveNotStagedValue.
+const clusterEffectiveValueDivergesFromStagedUID = "cluster-uid-effective-value-diverges-from-staged"
+const profileEffectiveValueDivergesFromStagedUID = "cluster-profile-effective-value-diverges-from-staged"
+
 // ---------------------------------------------------------------------------
 // updateProfiles / rollbackClusterProfileOnUpdateError / computeProfilesToDelete /
 // enrichClusterProfilesWithPacks / toClusterTemplateReference /
@@ -398,6 +413,44 @@ func TestUpdateClusterTemplateVariablesError_RealDiff(t *testing.T) {
 	assert.Empty(t, vars, "on error, cluster_template must roll back to the old (no-variables) value")
 }
 
+// TestUpdateClusterTemplateVariables_FallsBackWhenDirectWriteForbidden covers
+// PLT-2486: when the backend rejects the direct, cluster-scoped write with
+// ClusterVariableUpdateForbidden (the transient post-attach reconcile
+// window), updateClusterTemplateVariables must fall back to the
+// cluster_template-scoped endpoint and succeed, instead of propagating the
+// forbidden error or rolling back a value the fallback actually applied.
+func TestUpdateClusterTemplateVariables_FallsBackWhenDirectWriteForbidden(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+
+	oldTemplate := []interface{}{
+		map[string]interface{}{
+			"id": "template-uid-1",
+			"cluster_profile": []interface{}{
+				map[string]interface{}{"id": "cluster-profile-import-1"},
+			},
+		},
+	}
+	newTemplate := []interface{}{
+		map[string]interface{}{
+			"id": "template-uid-1",
+			"cluster_profile": []interface{}{
+				map[string]interface{}{
+					"id": "cluster-profile-import-1",
+					"variables": map[string]interface{}{
+						"region": "us-west-2",
+					},
+				},
+			},
+		},
+	}
+
+	d := buildClusterTemplateChangeResourceData(t, clusterVariableUpdateForbiddenFallbackSucceedsUID, oldTemplate, newTemplate)
+	require.True(t, d.HasChange("cluster_template"))
+
+	err := updateClusterTemplateVariables(c, d)
+	require.NoError(t, err, "direct write being forbidden must not fail the update when the fallback succeeds")
+}
+
 func TestFlattenClusterTemplateVariables_NoTemplate(t *testing.T) {
 	c := castV1Client(t, unitTestMockAPIClient)
 	d := resourceClusterEks().TestResourceData()
@@ -407,9 +460,8 @@ func TestFlattenClusterTemplateVariables_NoTemplate(t *testing.T) {
 }
 
 // TestFlattenClusterTemplateVariables_VariablesAPIError exercises the "Error
-// fetching cluster_template profile variables" branch: the negative mock
-// server has no route for GET /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables,
-// so GetClusterTemplateProfileVariables errors for the configured profile,
+// fetching cluster variables" branch: the negative mock server has no route
+// for GET /v1/spectroclusters/{uid}/variables, so GetClusterVariables errors,
 // and flattenClusterTemplateVariables must swallow it (log and continue)
 // rather than fail the read/update.
 func TestFlattenClusterTemplateVariables_VariablesAPIError(t *testing.T) {
@@ -441,6 +493,46 @@ func TestFlattenClusterTemplateVariables_VariablesAPIError(t *testing.T) {
 	assert.Equal(t, "cluster-profile-import-1", prof["id"])
 	vars, _ := prof["variables"].(map[string]interface{})
 	assert.Empty(t, vars, "a failed variables fetch must not populate variables, but must not error either")
+}
+
+// TestFlattenClusterTemplateVariables_ReadsEffectiveNotStagedValue covers
+// PLT-2486's drift-detection fix directly: the mock is set up so the
+// cluster_template-scoped assignment record (GetClusterTemplateProfileVariables)
+// and the cluster's own live value (GetClusterVariables) disagree on
+// purpose ("staged-stale-value" vs "effective-live-value"). Before this fix,
+// flattenClusterTemplateVariables read the staged record, which is exactly
+// the SCS-5434 symptom: Terraform reports a clean plan while the cluster
+// keeps rendering a stale value. It must read the effective one.
+func TestFlattenClusterTemplateVariables_ReadsEffectiveNotStagedValue(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := resourceClusterEks().TestResourceData()
+	d.SetId(clusterEffectiveValueDivergesFromStagedUID)
+	require.NoError(t, d.Set("cluster_template", []interface{}{
+		map[string]interface{}{
+			"id": "template-uid-1",
+			"cluster_profile": []interface{}{
+				map[string]interface{}{
+					"id": profileEffectiveValueDivergesFromStagedUID,
+					"variables": map[string]interface{}{
+						"region": "us-west-2",
+					},
+				},
+			},
+		},
+	}))
+
+	require.NoError(t, flattenClusterTemplateVariables(c, d, d.Id()))
+
+	tmpl := d.Get("cluster_template").([]interface{})
+	require.Len(t, tmpl, 1)
+	profSet, ok := tmpl[0].(map[string]interface{})["cluster_profile"].(*schema.Set)
+	require.True(t, ok)
+	require.Equal(t, 1, profSet.Len())
+	prof := profSet.List()[0].(map[string]interface{})
+	vars, ok := prof["variables"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "effective-live-value", vars["region"],
+		"must read the cluster's live value, not the cluster_template-scoped staged assignment")
 }
 
 // ---------------------------------------------------------------------------

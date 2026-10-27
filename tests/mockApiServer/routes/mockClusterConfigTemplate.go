@@ -14,14 +14,28 @@ import (
 // e.g. when a user changes cluster_template.id while already attached.
 const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
 
+// profileEffectiveValueDivergesFromStagedUID (PLT-2486) gets a staged
+// AssignedValue distinct from clusterVariablesGetHandler's effective value
+// for clusterEffectiveValueDivergesFromStagedUID - proving
+// flattenClusterTemplateVariables reads the live cluster value, not this
+// staged, cluster_template-scoped assignment record.
+const profileEffectiveValueDivergesFromStagedUID = "cluster-profile-effective-value-diverges-from-staged"
+
 // getClusterTemplateProfileVariablesResponse — canned payload for GET
 // /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
 // variable ("region") assigned to cluster "test-cluster-id", which is the
-// cluster UID every flattenClusterTemplateVariables test in this suite uses.
-func getClusterTemplateProfileVariablesResponse() *models.V1ClusterTemplateProfileVariablesResponse {
+// cluster UID every flattenClusterTemplateVariables test in this suite uses,
+// unless profileUid is profileEffectiveValueDivergesFromStagedUID, which
+// returns a deliberately different staged value for the PLT-2486 test.
+func getClusterTemplateProfileVariablesResponse(profileUID string) *models.V1ClusterTemplateProfileVariablesResponse {
 	varName := "region"
 	assignmentState := "Assigned"
 	clusterUID := "test-cluster-id"
+	assignedValue := "us-east-1"
+	if profileUID == profileEffectiveValueDivergesFromStagedUID {
+		clusterUID = clusterEffectiveValueDivergesFromStagedUID
+		assignedValue = "staged-stale-value"
+	}
 	return &models.V1ClusterTemplateProfileVariablesResponse{
 		Variables: []*models.V1ClusterTemplateProfileVariableWithClusters{
 			{
@@ -33,7 +47,7 @@ func getClusterTemplateProfileVariablesResponse() *models.V1ClusterTemplateProfi
 					{
 						UID:             &clusterUID,
 						AssignedBy:      "spectrocluster",
-						AssignedValue:   "us-east-1",
+						AssignedValue:   assignedValue,
 						AssignmentState: &assignmentState,
 					},
 				},
@@ -45,7 +59,7 @@ func getClusterTemplateProfileVariablesResponse() *models.V1ClusterTemplateProfi
 func clusterTemplateProfileVariablesGetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(getClusterTemplateProfileVariablesResponse())
+	_ = json.NewEncoder(w).Encode(getClusterTemplateProfileVariablesResponse(mux.Vars(r)["profileUid"]))
 }
 
 // clusterTemplateAttachHandler serves POST

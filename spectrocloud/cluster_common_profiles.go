@@ -11,6 +11,7 @@ import (
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-sdk-go/client/apiutil"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -1166,19 +1167,44 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 		}
 	}
 
-	// Patch variables using the cluster_template-scoped variables API (not
-	// UpdateClusterProfileVariableInCluster, which targets a cluster governed
-	// directly by cluster_profile and is not aware of the template's profile set).
 	if len(variableEntity) > 0 {
-		log.Printf("Patching %d profile variables using cluster_template variables API", len(variableEntity))
-		err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
-			Profiles: variableEntity,
-		})
+		// Try the direct, cluster-scoped write first (PLT-2486): it's what
+		// Palette's own UI uses, and the backend accepts it unconditionally
+		// pre-4.10 and for all but a brief post-attach reconcile window on
+		// 4.10+ (see PEM-12008). The cluster_template-scoped endpoint below
+		// is accepted in that window too, but only stages the value in the
+		// template's assignment record without making it eligible for
+		// application - using it as the default silently stopped per-cluster
+		// values from ever reaching the running cluster.
+		directEntity := make([]*models.V1SpectroClusterVariableUpdateEntity, 0, len(variableEntity))
+		for _, v := range variableEntity {
+			directEntity = append(directEntity, &models.V1SpectroClusterVariableUpdateEntity{
+				ProfileUID: StringPtr(v.UID),
+				Variables:  v.Variables,
+			})
+		}
+
+		log.Printf("Patching %d profile variables using direct cluster variables API", len(directEntity))
+		err = c.UpdateClusterProfileVariableInCluster(d.Id(), directEntity)
 		if err != nil {
-			// Rollback on error
-			oldTemplate, _ := d.GetChange("cluster_template")
-			_ = d.Set("cluster_template", oldTemplate)
-			return err
+			if apiutil.ToV1ErrorObj(err).Code != "ClusterVariableUpdateForbidden" {
+				oldTemplate, _ := d.GetChange("cluster_template")
+				_ = d.Set("cluster_template", oldTemplate)
+				return err
+			}
+
+			// Backend rejects direct writes only while this cluster is in a
+			// transient post-attach reconcile window - fall back to the
+			// cluster_template-scoped endpoint, which it accepts there.
+			log.Printf("Direct write forbidden (cluster in post-attach reconcile window); falling back to cluster_template variables API")
+			err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
+				Profiles: variableEntity,
+			})
+			if err != nil {
+				oldTemplate, _ := d.GetChange("cluster_template")
+				_ = d.Set("cluster_template", oldTemplate)
+				return err
+			}
 		}
 
 		// Refresh variables from API after update
@@ -1211,6 +1237,30 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 	templateData := clusterTemplate[0].(map[string]interface{})
 	templateID := templateData["id"].(string)
 	configuredProfileIDs := make(map[string]bool)
+
+	// Read the cluster's own effective variable values (PLT-2486), not the
+	// cluster_template-scoped assignment record. The latter only reflects
+	// whatever was last staged there via UpdateClusterTemplateVariablesForCluster
+	// and can disagree with what's actually applied - see
+	// updateClusterTemplateVariables, which now writes through the same
+	// direct endpoint this reads from whenever the backend allows it.
+	effectiveByProfile := make(map[string]map[string]string)
+	if clusterVars, err := c.GetClusterVariables(clusterUID); err != nil {
+		log.Printf("Error fetching cluster variables for cluster %s: %v", clusterUID, err)
+	} else {
+		for _, cv := range clusterVars {
+			if cv == nil || cv.ProfileUID == nil {
+				continue
+			}
+			byName := make(map[string]string)
+			for _, v := range cv.Variables {
+				if v != nil && v.Name != nil {
+					byName[*v.Name] = v.Value
+				}
+			}
+			effectiveByProfile[*cv.ProfileUID] = byName
+		}
+	}
 
 	// Build updated profile set with variables from API
 	updatedProfileSet := schema.NewSet(schema.HashResource(&schema.Resource{
@@ -1248,21 +1298,11 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 			updatedProfile := make(map[string]interface{})
 			updatedProfile["id"] = profileID
 
-			// Fetch this profile's cluster_template-scoped variable
-			// assignments and filter down to this cluster, since the
-			// response covers every cluster attached to the template.
-			if resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID); err != nil {
-				log.Printf("Error fetching cluster_template profile variables for profile %s: %v", profileID, err)
-			} else if resp != nil {
+			if byName, ok := effectiveByProfile[profileID]; ok {
 				variablesInterface := make(map[string]interface{})
-				for _, v := range resp.Variables {
-					if v == nil || v.Variable == nil || v.Variable.Name == nil || !configuredVarNames[*v.Variable.Name] {
-						continue
-					}
-					for _, assignment := range v.Clusters {
-						if assignment != nil && assignment.UID != nil && *assignment.UID == clusterUID && assignment.AssignedValue != "" {
-							variablesInterface[*v.Variable.Name] = assignment.AssignedValue
-						}
+				for varName := range configuredVarNames {
+					if val, ok := byName[varName]; ok && val != "" {
+						variablesInterface[varName] = val
 					}
 				}
 				if len(variablesInterface) > 0 {

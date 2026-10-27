@@ -258,6 +258,47 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	}
 }
 
+// clusterEffectiveValueDivergesFromStagedUID (PLT-2486) gets its own
+// GetClusterVariables response, distinct from both the blanket "us-east-1"
+// default below and clusterTemplateProfileVariablesGetHandler's staged
+// AssignedValue for profileEffectiveValueDivergesFromStagedUID - proving
+// flattenClusterTemplateVariables reads the live cluster value, not the
+// cluster_template-scoped assignment record.
+const clusterEffectiveValueDivergesFromStagedUID = "cluster-uid-effective-value-diverges-from-staged"
+
+func clusterVariablesGetHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if uid == clusterEffectiveValueDivergesFromStagedUID {
+		_ = json.NewEncoder(w).Encode([]*models.V1SpectroClusterVariables{
+			{
+				ProfileUID: strPtr(profileEffectiveValueDivergesFromStagedUID),
+				Variables: []*models.V1SpectroClusterVariableResponse{
+					{
+						Name:  strPtr("region"),
+						Value: "effective-live-value",
+					},
+				},
+			},
+		})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode([]*models.V1SpectroClusterVariables{
+		{
+			ProfileUID: strPtr(clusterProfileUID1),
+			Variables: []*models.V1SpectroClusterVariableResponse{
+				{
+					Name:  strPtr("region"),
+					Value: "us-east-1",
+				},
+			},
+		},
+	})
+}
+
 // clusterVariablesPatchErrorUID drives the UpdateClusterProfileVariableInCluster error
 // branch — any other UID gets the original blanket 204 success.
 const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
@@ -270,8 +311,26 @@ func clusterVariablesPatchHandler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(getError("500", "failed to update cluster profile variables"))
 		return
 	}
+	// clusterTemplateVariablesPatchErrorUID (PLT-2486): the direct write is
+	// rejected here as the backend does for a cluster in a post-attach
+	// reconcile window, so updateClusterTemplateVariables falls back to
+	// clusterTemplateVariablesPatchHandler below, which then fails too -
+	// together these exercise the full fallback-then-rollback path.
+	if uid == clusterTemplateVariablesPatchErrorUID || uid == clusterVariableUpdateForbiddenFallbackSucceedsUID {
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(getError("ClusterVariableUpdateForbidden", "direct variable update is forbidden while cluster is in reconcile state Attached"))
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// clusterVariableUpdateForbiddenFallbackSucceedsUID (PLT-2486): the direct
+// write is rejected the same way as clusterTemplateVariablesPatchErrorUID
+// above, but clusterTemplateVariablesPatchHandler gives this UID a plain
+// 204 (it's not the error sentinel there) - exercising the happy-path
+// fallback, where the cluster_template-scoped write succeeds after the
+// direct write is forbidden.
+const clusterVariableUpdateForbiddenFallbackSucceedsUID = "cluster-uid-variable-update-forbidden-fallback-succeeds"
 
 // clusterTemplateVariablesPatchErrorUID drives the
 // UpdateClusterTemplateVariablesForCluster error branch inside
@@ -629,22 +688,9 @@ func ClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/variables",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: []*models.V1SpectroClusterVariables{
-					{
-						ProfileUID: strPtr(clusterProfileUID1),
-						Variables: []*models.V1SpectroClusterVariableResponse{
-							{
-								Name:  strPtr("region"),
-								Value: "us-east-1",
-							},
-						},
-					},
-				},
-			},
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/variables",
+			Handler: clusterVariablesGetHandler,
 		},
 		{
 			// UID-dispatched so tests can drive the UpdateClusterProfileVariableInCluster

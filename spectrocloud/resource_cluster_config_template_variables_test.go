@@ -287,14 +287,20 @@ func TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable(t *testin
 		"same profile id on both sides must still route to the variables-only PATCH path, not the PUT path")
 }
 
-func TestValidateClusterConfigTemplateVariableAssignment_RejectsMissingClusterIDs(t *testing.T) {
+// TestValidateClusterConfigTemplateVariableAssignment_AllowsMissingClusterIDs
+// covers PLT-2486: assign_strategy "cluster" with no cluster_ids is the
+// pre-PLT-2462 configuration that registered a variable as cluster-owned -
+// each attached cluster's own resource sets its own value, and the template
+// pushes nothing (buildProfilesVariablesBatchEntity sends Clusters: []).
+// Requiring cluster_ids unconditionally broke every existing config using
+// this pattern (SCS-5434); it must validate cleanly again.
+func TestValidateClusterConfigTemplateVariableAssignment_AllowsMissingClusterIDs(t *testing.T) {
 	err := diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
 		"name":            "region",
 		"value":           "us-west-2",
 		"assign_strategy": "cluster",
 	}))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cluster_ids is required")
+	require.NoError(t, err)
 }
 
 func TestValidateClusterConfigTemplateVariableAssignment_RejectsClusterIDsWithAllStrategy(t *testing.T) {

@@ -461,11 +461,22 @@ func resourceClusterConfigTemplateVariableHash(v interface{}) int {
 }
 
 // validateClusterConfigTemplateVariableAssignment is a CustomizeDiff guard:
-// assign_strategy "cluster" requires at least one cluster_ids entry to have
-// any effect (buildProfilesVariablesBatchEntity only assigns the variable's
-// value to clusters listed there); assign_strategy "all" must not set
-// cluster_ids, since that value is sent to every attached cluster already
-// and a populated cluster_ids there would be silently ignored.
+// assign_strategy "all" must not set cluster_ids, since
+// buildProfilesVariablesBatchEntity sends the value to every attached
+// cluster regardless of cluster_ids for "all" - a populated cluster_ids
+// there would be silently ignored, which this rejects explicitly instead.
+//
+// assign_strategy "cluster" does NOT require cluster_ids (PLT-2486): an
+// empty cluster_ids is a legitimate, pre-PLT-2462 configuration meaning
+// "this variable is owned per-cluster - the template pushes no value, each
+// attached cluster's own resource sets its own value." A populated
+// cluster_ids is the newer, additional meaning introduced by PLT-2462:
+// "the template pins this value to exactly these cluster UIDs." Both are
+// valid and buildProfilesVariablesBatchEntity/refreshProfileVariableValues
+// already handle the empty case correctly (targetUIDs stays empty, so the
+// template pushes/reads nothing for that variable, leaving it fully
+// delegated to the cluster side). Requiring cluster_ids unconditionally
+// broke every existing config using the pre-PLT-2462 pattern.
 func validateClusterConfigTemplateVariableAssignment(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
 	profilesRaw, ok := diff.Get("cluster_profile").(*schema.Set)
 	if !ok {
@@ -494,15 +505,8 @@ func validateClusterConfigTemplateVariableAssignment(_ context.Context, diff *sc
 			clusterIDs, _ := varMap["cluster_ids"].(*schema.Set)
 			hasClusterIDs := clusterIDs != nil && clusterIDs.Len() > 0
 
-			switch assignStrategy {
-			case "cluster":
-				if !hasClusterIDs {
-					return fmt.Errorf("cluster_profile %q variable %q: cluster_ids is required when assign_strategy is \"cluster\"", profileID, varName)
-				}
-			case "all", "":
-				if hasClusterIDs {
-					return fmt.Errorf("cluster_profile %q variable %q: cluster_ids must be empty when assign_strategy is \"all\" (value is applied to every attached cluster)", profileID, varName)
-				}
+			if assignStrategy != "cluster" && hasClusterIDs {
+				return fmt.Errorf("cluster_profile %q variable %q: cluster_ids must be empty when assign_strategy is \"all\" (value is applied to every attached cluster)", profileID, varName)
 			}
 		}
 	}
