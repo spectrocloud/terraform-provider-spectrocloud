@@ -1,8 +1,30 @@
 package routes
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// GcpBackupStorageLocationValidateRejectProjectID (PLT-2485) drives the
+// ValidateGcpBackupStorageLocation rejection branch inside
+// GcpBackupStorageLocationCreate/Update (common_backup_storage_location.go):
+// any other project_id gets the original blanket 204 success. Dispatching
+// on project_id rather than a UID because the validate call carries no
+// resource ID - it runs before the backup location exists.
+const GcpBackupStorageLocationValidateRejectProjectID = "test-project-invalid-gcp-credentials"
+
+func gcpBucketNameValidateHandler(w http.ResponseWriter, r *http.Request) {
+	var body models.V1GcpAccountNameValidateSpec
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.ProjectID == GcpBackupStorageLocationValidateRejectProjectID {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("InvalidGcpCredentials", "the provided GCP service account JSON credentials are invalid"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // Batch 5 adds Minio/GCP/Azure BSL endpoints so
 // {Minio,Gcp,Azure}BackupStorageLocation{Create,Read,Update} in
@@ -32,12 +54,9 @@ func BackupRoutes() []Route {
 			},
 		},
 		{
-			Method: "POST",
-			Path:   "/v1/clouds/gcp/bucketname/validate",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
+			Method:  "POST",
+			Path:    "/v1/clouds/gcp/bucketname/validate",
+			Handler: gcpBucketNameValidateHandler,
 		},
 		{
 			Method: "POST",
