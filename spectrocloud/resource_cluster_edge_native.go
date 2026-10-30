@@ -184,7 +184,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							ForceNew:    true,
-							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`",
+							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`. If left unset, the cluster is created in DHCP mode without overlay networking, and Terraform prints a warning on creation since DHCP-assigned IP changes can cause cluster instability.",
 						},
 						"is_two_node_cluster": {
 							Type:        schema.TypeBool,
@@ -417,6 +417,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
+	appendOverlayNetworkDisabledWarning(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
