@@ -4,10 +4,22 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// diagsContainOverlayWarning reports whether diags carries the
+// PLT-2482 overlay-networking-disabled warning.
+func diagsContainOverlayWarning(diags diag.Diagnostics) bool {
+	for _, d := range diags {
+		if d.Severity == diag.Warning && d.Detail == overlayNetworkDisabledWarning {
+			return true
+		}
+	}
+	return false
+}
 
 // (test file header) edge_native CRUD.
 
@@ -88,6 +100,28 @@ func TestResourceClusterEdgeNativeCreateWithMock(t *testing.T) {
 	diags := resourceClusterEdgeNativeCreate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
 	assert.Equal(t, edgeNativeClusterID, d.Id())
+	assert.True(t, diagsContainOverlayWarning(diags),
+		"creating an Edge Native cluster with overlay_cidr_range unset must warn about DHCP mode instability; diags: %+v", diags)
+}
+
+// TestResourceClusterEdgeNativeCreateOverlayEnabledWithMock is the
+// symmetric PLT-2482 guard: when overlay_cidr_range is set, Create must not
+// warn about overlay networking being disabled.
+func TestResourceClusterEdgeNativeCreateOverlayEnabledWithMock(t *testing.T) {
+	d := prepareEdgeNativeClusterResourceData(t)
+	require.NoError(t, d.Set("tags", []interface{}{"skip_completion"}))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"vip":                "10.0.0.100",
+			"overlay_cidr_range": "100.64.192.0/24",
+		},
+	}))
+
+	diags := resourceClusterEdgeNativeCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.Equal(t, edgeNativeClusterID, d.Id())
+	assert.False(t, diagsContainOverlayWarning(diags),
+		"creating an Edge Native cluster with overlay_cidr_range set must not warn about overlay networking; diags: %+v", diags)
 }
 
 func TestResourceClusterEdgeNativeUpdateMachinePoolWithMock(t *testing.T) {
@@ -107,6 +141,8 @@ func TestResourceClusterEdgeNativeUpdateMachinePoolWithMock(t *testing.T) {
 
 	diags := resourceClusterEdgeNativeUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.False(t, diagsContainOverlayWarning(diags),
+		"PLT-2482: updating an existing cluster must never warn about overlay networking, even with overlay_cidr_range unset; diags: %+v", diags)
 }
 
 func TestResourceClusterEdgeNativeUpdateClusterProfileWithMock(t *testing.T) {
@@ -121,4 +157,6 @@ func TestResourceClusterEdgeNativeUpdateClusterProfileWithMock(t *testing.T) {
 
 	diags := resourceClusterEdgeNativeUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.False(t, diagsContainOverlayWarning(diags),
+		"PLT-2482: updating an existing cluster must never warn about overlay networking; diags: %+v", diags)
 }

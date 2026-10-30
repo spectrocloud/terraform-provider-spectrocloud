@@ -184,7 +184,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							ForceNew:    true,
-							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`",
+							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`. If left unset, the cluster is created in DHCP mode without overlay networking, and Terraform prints a warning on creation since DHCP-assigned IP changes can cause cluster instability.",
 						},
 						"is_two_node_cluster": {
 							Type:        schema.TypeBool,
@@ -200,6 +200,11 @@ func resourceClusterEdgeNative() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Description: "A list of NTP servers to be used by the cluster.",
+						},
+						"image_registry_ref": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "UID of an OCI registry (`spectrocloud_registry_oci`, `provider_type = \"image\"`) that the Edge hosts use to pull the Edge Native provider (OS/bootstrap) image. Can be set on create or changed later without replacing the cluster.",
 						},
 					},
 				},
@@ -412,6 +417,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
+	appendOverlayNetworkDisabledWarning(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -526,6 +532,9 @@ func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []i
 	}
 	if config.Spec.ClusterConfig != nil {
 		m["is_two_node_cluster"] = config.Spec.ClusterConfig.IsTwoNodeCluster
+	}
+	if config.Spec.ClusterConfig.ImageRegistryRef != nil && config.Spec.ClusterConfig.ImageRegistryRef.UID != "" {
+		m["image_registry_ref"] = config.Spec.ClusterConfig.ImageRegistryRef.UID
 	}
 
 	return []interface{}{m}
@@ -845,6 +854,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				ControlPlaneEndpoint:        controlPlaneEndpoint,
 				OverlayNetworkConfiguration: overlayConfig,
 				IsTwoNodeCluster:            isTwoNodeCluster.(bool),
+				ImageRegistryRef:            toImageRegistryRef(cloudConfig),
 			},
 		},
 	}
@@ -1078,8 +1088,21 @@ func toClusterConfigEdgeNativeUpdate(d *schema.ResourceData) (*models.V1EdgeNati
 			ControlPlaneEndpoint:        controlPlaneEndpoint,
 			OverlayNetworkConfiguration: overlayConfig,
 			IsTwoNodeCluster:            cloudConfig["is_two_node_cluster"].(bool),
+			ImageRegistryRef:            toImageRegistryRef(cloudConfig),
 		},
 	}, nil
+}
+
+// toImageRegistryRef builds the imageRegistryRef sent to the API from
+// cloud_config's image_registry_ref UID (PLT-2484). Returns nil - the field
+// is omitempty on V1EdgeNativeClusterConfig - when unset, rather than an
+// empty V1ObjectReference, so Create/Update requests for clusters that don't
+// use this field are unaffected.
+func toImageRegistryRef(cloudConfig map[string]interface{}) *models.V1ObjectReference {
+	if v, ok := cloudConfig["image_registry_ref"].(string); ok && v != "" {
+		return &models.V1ObjectReference{UID: v}
+	}
+	return nil
 }
 
 func getFirstIPRange(cidr string) (string, error) {

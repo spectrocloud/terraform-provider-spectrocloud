@@ -139,8 +139,8 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "helm",
-				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack"}, false),
-				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`  ",
+				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack", "image"}, false),
+				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf`, `pack` and `image`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`. `image` registries are not used as a pack source and host Edge Native provider (OS/bootstrap) images instead.",
 			},
 			"wait_for_sync": {
 				Type:        schema.TypeBool,

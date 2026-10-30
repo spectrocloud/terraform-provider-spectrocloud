@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 ////
@@ -193,6 +195,59 @@ func TestGcpBackupStorageLocationUpdate(t *testing.T) {
 
 	diags := GcpBackupStorageLocationUpdate(d, c)
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// prepareGCPResourceDataWithRejectedCredentials is prepareGCPResourceData
+// with a project_id the mock server's GCP validate handler is wired to
+// reject (routes.GcpBackupStorageLocationValidateRejectProjectID) - standing in for
+// an invalid JSON credentials string, which the real Palette API would
+// reject the same way via the same validate endpoint.
+func prepareGCPResourceDataWithRejectedCredentials(t *testing.T) *schema.ResourceData {
+	t.Helper()
+	d := resourceBackupStorageLocation().TestResourceData()
+	prepareBSLCommonFields(t, d, "test-gcp-bsl")
+	require.NoError(t, d.Set("storage_provider", StorageProviderGCP))
+	require.NoError(t, d.Set("gcp_storage_config", []interface{}{
+		map[string]interface{}{
+			"project_id":           routes.GcpBackupStorageLocationValidateRejectProjectID,
+			"gcp_json_credentials": `not valid json`,
+		},
+	}))
+	return d
+}
+
+// TestGcpBackupStorageLocationCreate_ValidationError covers PLT-2485: Create
+// calls c.ValidateGcpBackupStorageLocation (a real round-trip to Palette's
+// GCP bucket/credentials validation) before CreateGcpBackupStorageLocation.
+// When that validation fails - the case an invalid JSON credentials string
+// is expected to hit - the error must be surfaced via diag.FromErr, not
+// swallowed, and the resource must not be assigned an ID.
+//
+// Uses the positive mock server with a project_id the GCP validate handler
+// is specifically wired to reject, while CreateGcpBackupStorageLocation
+// itself always succeeds there - so an empty d.Id() can only mean Create
+// was never reached, not that some unrelated call also happened to fail.
+func TestGcpBackupStorageLocationCreate_ValidationError(t *testing.T) {
+	c := mustUnitClient(t, false)
+	d := prepareGCPResourceDataWithRejectedCredentials(t)
+
+	diags := GcpBackupStorageLocationCreate(d, c)
+	assert.True(t, diags.HasError(), "an invalid/rejected GCP credential must surface as an error")
+	assert.Empty(t, d.Id(), "no ID should be assigned when validation fails before create")
+}
+
+// TestGcpBackupStorageLocationUpdate_ValidationError is the Update-path
+// counterpart of TestGcpBackupStorageLocationCreate_ValidationError: a
+// rejected credentials update must surface the validation error rather than
+// silently proceeding to UpdateGcpBackupStorageLocation (which, like Create,
+// always succeeds on the positive mock server here).
+func TestGcpBackupStorageLocationUpdate_ValidationError(t *testing.T) {
+	c := mustUnitClient(t, false)
+	d := prepareGCPResourceDataWithRejectedCredentials(t)
+	d.SetId("test-gcp-bsl-id")
+
+	diags := GcpBackupStorageLocationUpdate(d, c)
+	assert.True(t, diags.HasError(), "an invalid/rejected GCP credential must surface as an error on update too")
 }
 
 // ---------------------------------------------------------------------------

@@ -743,6 +743,10 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 		return diag.FromErr(err), true
 	}
 
+	if err := dropEmptyClusterProfileEntries(d); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	// Set backup_policy if field exists
 	if _, ok := d.GetOk("backup_policy"); ok {
 		if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {

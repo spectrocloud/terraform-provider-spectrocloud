@@ -22,6 +22,9 @@ func resourceCloudAccountAzure() *schema.Resource {
 			StateContext: resourceAccountAzureImport,
 		},
 		Description: "Resource for managing Azure cloud account credentials in Spectro Cloud.",
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return validateAzureAccountIdentityType(d.Get("identity_type").(string), d.Get("azure_client_secret").(string))
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -53,9 +56,24 @@ func resourceCloudAccountAzure() *schema.Resource {
 			},
 			"azure_client_secret": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
-				Description: "Azure secret for authentication.",
+				Description: "Azure secret for authentication. Required when `identity_type` is `ServicePrincipal` (the default); not used when `identity_type` is `UserAssignedMSI`.",
+			},
+			"identity_type": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				Default:      "ServicePrincipal",
+				ValidateFunc: validation.StringInSlice([]string{"ServicePrincipal", "UserAssignedMSI"}, false),
+				Description: "The type of identity Palette uses to authenticate to Azure. `ServicePrincipal` (default) authenticates with `azure_client_id`/`azure_client_secret`. " +
+					"`UserAssignedMSI` authenticates using a user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs; `azure_client_secret` is not used in this mode. " +
+					"Changing this value forces a new resource - converting an existing cloud account between identity types is not supported.",
+			},
+			"management_identity_resource_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The Azure resource ID of the user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs. Resolved by Palette during validation when `identity_type` is `UserAssignedMSI`.",
 			},
 			"tenant_name": {
 				Type:        schema.TypeString,
@@ -159,6 +177,16 @@ func flattenCloudAccountAzure(d *schema.ResourceData, account *models.V1AzureAcc
 	if err := d.Set("disable_properties_request", account.Spec.Settings.DisablePropertiesRequest); err != nil {
 		return diag.FromErr(err), true
 	}
+	identityType := "ServicePrincipal"
+	if account.Spec.IdentityType != nil && *account.Spec.IdentityType != "" {
+		identityType = *account.Spec.IdentityType
+	}
+	if err := d.Set("identity_type", identityType); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("management_identity_resource_id", account.Spec.ManagementIdentityResourceID); err != nil {
+		return diag.FromErr(err), true
+	}
 	if account.Spec.AzureEnvironment != nil {
 		if err := d.Set("cloud", account.Spec.AzureEnvironment); err != nil {
 			return diag.FromErr(err), true
@@ -215,7 +243,6 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 }
 
 func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
-	clientSecret := strfmt.Password(d.Get("azure_client_secret").(string)).String()
 	account := &models.V1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -227,13 +254,20 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 		},
 		Spec: &models.V1AzureCloudAccount{
 			ClientID:     types.Ptr(d.Get("azure_client_id").(string)),
-			ClientSecret: &clientSecret,
+			IdentityType: types.Ptr(d.Get("identity_type").(string)),
 			TenantID:     types.Ptr(d.Get("azure_tenant_id").(string)),
 			TenantName:   d.Get("tenant_name").(string),
 			Settings: &models.V1CloudAccountSettings{
 				DisablePropertiesRequest: d.Get("disable_properties_request").(bool),
 			},
 		},
+	}
+
+	// azure_client_secret is only meaningful for identity_type=ServicePrincipal
+	// (PLT-2489); leave it nil (omitted from the request) for UserAssignedMSI
+	// rather than sending an empty string.
+	if clientSecret := d.Get("azure_client_secret").(string); clientSecret != "" {
+		account.Spec.ClientSecret = types.Ptr(strfmt.Password(clientSecret).String())
 	}
 
 	// add partition to account
@@ -249,6 +283,17 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	}
 
 	return account
+}
+
+// validateAzureAccountIdentityType is the testable CustomizeDiff body for
+// PLT-2489's conditional azure_client_secret requirement: it's required for
+// ServicePrincipal (the default, including an empty/unset identityType) and
+// not used for UserAssignedMSI.
+func validateAzureAccountIdentityType(identityType, clientSecret string) error {
+	if (identityType == "" || identityType == "ServicePrincipal") && clientSecret == "" {
+		return fmt.Errorf("`azure_client_secret` is required when `identity_type` is `ServicePrincipal`")
+	}
+	return nil
 }
 
 func validateTlsCertConfiguration(d *schema.ResourceData) error {

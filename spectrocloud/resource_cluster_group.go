@@ -228,6 +228,10 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 		return diags
 	}
 
+	if err := dropEmptyClusterProfileEntries(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return flattenClusterGroup(clusterGroup, d)
 }
 
