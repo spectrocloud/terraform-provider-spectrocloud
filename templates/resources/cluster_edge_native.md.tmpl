@@ -74,6 +74,9 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
 }
 ```
+
+!> Creating a cluster without `cloud_config.overlay_cidr_range` set deploys it in DHCP mode without overlay networking. Terraform prints a warning on creation in this case, because DHCP-assigned IP changes can cause cluster instability; the cluster is still created. This warning only appears on creation, not on subsequent updates.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
