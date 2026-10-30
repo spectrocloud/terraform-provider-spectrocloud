@@ -65,7 +65,7 @@ The import will automatically detect whether the registry is an ECR or basic typ
 - `base_content_path` (String) The relative path to the endpoint specified. Required when `is_synchronization` is set to `true`.
 - `endpoint_suffix` (String) Specifies a suffix to append to the endpoint. This field is optional, but some registries (e.g., JFrog) may require it. The final registry URL is constructed by appending this suffix to the endpoint.
 - `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
-- `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`
+- `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf`, `pack` and `image`, The default is 'helm'. `zarf` is allowed with `type="basic"`. `image` registries are not used as a pack source and host Edge Native provider (OS/bootstrap) images instead.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_status_message` (String) The status message from the last sync operation. This is a computed field that is populated after sync completes.
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the OCI registry to complete its initial synchronization before marking the resource as created or updated. This option is applicable when `provider_type` is set to `zarf` or `helm`. Default value is `false`.

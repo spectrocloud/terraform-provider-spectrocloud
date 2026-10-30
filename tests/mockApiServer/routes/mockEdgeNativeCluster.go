@@ -18,6 +18,16 @@ const EdgeNativeCloudConfigErrorUID = "edge-native-cloud-config-error"
 // exercised.
 const EdgeNativeCloudConfigUpdateRejectUID = "edge-native-cloud-config-update-reject"
 
+// EdgeNativeCloudConfigImageRegistryRefUID (PLT-2484) drives a
+// GetCloudConfigEdgeNative response whose ClusterConfig.ImageRegistryRef is
+// populated, so flattenClusterConfigsEdgeNative's image_registry_ref
+// round-trip can be exercised through the full Read path.
+const EdgeNativeCloudConfigImageRegistryRefUID = "edge-native-cloud-config-image-registry-ref"
+
+// EdgeNativeImageRegistryRefUID is the registry UID returned for
+// EdgeNativeCloudConfigImageRegistryRefUID.
+const EdgeNativeImageRegistryRefUID = "test-image-registry-uid"
+
 // EdgeNativePoolMachinesFoundHostName / UID is the host name the mock
 // machines-list handler reports for the "pool-to-change" and
 // "pool-to-remove" machine pool names used by
@@ -92,7 +102,11 @@ func edgeNativeCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(getMockEdgeNativeCloudConfig())
+	config := getMockEdgeNativeCloudConfig()
+	if configUID == EdgeNativeCloudConfigImageRegistryRefUID {
+		config.Spec.ClusterConfig.ImageRegistryRef = &models.V1ObjectReference{UID: EdgeNativeImageRegistryRefUID}
+	}
+	_ = json.NewEncoder(w).Encode(config)
 }
 
 // edgeNativeCloudConfigUpdateHandler serves PUT

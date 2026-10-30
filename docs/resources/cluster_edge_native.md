@@ -146,6 +146,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Optional:
 
+- `image_registry_ref` (String) UID of an OCI registry (`spectrocloud_registry_oci`, `provider_type = "image"`) that the Edge hosts use to pull the Edge Native provider (OS/bootstrap) image. Can be set on create or changed later without replacing the cluster.
 - `is_two_node_cluster` (Boolean) Set to `true` to enable a two-node cluster.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`

@@ -251,6 +251,16 @@ func basicRegistryFixtureFor(uid string) (*models.V1BasicOciRegistry, int) {
 			TLS:  &models.V1TLSConfiguration{},
 		}
 		return r, http.StatusOK
+	case "basic-uid-image":
+		// PLT-2484: image-type registries aren't a pack source, so the API
+		// reports IsSyncSupported=false here (as opposed to the zarf default
+		// fixture's true), letting Read's provider_type passthrough be
+		// exercised against a realistic image-registry payload.
+		r := base()
+		r.Spec.ProviderType = strPtr("image")
+		r.Spec.IsSyncSupported = false
+		r.Status.SyncStatus.IsSyncSupported = false
+		return r, http.StatusOK
 	default:
 		return base(), http.StatusOK
 	}
