@@ -37,6 +37,14 @@ func buildAzureUpdateResourceData(t *testing.T, oldRaw, newRaw map[string]interf
 	finalRD, err := schema.InternalMap(res.Schema).Data(oldState, diff)
 	require.NoError(t, err)
 	finalRD.SetId(azureClusterID)
+	// cloud_config_id is Computed; schema.InternalMap(...).Data(oldState, diff)
+	// doesn't carry it forward when the diff includes a ForceNew field inside
+	// a changed machine_pool Set element (PLT-2489's user_assigned_identities
+	// / exclude_cluster_identity) - the reconstruction treats that like part
+	// of a replace diff and drops computed values, even though Terraform core
+	// itself would never call Update in a genuine replace scenario. Re-patch
+	// it the same way SetId is re-patched above.
+	require.NoError(t, finalRD.Set("cloud_config_id", configUID))
 	return finalRD
 }
 
@@ -70,13 +78,20 @@ func baseAzureRaw(cloudConfig map[string]interface{}, machinePools []interface{}
 // azureMachinePoolDiffRaw mirrors defaultAzureMachinePool
 // (resource_cluster_azure_wave2_test.go) but is used for building the raw
 // Diff config, matching the shape schema.TestResourceDataRaw /
-// terraform.NewResourceConfigRaw expect. None of machine_pool's fields are
-// ForceNew (all commented out in the schema), so any field is safe to diff.
+// terraform.NewResourceConfigRaw expect. Most of machine_pool's fields are
+// not ForceNew (commented out in the schema), so any of those are safe to
+// diff; user_assigned_identities and exclude_cluster_identity (PLT-2489)
+// *are* ForceNew, so they're pinned to their schema defaults here - leaving
+// them out of old/new config lets the diff pipeline treat every pool as
+// needing replacement instead of the in-place update/no-op these tests
+// expect.
 func azureMachinePoolDiffRaw(overrides map[string]interface{}) map[string]interface{} {
 	pool := map[string]interface{}{
-		"name":          "worker-pool",
-		"count":         2,
-		"instance_type": "Standard_D2s_v3",
+		"name":                     "worker-pool",
+		"count":                    2,
+		"instance_type":            "Standard_D2s_v3",
+		"exclude_cluster_identity": false,
+		"user_assigned_identities": []interface{}{},
 	}
 	for k, v := range overrides {
 		pool[k] = v

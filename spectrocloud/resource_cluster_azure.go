@@ -245,6 +245,23 @@ func resourceClusterAzure() *schema.Resource {
 							},
 						},
 						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
+						"managed_identity": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							ForceNew:    true,
+							MaxItems:    1,
+							Description: "User-assigned managed identity used to authenticate to Azure. Immutable after cluster creation.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"cluster_identity_resource_id": {
+										Type:        schema.TypeString,
+										Required:    true,
+										ForceNew:    true,
+										Description: "Azure resource ID of the user-assigned managed identity Palette authenticates to Azure with, attached to every node of the cluster by default. A worker pool can leave it off with `exclude_cluster_identity`.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -388,6 +405,23 @@ func resourceClusterAzure() *schema.Resource {
 							Default:      "Linux",
 							ValidateFunc: validation.StringInSlice([]string{"Linux", "Windows"}, false),
 							Description:  "Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.",
+						},
+						"user_assigned_identities": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							ForceNew: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Azure resource IDs of additional user-assigned managed identities attached to the nodes of this pool, alongside `cloud_config.managed_identity`'s cluster identity (unless `exclude_cluster_identity` is set). Immutable after the pool is created.",
+						},
+						"exclude_cluster_identity": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							ForceNew:    true,
+							Default:     false,
+							Description: "Leaves `cloud_config.managed_identity`'s cluster identity off the machines of this pool. Default value is `false`. Immutable after the pool is created.",
 						},
 					},
 				},
@@ -578,6 +612,12 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 			}
 		}
 	}
+	if config.Spec.ClusterConfig.ManagedIdentity != nil && config.Spec.ClusterConfig.ManagedIdentity.ClusterIdentity != nil &&
+		config.Spec.ClusterConfig.ManagedIdentity.ClusterIdentity.ResourceID != nil {
+		m["managed_identity"] = []interface{}{map[string]interface{}{
+			"cluster_identity_resource_id": *config.Spec.ClusterConfig.ManagedIdentity.ClusterIdentity.ResourceID,
+		}}
+	}
 
 	return []interface{}{m}
 }
@@ -652,6 +692,18 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 
 		oi["azs"] = machinePool.Azs
 		oi["os_type"] = machinePool.OsType
+		if machinePool.ExcludeClusterIdentity != nil {
+			oi["exclude_cluster_identity"] = *machinePool.ExcludeClusterIdentity
+		}
+		if len(machinePool.UserAssignedIdentities) > 0 {
+			ids := make([]interface{}, 0, len(machinePool.UserAssignedIdentities))
+			for _, ref := range machinePool.UserAssignedIdentities {
+				if ref != nil && ref.ResourceID != nil {
+					ids = append(ids, *ref.ResourceID)
+				}
+			}
+			oi["user_assigned_identities"] = schema.NewSet(schema.HashString, ids)
+		}
 		if machinePool.OsDisk != nil {
 			d := make(map[string]interface{})
 			d["size_gb"] = machinePool.OsDisk.DiskSizeGB
@@ -904,6 +956,18 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 		}
 	}
 
+	excludeClusterIdentity := false
+	if v, ok := m["exclude_cluster_identity"].(bool); ok {
+		excludeClusterIdentity = v
+	}
+	var userAssignedIdentities []*models.V1AzureIdentityRef
+	if v, ok := m["user_assigned_identities"].(*schema.Set); ok {
+		for _, raw := range v.List() {
+			resourceID := raw.(string)
+			userAssignedIdentities = append(userAssignedIdentities, &models.V1AzureIdentityRef{ResourceID: &resourceID})
+		}
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			Azs:          azs,
@@ -915,7 +979,9 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 				},
 				OsType: &osType,
 			},
-			IsSystemNodePool: m["is_system_node_pool"].(bool),
+			IsSystemNodePool:       m["is_system_node_pool"].(bool),
+			ExcludeClusterIdentity: &excludeClusterIdentity,
+			UserAssignedIdentities: userAssignedIdentities,
 		},
 		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
@@ -991,7 +1057,26 @@ func azureClusterConfigFromMap(cloudConfig map[string]interface{}) *models.V1Azu
 	if override, ok := cloudConfig["override_cluster_api_config"].(string); ok {
 		cluster.Spec.CloudConfig.OverrideClusterAPIConfig = override
 	}
+	cluster.Spec.CloudConfig.ManagedIdentity = toAzureManagedIdentity(cloudConfig)
 	return cluster.Spec.CloudConfig
+}
+
+// toAzureManagedIdentity builds cloud_config.managed_identity's clusterIdentity
+// (PLT-2489). IaaS clusters only use clusterIdentity; aksServiceIdentity and
+// kubeletIdentity are AKS-only (see resource_cluster_aks.go).
+func toAzureManagedIdentity(cloudConfig map[string]interface{}) *models.V1AzureManagedIdentity {
+	raw, ok := cloudConfig["managed_identity"].([]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	managedIdentity := raw[0].(map[string]interface{})
+	resourceID, ok := managedIdentity["cluster_identity_resource_id"].(string)
+	if !ok || resourceID == "" {
+		return nil
+	}
+	return &models.V1AzureManagedIdentity{
+		ClusterIdentity: &models.V1AzureIdentityRef{ResourceID: &resourceID},
+	}
 }
 
 func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
