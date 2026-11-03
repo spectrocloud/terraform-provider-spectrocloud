@@ -51,7 +51,29 @@ func TestToTagsMapAndFlattenTagsMap(t *testing.T) {
 
 	flattened := flattenTagsMap(tags)
 	assert.Equal(t, "platform", flattened["owner"])
-	assert.Equal(t, "spectro__tag", flattened["cost"])
+	assert.Equal(t, "", flattened["cost"])
+}
+
+// A tags_map entry with an empty value is sent to Palette as "spectro__tag".
+// Reading it back must give the empty value again, otherwise every plan shows
+// a change from "spectro__tag" to "".
+func TestTagsMapEmptyValueRoundTrip(t *testing.T) {
+	config := map[string]interface{}{
+		"owner": "platform",
+		"cost":  "",
+	}
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"tags_map": {
+			Type:     schema.TypeMap,
+			Optional: true,
+		},
+	}, map[string]interface{}{"tags_map": config})
+
+	labels := toTagsMap(d)
+	assert.Equal(t, "spectro__tag", labels["cost"])
+
+	state := flattenTagsMap(labels)
+	assert.Equal(t, map[string]string{"owner": "platform", "cost": ""}, state)
 }
 
 func TestFlattenTagsMapEmpty(t *testing.T) {

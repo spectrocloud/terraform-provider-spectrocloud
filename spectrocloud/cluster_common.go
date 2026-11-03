@@ -338,6 +338,11 @@ func flattenTagsMap(labels map[string]string) map[string]string {
 	tags := make(map[string]string)
 	if len(labels) > 0 {
 		for k, v := range labels {
+			// toTagsMap sends key-only tags (empty value) as "spectro__tag";
+			// map them back so state matches the configured empty value.
+			if v == "spectro__tag" {
+				v = ""
+			}
 			tags[k] = v
 		}
 		return tags
