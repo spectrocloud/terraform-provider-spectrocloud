@@ -1061,10 +1061,7 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 // so any rejection is surfaced to the user via diag.FromErr instead of being silently dropped.
 func toClusterConfigEdgeNativeUpdate(d *schema.ResourceData) (*models.V1EdgeNativeCloudClusterConfigEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	sshKeys, err := toSSHKeys(cloudConfig)
-	if err != nil {
-		return nil, err
-	}
+	sshKeys, _ := toSSHKeys(cloudConfig)
 
 	controlPlaneEndpoint, overlayConfig, err := toOverlayNetworkConfigAndVip(cloudConfig)
 	if err != nil {
