@@ -150,6 +150,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	if err := dropEmptyClusterProfileEntries(d); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
 		return diags, true
 	}

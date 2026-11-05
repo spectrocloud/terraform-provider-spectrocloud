@@ -62,6 +62,23 @@ func filterEntriesWithID(entries []interface{}) []interface{} {
 	return filtered
 }
 
+// dropEmptyClusterProfileEntries removes phantom empty-id cluster_profile
+// entries from state. Changing a cluster_profile element that carries both
+// pack overrides and variables leaves such an entry behind after apply, and
+// the default Read never rewrites cluster_profile, so without this every
+// following plan shows a spurious removal (PLT-2493).
+func dropEmptyClusterProfileEntries(d *schema.ResourceData) error {
+	raw, ok := d.GetOk("cluster_profile")
+	if !ok {
+		return nil
+	}
+	all := normalizeInterfaceSliceFromListOrSet(raw)
+	if clean := filterEntriesWithID(all); len(clean) != len(all) {
+		return d.Set("cluster_profile", clean)
+	}
+	return nil
+}
+
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
 func validateProfileSource(d *schema.ResourceData) error {
 	// cluster_template may not exist in all schemas (e.g., cluster_group)

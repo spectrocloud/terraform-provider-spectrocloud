@@ -260,6 +260,29 @@ func resourceClusterAks() *schema.Resource {
 							ForceNew:    true,
 							Description: "Security group name attached to the control plane subnet. Changing this forces a new resource.",
 						},
+						"managed_identity": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							ForceNew:    true,
+							MaxItems:    1,
+							Description: "User-assigned managed identities used to authenticate to Azure. Immutable after cluster creation.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"aks_service_identity_resource_id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										ForceNew:    true,
+										Description: "Azure resource ID of the user-assigned managed identity used by the AKS control plane.",
+									},
+									"kubelet_identity_resource_id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										ForceNew:    true,
+										Description: "Azure resource ID of the user-assigned managed identity used by the AKS kubelet.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -570,8 +593,31 @@ func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
 			m["control_plane_subnet_security_group_name"] = config.Spec.ClusterConfig.ControlPlaneSubnet.SecurityGroupName
 		}
 	}
+	if managedIdentity := flattenAksManagedIdentity(config.Spec.ClusterConfig.ManagedIdentity); managedIdentity != nil {
+		m["managed_identity"] = managedIdentity
+	}
 
 	return []interface{}{m}
+}
+
+// flattenAksManagedIdentity is the Read-side counterpart to
+// toAksManagedIdentity. Returns nil (key omitted from state) when neither
+// identity is set, rather than a block of two empty strings.
+func flattenAksManagedIdentity(managedIdentity *models.V1AzureManagedIdentity) []interface{} {
+	if managedIdentity == nil {
+		return nil
+	}
+	entry := map[string]interface{}{}
+	if managedIdentity.AksServiceIdentity != nil && managedIdentity.AksServiceIdentity.ResourceID != nil {
+		entry["aks_service_identity_resource_id"] = *managedIdentity.AksServiceIdentity.ResourceID
+	}
+	if managedIdentity.KubeletIdentity != nil && managedIdentity.KubeletIdentity.ResourceID != nil {
+		entry["kubelet_identity_resource_id"] = *managedIdentity.KubeletIdentity.ResourceID
+	}
+	if len(entry) == 0 {
+		return nil
+	}
+	return []interface{}{entry}
 }
 
 func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {
@@ -835,6 +881,34 @@ func toAksClusterConfig(cloudConfigMap map[string]interface{}) *models.V1AzureCl
 		VnetCidrBlock:            vnetcidr,
 		ControlPlaneSubnet:       controlPlaneSubnet,
 		WorkerSubnet:             workerSubnet,
+		ManagedIdentity:          toAksManagedIdentity(cloudConfigMap),
+	}
+}
+
+// toAksManagedIdentity builds cloud_config.managed_identity's
+// aksServiceIdentity/kubeletIdentity (PLT-2489). AKS clusters don't use
+// clusterIdentity or the IaaS-only machine_pool identity fields - see
+// toAzureManagedIdentity in resource_cluster_azure.go for those.
+func toAksManagedIdentity(cloudConfigMap map[string]interface{}) *models.V1AzureManagedIdentity {
+	raw, ok := cloudConfigMap["managed_identity"].([]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	managedIdentity := raw[0].(map[string]interface{})
+
+	var aksServiceIdentity, kubeletIdentity *models.V1AzureIdentityRef
+	if v, ok := managedIdentity["aks_service_identity_resource_id"].(string); ok && v != "" {
+		aksServiceIdentity = &models.V1AzureIdentityRef{ResourceID: &v}
+	}
+	if v, ok := managedIdentity["kubelet_identity_resource_id"].(string); ok && v != "" {
+		kubeletIdentity = &models.V1AzureIdentityRef{ResourceID: &v}
+	}
+	if aksServiceIdentity == nil && kubeletIdentity == nil {
+		return nil
+	}
+	return &models.V1AzureManagedIdentity{
+		AksServiceIdentity: aksServiceIdentity,
+		KubeletIdentity:    kubeletIdentity,
 	}
 }
 

@@ -455,6 +455,54 @@ Bumping `var.profile_version` from `1.0.0` to `1.1.0` and running `terraform app
 The `immutable-clusterprofiles` feature flag is opt-in. Without it, `spectrocloud_cluster_profile` behaves exactly as it did before the flag was introduced; version changes go through the in-place `PUT` path. Existing HCL, state files, and CI pipelines continue to work without modification. See the resource's `version` and `skip_destroy` field docs below for further details.
 
 
+## OIDC system macros in pack values
+
+A pack's `values` can reference the cluster's OIDC configuration (issuer URL, client ID, client secret, and related settings) through system macros instead of hard-coded values. Palette resolves these macros when the pack is applied to the cluster -- the provider passes the macro text through to Palette unchanged, on both initial creation and subsequent pack updates. The macro text is not resolved locally, so the resolved client secret is never written to Terraform state, plan output, or provider logs.
+
+| Macro | Resolves to |
+|-------|-------------|
+| `{{.spectro.system.oidc.issuerurl}}` | OIDC issuer URL |
+| `{{.spectro.system.oidc.clientid}}` | OIDC client ID |
+| `{{.spectro.system.oidc.clientsecret}}` | OIDC client secret |
+| `{{.spectro.system.oidc.usernameclaim}}` | OIDC username claim |
+| `{{.spectro.system.oidc.groupsclaim}}` | OIDC groups claim |
+| `{{.spectro.system.oidc.extrascopes}}` | Additional OIDC scopes |
+| `{{.spectro.system.oidc.idpconfigname}}` | Identity provider configuration name |
+
+These macros work with Palette IdP, a custom IdP, and Inherit from Tenant, on both Palette and VerteX. Supported distributions resolve the macros wherever the pack places them, including keys that require a `--` prefix.
+
+### Example: Canonical Kubernetes (CK8s) with OIDC macros
+
+Canonical Kubernetes expects the apiserver's OIDC flags as `extraKubeAPIServerArgs` keys prefixed with `--`:
+
+```terraform
+resource "spectrocloud_cluster_profile" "ck8s_oidc" {
+  name    = "ck8s-oidc"
+  version = "1.0.0"
+  type    = "cluster"
+  context = "project"
+
+  pack {
+    name   = "ck8s"
+    type   = "spectro"
+    tag    = "1.32.0"
+    uid    = data.spectrocloud_pack.ck8s.id
+    values = <<-EOT
+      pack:
+        k8sHardening: false
+      kubernetesVersion: "1.32.0"
+      clusterConfig:
+        controlPlane:
+          extraKubeAPIServerArgs:
+            --oidc-issuer-url: "{{.spectro.system.oidc.issuerurl}}"
+            --oidc-client-id: "{{.spectro.system.oidc.clientid}}"
+            --oidc-username-claim: "{{.spectro.system.oidc.usernameclaim}}"
+            --oidc-groups-claim: "{{.spectro.system.oidc.groupsclaim}}"
+    EOT
+  }
+}
+```
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
