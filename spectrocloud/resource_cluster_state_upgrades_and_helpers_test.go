@@ -88,6 +88,20 @@ func TestValidateSingleClusterProfile(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "exactly one cluster_profile is allowed")
 	})
+
+	// PLT-2503: cluster_profile is a TypeSet, so when its id changes (e.g. a
+	// profile version upgrade), Terraform's set diff can leave a phantom
+	// entry with an empty id alongside the real one. That phantom must be
+	// filtered out like every other cluster_profile reader does, not counted
+	// as a second profile.
+	t.Run("phantom empty-id entry alongside real profile is ok", func(t *testing.T) {
+		d := resourceAddonDeployment().TestResourceData()
+		require.NoError(t, d.Set("cluster_profile", []interface{}{
+			map[string]interface{}{"id": "cp-new"},
+			map[string]interface{}{"id": ""},
+		}))
+		assert.NoError(t, validateSingleClusterProfile(d))
+	})
 }
 
 // TestGetAddonDeploymentIDHelpers pins the tiny ID pack/unpack helpers.
