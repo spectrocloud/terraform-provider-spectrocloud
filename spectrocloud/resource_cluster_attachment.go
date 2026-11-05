@@ -105,7 +105,7 @@ func resourceAddonDeploymentStateUpgradeV2(ctx context.Context, rawState map[str
 
 // validateSingleClusterProfile validates that exactly one cluster_profile is specified
 func validateSingleClusterProfile(d *schema.ResourceData) error {
-	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	profiles := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
 	if len(profiles) == 0 {
 		return errors.New("exactly one cluster_profile is required, but none was specified")
 	}
