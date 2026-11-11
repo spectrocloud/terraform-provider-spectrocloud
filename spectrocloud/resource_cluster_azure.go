@@ -256,7 +256,6 @@ func resourceClusterAzure() *schema.Resource {
 									"cluster_identity_resource_id": {
 										Type:        schema.TypeString,
 										Required:    true,
-										ForceNew:    true,
 										Description: "Azure resource ID of the user-assigned managed identity Palette authenticates to Azure with, attached to every node of the cluster by default. A worker pool can leave it off with `exclude_cluster_identity`.",
 									},
 								},

@@ -14,12 +14,13 @@ import (
 // spectrocloud_cluster_azure (IaaS): cloud_config.managed_identity
 // (cluster_identity only - aks_service_identity/kubelet_identity are
 // AKS-only) and machine_pool.user_assigned_identities /
-// exclude_cluster_identity. All four fields are immutable after creation
-// per the API contract (PEM-12252).
+// exclude_cluster_identity. cloud_config.managed_identity is immutable
+// after creation per the API contract (PEM-12252); the machine_pool-level
+// fields were later made mutable in place (see
+// TestAzureMachinePool_IdentityFields_Mutable).
 
-// TestAzureCloudConfig_ManagedIdentity_ForceNew and
-// TestAzureMachinePool_IdentityFields_ForceNew guard the immutability
-// requirement at the schema level.
+// TestAzureCloudConfig_ManagedIdentity_ForceNew guards the cloud_config-level
+// immutability requirement at the schema level.
 func TestAzureCloudConfig_ManagedIdentity_ForceNew(t *testing.T) {
 	res := resourceClusterAzure()
 	cloudConfigElem := res.Schema["cloud_config"].Elem.(*schema.Resource)
