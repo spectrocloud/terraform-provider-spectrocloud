@@ -134,6 +134,23 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["exclude_cluster_identity"]; ok {
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		fmt.Fprintf(buf, "%t-", boolVal)
+	}
+	if val, ok := m["user_assigned_identities"]; ok {
+		if idsSet, ok := val.(*schema.Set); ok {
+			fmt.Fprintf(buf, "%s-", idsSet.GoString())
+		}
+	}
 
 	return int(hash(buf.String()))
 }
