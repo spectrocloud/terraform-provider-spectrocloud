@@ -437,6 +437,24 @@ func TestResourceRegistryEcrRead_Ecr_SecretMasked(t *testing.T) {
 	assert.Empty(t, cred["secret_key"], "masked API secret must not populate state")
 }
 
+// TestResourceRegistryEcrRead_Ecr_DefaultTLSOmittedFromState covers PLT-2509:
+// the API always returns a TLS block for ecr registries, defaulting to
+// insecure_skip_verify=false with no certificate. Read must not materialize
+// that default into state when it isn't already there, otherwise every plan
+// shows a phantom tls_config removal.
+func TestResourceRegistryEcrRead_Ecr_DefaultTLSOmittedFromState(t *testing.T) {
+	d := resourceRegistryOciEcr().TestResourceData()
+	require.NoError(t, d.Set("type", "ecr"))
+	d.SetId("ecr-uid-sts-default-tls")
+	diags := resourceRegistryEcrRead(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+
+	creds := d.Get("credentials").([]interface{})
+	require.Len(t, creds, 1)
+	cred := creds[0].(map[string]interface{})
+	assert.Empty(t, cred["tls_config"], "default API TLS (no cert, insecure_skip_verify=false) must not be materialized into state")
+}
+
 func TestResourceRegistryEcrRead_Ecr_UnknownCredentialType(t *testing.T) {
 	d := resourceRegistryOciEcr().TestResourceData()
 	require.NoError(t, d.Set("type", "ecr"))

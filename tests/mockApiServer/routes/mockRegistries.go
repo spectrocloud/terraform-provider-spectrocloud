@@ -173,6 +173,23 @@ func ecrRegistryFixtureFor(uid string) (*models.V1EcrRegistry, int) {
 			CredentialType: &unknown,
 		}
 		return r, http.StatusOK
+	case "ecr-uid-sts-default-tls":
+		// PLT-2509: Hubble always returns a TLS block with
+		// insecure_skip_verify=false and no certificate, even when the HCL
+		// config omits tls_config entirely. Read must not materialize this
+		// into state, or every subsequent plan shows a phantom removal.
+		r := base()
+		r.Spec.Credentials = &models.V1AwsCloudAccount{
+			CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
+			Sts: &models.V1AwsStsCredentials{
+				Arn:        "test-arn",
+				ExternalID: "test-external-id",
+			},
+		}
+		r.Spec.TLS = &models.V1TLSConfiguration{
+			InsecureSkipVerify: false,
+		}
+		return r, http.StatusOK
 	default:
 		r := base()
 		r.Spec.Credentials = &models.V1AwsCloudAccount{
