@@ -209,14 +209,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"update_lock": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							Computed:     true,
 							Default:      "disabled",
 							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
 							Description: "Profile update lock state for the edge native cluster. When `enabled`, cluster profile " +
 								"updates targeting the device are held until a local operator releases the lock from the Edge Local UI - " +
 								"releasing the lock is out of scope for this provider and can only be done locally on the device. Palette " +
-								"re-engages the lock automatically once a held update is applied. Defaults to the value Palette reports " +
-								"(computed) when left unset.",
+								"re-engages the lock automatically once a held update is applied. Defaults to the value set to  `disabled`.",
 						},
 					},
 				},
