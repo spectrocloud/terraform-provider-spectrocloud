@@ -440,13 +440,6 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	// Captured before create: Palette engages the profile update lock (PLT-2476)
-	// automatically once deployment completes, so an explicitly configured
-	// update_lock is applied as a Day-2-style patch after the cluster exists,
-	// not as part of the create body.
-	desiredCloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	desiredLockState, lockConfigured := toUpdateLockState(desiredCloudConfig)
-
 	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -460,18 +453,6 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diagnostics
 	}
 	resourceClusterEdgeNativeRead(ctx, d, m)
-
-	if lockConfigured {
-		cloudConfigId := d.Get("cloud_config_id").(string)
-		if err := c.UpdateLockEdgeNative(cloudConfigId, desiredLockState); err != nil {
-			return append(diags, diag.FromErr(err)...)
-		}
-		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-		cloudConfig["update_lock"] = string(desiredLockState)
-		if err := d.Set("cloud_config", []interface{}{cloudConfig}); err != nil {
-			return diag.FromErr(err)
-		}
-	}
 
 	return diags
 }
@@ -684,7 +665,9 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
-	if d.HasChange("cloud_config") {
+	// update_lock is excluded here: a lock-only change must not trigger the general cloud
+	// config PUT, which needs the broader cloud config update permission.
+	if hasCloudConfigChangeExceptUpdateLock(d) {
 		clusterConfig, err := toClusterConfigEdgeNativeUpdate(d)
 		if err != nil {
 			return diag.FromErr(err)
@@ -900,6 +883,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				OverlayNetworkConfiguration: overlayConfig,
 				IsTwoNodeCluster:            isTwoNodeCluster.(bool),
 				ImageRegistryRef:            toImageRegistryRef(cloudConfig),
+				UpdateLock:                  toUpdateLock(cloudConfig),
 			},
 		},
 	}
@@ -1147,11 +1131,35 @@ func toImageRegistryRef(cloudConfig map[string]interface{}) *models.V1ObjectRefe
 	return nil
 }
 
-// toUpdateLockState reads cloud_config's update_lock (PLT-2476). Sent through the dedicated
-// profile-update-lock endpoint rather than the general cloud config PUT/PATCH, since Palette
-// scopes the permission to change it separately from the permission to trigger cluster updates.
-// Returns ok=false when left unset in config, so callers can leave the backend's current/
-// auto-engaged state untouched instead of forcing a value.
+// toUpdateLock builds the Day-1 create body's updateLock from cloud_config's update_lock
+// (PLT-2476). Returns nil - the field is omitempty - when unset, so Palette applies its default.
+func toUpdateLock(cloudConfig map[string]interface{}) *models.V1UpdateLock {
+	if state, ok := toUpdateLockState(cloudConfig); ok {
+		return &models.V1UpdateLock{State: state}
+	}
+	return nil
+}
+
+// hasCloudConfigChangeExceptUpdateLock reports whether any cloud_config field other than
+// update_lock changed, i.e. whether the general Day-2 cloud config PUT is needed.
+func hasCloudConfigChangeExceptUpdateLock(d *schema.ResourceData) bool {
+	if !d.HasChange("cloud_config") {
+		return false
+	}
+	cloudConfigElem := resourceClusterEdgeNative().Schema["cloud_config"].Elem.(*schema.Resource)
+	for key := range cloudConfigElem.Schema {
+		if key != "update_lock" && d.HasChange("cloud_config.0."+key) {
+			return true
+		}
+	}
+	return false
+}
+
+// toUpdateLockState reads cloud_config's update_lock (PLT-2476). On Day 2 it is sent through
+// the dedicated profile-update-lock endpoint rather than the general cloud config PUT/PATCH,
+// since Palette scopes the permission to change it separately from the permission to trigger
+// cluster updates. Returns ok=false when left unset in config, so callers can leave the
+// backend's current/auto-engaged state untouched instead of forcing a value.
 func toUpdateLockState(cloudConfig map[string]interface{}) (state models.V1UpdateLockState, ok bool) {
 	v, exists := cloudConfig["update_lock"].(string)
 	if !exists || v == "" {

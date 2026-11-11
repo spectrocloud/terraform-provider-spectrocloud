@@ -35,7 +35,7 @@ const EdgeNativeImageRegistryRefUID = "test-image-registry-uid"
 const EdgeNativeCloudConfigUpdateLockUID = "edge-native-cloud-config-update-lock"
 
 // EdgeNativeUpdateLockRejectUID drives the UpdateLockEdgeNative API-error
-// branch so resourceClusterEdgeNativeUpdate/Create's update_lock error
+// branch so resourceClusterEdgeNativeUpdate's update_lock error
 // propagation can be exercised.
 const EdgeNativeUpdateLockRejectUID = "edge-native-update-lock-reject"
 

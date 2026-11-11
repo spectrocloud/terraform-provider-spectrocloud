@@ -13,7 +13,8 @@ import (
 )
 
 // PLT-2476 adds `update_lock` to spectrocloud_cluster_edge_native's
-// `cloud_config`, mapped to the API's dedicated profile-update-lock endpoint
+// `cloud_config`. On Day 1 it is sent in the create body's cloud config; on
+// Day 2 it is mapped to the API's dedicated profile-update-lock endpoint
 // (PATCH /v1/cloudconfigs/edge-native/{uid}/updateLock), separate from the
 // general cloud config PUT/PATCH used by the other cloud_config fields.
 // Palette engages the lock automatically once deployment completes and
@@ -56,20 +57,30 @@ func TestToUpdateLockState(t *testing.T) {
 	assert.False(t, ok)
 }
 
-// TestToEdgeNativeCluster_UpdateLockNotInCreateBody confirms update_lock is
-// never sent as part of the cluster create body: Palette engages the lock
-// automatically post-deployment, and this provider applies an explicit
-// override afterwards through the dedicated endpoint (see
-// resourceClusterEdgeNativeCreate), not via the create entity.
-func TestToEdgeNativeCluster_UpdateLockNotInCreateBody(t *testing.T) {
+// TestToEdgeNativeCluster_UpdateLockInCreateBody confirms a configured
+// update_lock is sent on Day 1 as part of the cluster create body's
+// cloud config.
+func TestToEdgeNativeCluster_UpdateLockInCreateBody(t *testing.T) {
 	d := prepareEdgeNativeClusterResourceData(t)
 	require.NoError(t, d.Set("cloud_config", []interface{}{
 		map[string]interface{}{
 			"vip":                "10.0.0.100",
 			"overlay_cidr_range": "",
-			"update_lock":        "enabled",
+			"update_lock":        "disabled",
 		},
 	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	cluster, err := toEdgeNativeCluster(c, d)
+	require.NoError(t, err)
+	require.NotNil(t, cluster.Spec.CloudConfig.UpdateLock)
+	assert.Equal(t, models.V1UpdateLockStateDisabled, cluster.Spec.CloudConfig.UpdateLock.State)
+}
+
+// TestToEdgeNativeCluster_UpdateLockUnsetNotInCreateBody confirms an unset
+// update_lock is omitted from the create body, leaving Palette's default.
+func TestToEdgeNativeCluster_UpdateLockUnsetNotInCreateBody(t *testing.T) {
+	d := prepareEdgeNativeClusterResourceData(t)
 
 	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
 	cluster, err := toEdgeNativeCluster(c, d)
@@ -170,6 +181,44 @@ func TestResourceClusterEdgeNativeUpdate_UpdateLock_Day2(t *testing.T) {
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
 }
 
+// TestResourceClusterEdgeNativeUpdate_UpdateLockOnly_SkipsCloudConfigPut
+// confirms a lock-only change does not also send the general cloud config
+// PUT: the config UID makes that PUT fail, so success proves it was skipped.
+func TestResourceClusterEdgeNativeUpdate_UpdateLockOnly_SkipsCloudConfigPut(t *testing.T) {
+	oldRaw := baseEdgeNativeRaw(edgeNativeCloudConfigRawMap(map[string]interface{}{
+		"update_lock": "disabled",
+	}))
+	newRaw := baseEdgeNativeRaw(edgeNativeCloudConfigRawMap(map[string]interface{}{
+		"update_lock": "enabled",
+	}))
+
+	d := buildEdgeNativeUpdateResourceData(t, oldRaw, newRaw, routes.EdgeNativeCloudConfigUpdateRejectUID)
+	require.True(t, d.HasChange("cloud_config"))
+	require.False(t, hasCloudConfigChangeExceptUpdateLock(d))
+
+	diags := resourceClusterEdgeNativeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// TestResourceClusterEdgeNativeUpdate_UpdateLockAndOtherField_SendsCloudConfigPut
+// confirms a change to another cloud_config field alongside update_lock still
+// goes through the general cloud config PUT.
+func TestResourceClusterEdgeNativeUpdate_UpdateLockAndOtherField_SendsCloudConfigPut(t *testing.T) {
+	oldRaw := baseEdgeNativeRaw(edgeNativeCloudConfigRawMap(map[string]interface{}{
+		"update_lock": "disabled",
+	}))
+	newRaw := baseEdgeNativeRaw(edgeNativeCloudConfigRawMap(map[string]interface{}{
+		"update_lock": "enabled",
+		"ssh_keys":    []interface{}{"ssh-rsa BBBB..."},
+	}))
+
+	d := buildEdgeNativeUpdateResourceData(t, oldRaw, newRaw, routes.EdgeNativeCloudConfigUpdateRejectUID)
+	require.True(t, hasCloudConfigChangeExceptUpdateLock(d))
+
+	diags := resourceClusterEdgeNativeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError(), "expected the general cloud config PUT to be sent")
+}
+
 // TestResourceClusterEdgeNativeUpdate_UpdateLock_RejectedByAPI confirms a
 // backend rejection of the lock-state change is surfaced as an apply-time
 // error instead of being swallowed.
@@ -208,10 +257,9 @@ func TestResourceClusterEdgeNativeUpdate_UpdateLock_NoChangeNoOp(t *testing.T) {
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
 }
 
-// TestResourceClusterEdgeNativeCreate_UpdateLock exercises the day-0 guard:
-// an explicitly configured update_lock is applied via UpdateLockEdgeNative
-// after the cluster is created and read, landing in the final cloud_config
-// state.
+// TestResourceClusterEdgeNativeCreate_UpdateLock exercises the day-1 path: an
+// explicitly configured update_lock goes out in the create body and the
+// create completes without a separate UpdateLockEdgeNative call.
 func TestResourceClusterEdgeNativeCreate_UpdateLock(t *testing.T) {
 	d := prepareEdgeNativeClusterResourceData(t)
 	require.NoError(t, d.Set("tags", []interface{}{"skip_completion"}))
@@ -232,9 +280,8 @@ func TestResourceClusterEdgeNativeCreate_UpdateLock(t *testing.T) {
 	assert.Equal(t, "disabled", cc["update_lock"])
 }
 
-// TestResourceClusterEdgeNativeCreate_UpdateLockUnset confirms Create doesn't
-// call UpdateLockEdgeNative at all when update_lock is left unset, leaving
-// Palette's auto-engaged state untouched.
+// TestResourceClusterEdgeNativeCreate_UpdateLockUnset confirms Create succeeds
+// when update_lock is left unset, leaving Palette's default untouched.
 func TestResourceClusterEdgeNativeCreate_UpdateLockUnset(t *testing.T) {
 	d := prepareEdgeNativeClusterResourceData(t)
 	require.NoError(t, d.Set("tags", []interface{}{"skip_completion"}))
