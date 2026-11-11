@@ -409,17 +409,17 @@ func resourceClusterAzure() *schema.Resource {
 						"user_assigned_identities": {
 							Type:     schema.TypeSet,
 							Optional: true,
-							ForceNew: true,
-							Set:      schema.HashString,
+							// ForceNew: true,
+							Set: schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 							Description: "Azure resource IDs of additional user-assigned managed identities attached to the nodes of this pool, alongside `cloud_config.managed_identity`'s cluster identity (unless `exclude_cluster_identity` is set). Immutable after the pool is created.",
 						},
 						"exclude_cluster_identity": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							ForceNew:    true,
+							Type:     schema.TypeBool,
+							Optional: true,
+							// ForceNew:    true,
 							Default:     false,
 							Description: "Leaves `cloud_config.managed_identity`'s cluster identity off the machines of this pool. Default value is `false`. Immutable after the pool is created.",
 						},
