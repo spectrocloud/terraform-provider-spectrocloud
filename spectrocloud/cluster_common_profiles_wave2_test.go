@@ -23,6 +23,11 @@ const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
 // clusterUid's cluster_template-scoped variables endpoint returns 500.
 const clusterTemplateVariablesPatchErrorUID = "cluster-template-uid-variables-patch-error"
 
+// clusterProfilesPatchErrorUID mirrors the constant of the same name in
+// tests/mockApiServer/routes/mockCluster.go — PATCH against this UID's
+// profiles endpoint returns a Hubble-style K8sUpgradeNotSupported rejection.
+const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
+
 // ---------------------------------------------------------------------------
 // updateProfiles / rollbackClusterProfileOnUpdateError / computeProfilesToDelete /
 // enrichClusterProfilesWithPacks / toClusterTemplateReference /
@@ -291,6 +296,31 @@ func TestUpdateProfilesSetReplaceWithProfileError_RealDiff(t *testing.T) {
 	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 	require.Len(t, profiles, 1)
 	assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+}
+
+// TestUpdateProfilesPatchProfileValuesError_RealDiff forces c.PatchClusterProfileValues
+// to fail with a Hubble-style rejection (clusterProfilesPatchErrorUID in mockCluster.go,
+// modeled on K8sUpgradeNotSupported), exercising the rollback call site right after the
+// PATCH call and confirming cluster_profile reverts to the pre-apply profile UID rather
+// than persisting the rejected swap (PLT-2508).
+func TestUpdateProfilesPatchProfileValuesError_RealDiff(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := buildClusterProfileChangeResourceData(t,
+		[]interface{}{map[string]interface{}{"id": "k8s-1-35-profile-uid"}},
+		[]interface{}{map[string]interface{}{"id": "k8s-1-37-profile-uid"}},
+		nil,
+	)
+	d.SetId(clusterProfilesPatchErrorUID)
+	require.True(t, d.HasChange("cluster_profile"))
+
+	err := updateProfiles(c, d)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "K8sUpgradeNotSupported")
+
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	require.Len(t, profiles, 1)
+	assert.Equal(t, "k8s-1-35-profile-uid", profiles[0].(map[string]interface{})["id"],
+		"rollback must restore the pre-apply cluster_profile.id, not the rejected swap target")
 }
 
 func mustGetCluster(t *testing.T, c interface {

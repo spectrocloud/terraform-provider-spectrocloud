@@ -258,6 +258,25 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	}
 }
 
+// clusterProfilesPatchErrorUID drives the PatchClusterProfileValues error branch inside
+// updateProfiles (cluster_common_profiles.go) — e.g. Hubble rejecting a cluster_profile.id
+// swap with K8sUpgradeNotSupported (PLT-2508). Any other UID gets the original blanket
+// 204 success.
+const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
+
+func clusterProfilesPatchHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterProfilesPatchErrorUID {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("K8sUpgradeNotSupported",
+			"Kubernetes upgrade from 1.35 to 1.37 is not supported. Upgrades must stay on the same "+
+				"major version and advance at most one minor version at a time."))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // clusterVariablesPatchErrorUID drives the UpdateClusterProfileVariableInCluster error
 // branch — any other UID gets the original blanket 204 success.
 const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
@@ -613,12 +632,13 @@ func ClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "PATCH",
-			Path:   "/v1/spectroclusters/{uid}/profiles",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
+			// UID-dispatched so tests can drive the PatchClusterProfileValues
+			// error branch inside updateProfiles (cluster_common_profiles.go) —
+			// see clusterProfilesPatchErrorUID for the K8sUpgradeNotSupported
+			// rejection branch (PLT-2508).
+			Method:  "PATCH",
+			Path:    "/v1/spectroclusters/{uid}/profiles",
+			Handler: clusterProfilesPatchHandler,
 		},
 		{
 			Method: "DELETE",
