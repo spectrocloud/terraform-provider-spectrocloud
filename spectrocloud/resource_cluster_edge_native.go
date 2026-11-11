@@ -206,6 +206,17 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional:    true,
 							Description: "UID of an OCI registry (`spectrocloud_registry_oci`, `provider_type = \"image\"`) that the Edge hosts use to pull the Edge Native provider (OS/bootstrap) image. Can be set on create or changed later without replacing the cluster.",
 						},
+						"update_lock": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description: "Profile update lock state for the edge native cluster. When `enabled`, cluster profile " +
+								"updates targeting the device are held until a local operator releases the lock from the Edge Local UI - " +
+								"releasing the lock is out of scope for this provider and can only be done locally on the device. Palette " +
+								"re-engages the lock automatically once a held update is applied. Defaults to the value Palette reports " +
+								"(computed) when left unset.",
+						},
 					},
 				},
 			},
@@ -429,6 +440,13 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
+	// Captured before create: Palette engages the profile update lock (PLT-2476)
+	// automatically once deployment completes, so an explicitly configured
+	// update_lock is applied as a Day-2-style patch after the cluster exists,
+	// not as part of the create body.
+	desiredCloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	desiredLockState, lockConfigured := toUpdateLockState(desiredCloudConfig)
+
 	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -442,6 +460,18 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diagnostics
 	}
 	resourceClusterEdgeNativeRead(ctx, d, m)
+
+	if lockConfigured {
+		cloudConfigId := d.Get("cloud_config_id").(string)
+		if err := c.UpdateLockEdgeNative(cloudConfigId, desiredLockState); err != nil {
+			return append(diags, diag.FromErr(err)...)
+		}
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfig["update_lock"] = string(desiredLockState)
+		if err := d.Set("cloud_config", []interface{}{cloudConfig}); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diags
 }
@@ -535,6 +565,9 @@ func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []i
 	}
 	if config.Spec.ClusterConfig.ImageRegistryRef != nil && config.Spec.ClusterConfig.ImageRegistryRef.UID != "" {
 		m["image_registry_ref"] = config.Spec.ClusterConfig.ImageRegistryRef.UID
+	}
+	if config.Spec.ClusterConfig.UpdateLock != nil && config.Spec.ClusterConfig.UpdateLock.State != "" {
+		m["update_lock"] = string(config.Spec.ClusterConfig.UpdateLock.State)
 	}
 
 	return []interface{}{m}
@@ -658,6 +691,18 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 		}
 		if err := c.UpdateCloudConfigEdgeNative(cloudConfigId, clusterConfig); err != nil {
 			return diag.FromErr(err)
+		}
+	}
+
+	// Profile update lock (PLT-2476) is patched through its own endpoint, separate from the
+	// general cloud config update above, so changing it doesn't require the broader cloud
+	// config update permission.
+	if d.HasChange("cloud_config.0.update_lock") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if state, ok := toUpdateLockState(cloudConfig); ok {
+			if err := c.UpdateLockEdgeNative(cloudConfigId, state); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -1100,6 +1145,19 @@ func toImageRegistryRef(cloudConfig map[string]interface{}) *models.V1ObjectRefe
 		return &models.V1ObjectReference{UID: v}
 	}
 	return nil
+}
+
+// toUpdateLockState reads cloud_config's update_lock (PLT-2476). Sent through the dedicated
+// profile-update-lock endpoint rather than the general cloud config PUT/PATCH, since Palette
+// scopes the permission to change it separately from the permission to trigger cluster updates.
+// Returns ok=false when left unset in config, so callers can leave the backend's current/
+// auto-engaged state untouched instead of forcing a value.
+func toUpdateLockState(cloudConfig map[string]interface{}) (state models.V1UpdateLockState, ok bool) {
+	v, exists := cloudConfig["update_lock"].(string)
+	if !exists || v == "" {
+		return "", false
+	}
+	return models.V1UpdateLockState(v), true
 }
 
 func getFirstIPRange(cidr string) (string, error) {
