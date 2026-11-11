@@ -263,7 +263,6 @@ func resourceClusterAks() *schema.Resource {
 						"managed_identity": {
 							Type:        schema.TypeList,
 							Optional:    true,
-							ForceNew:    true,
 							MaxItems:    1,
 							Description: "User-assigned managed identities used to authenticate to Azure. Immutable after cluster creation.",
 							Elem: &schema.Resource{
@@ -271,13 +270,11 @@ func resourceClusterAks() *schema.Resource {
 									"aks_service_identity_resource_id": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										ForceNew:    true,
 										Description: "Azure resource ID of the user-assigned managed identity used by the AKS control plane.",
 									},
 									"kubelet_identity_resource_id": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										ForceNew:    true,
 										Description: "Azure resource ID of the user-assigned managed identity used by the AKS kubelet.",
 									},
 								},
