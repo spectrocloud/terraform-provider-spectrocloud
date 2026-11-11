@@ -280,7 +280,7 @@ Optional:
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))
-- `exclude_cluster_identity` (Boolean) Leaves `cloud_config.managed_identity`'s cluster identity off the machines of this pool. Default value is `false`. Immutable after the pool is created.
+- `exclude_cluster_identity` (Boolean) Leaves `cloud_config.managed_identity`'s cluster identity off the machines of this pool. Default value is `false`.
 - `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool. Default value is `false'.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
@@ -292,7 +292,7 @@ Optional:
 - `skip_k8s_upgrade` (String) Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.
-- `user_assigned_identities` (Set of String) Azure resource IDs of additional user-assigned managed identities attached to the nodes of this pool, alongside `cloud_config.managed_identity`'s cluster identity (unless `exclude_cluster_identity` is set). Immutable after the pool is created.
+- `user_assigned_identities` (Set of String) Azure resource IDs of additional user-assigned managed identities attached to the nodes of this pool, alongside `cloud_config.managed_identity`'s cluster identity (unless `exclude_cluster_identity` is set).
 
 <a id="nestedblock--machine_pool--disk"></a>
 ### Nested Schema for `machine_pool.disk`

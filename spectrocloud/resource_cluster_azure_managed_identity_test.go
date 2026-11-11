@@ -33,17 +33,24 @@ func TestAzureCloudConfig_ManagedIdentity_ForceNew(t *testing.T) {
 	assert.True(t, resourceIDSchema.ForceNew)
 }
 
-func TestAzureMachinePool_IdentityFields_ForceNew(t *testing.T) {
+// TestAzureMachinePool_IdentityFields_Mutable pins the current design:
+// user_assigned_identities and exclude_cluster_identity are NOT ForceNew —
+// they can be changed in place on an existing machine pool. In-place
+// mutability relies on resourceMachinePoolAzureHash including both fields
+// so the TypeSet diff is detected (see
+// TestResourceMachinePoolAzureHashIncludesExcludeClusterIdentity /
+// TestResourceMachinePoolAzureHashIncludesUserAssignedIdentities).
+func TestAzureMachinePool_IdentityFields_Mutable(t *testing.T) {
 	res := resourceClusterAzure()
 	machinePoolElem := res.Schema["machine_pool"].Elem.(*schema.Resource)
 
 	uaiSchema, ok := machinePoolElem.Schema["user_assigned_identities"]
 	require.True(t, ok)
-	assert.True(t, uaiSchema.ForceNew)
+	assert.False(t, uaiSchema.ForceNew)
 
 	eciSchema, ok := machinePoolElem.Schema["exclude_cluster_identity"]
 	require.True(t, ok)
-	assert.True(t, eciSchema.ForceNew)
+	assert.False(t, eciSchema.ForceNew)
 	assert.Equal(t, false, eciSchema.Default)
 }
 
