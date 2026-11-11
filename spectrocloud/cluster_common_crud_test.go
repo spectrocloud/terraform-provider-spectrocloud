@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestResourceClusterStateRefreshFunc(t *testing.T) {
 	t.Run("default cluster → Running-Healthy", func(t *testing.T) {
 		// Default fixture has State=Running; overviewHandler defaults
 		// return Health=Healthy → the func appends "-Healthy".
-		_, state, err := resourceClusterStateRefreshFunc(c, "test-cluster-id")()
+		_, state, err := resourceClusterStateRefreshFunc(c, "test-cluster-id", false)()
 		require.NoError(t, err)
 		assert.Equal(t, "Running-Healthy", state)
 	})
@@ -93,7 +94,7 @@ func TestResourceClusterStateRefreshFunc(t *testing.T) {
 	t.Run("provisioning → Provisioning (no health suffix)", func(t *testing.T) {
 		// Non-Running states skip the overview lookup entirely — verify
 		// the state passes through untouched.
-		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-provisioning")()
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-provisioning", false)()
 		require.NoError(t, err)
 		assert.Equal(t, "Provisioning", state)
 	})
@@ -102,29 +103,59 @@ func TestResourceClusterStateRefreshFunc(t *testing.T) {
 		// The func ONLY appends "-Healthy" when Health.State == "Healthy".
 		// An Unhealthy cluster comes back as bare "Running" — that's a
 		// signal to the caller to keep waiting.
-		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-running-unhealthy")()
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-running-unhealthy", false)()
 		require.NoError(t, err)
 		assert.Equal(t, "Running", state,
 			"Unhealthy Running should NOT get the -Healthy suffix")
 	})
 
+	t.Run("running-unhealthy, failOnPackError=true, no failed pack → Running (no suffix, no error)", func(t *testing.T) {
+		// PLT-2341: failOnPackError only short-circuits when a pack is
+		// actually in Error - an unhealthy cluster with no failed pack must
+		// still just return bare "Running" so the caller keeps polling.
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-running-unhealthy", true)()
+		require.NoError(t, err)
+		assert.Equal(t, "Running", state)
+	})
+
+	t.Run("running with failed pack, failOnPackError=true → Pack:Error", func(t *testing.T) {
+		// PLT-2341: a pack in Error is terminal - surface it immediately as
+		// an error instead of falling through to the health-overview lookup.
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-running-pack-error", true)()
+		require.Error(t, err)
+		assert.Equal(t, "Pack:Error", state)
+		var packErr *resourceClusterPackError
+		require.ErrorAs(t, err, &packErr)
+		assert.Equal(t, "bad-addon-pack", packErr.packName)
+		assert.Contains(t, packErr.message, "replicaCount")
+	})
+
+	t.Run("running with failed pack, failOnPackError=false → Running (delete path unaffected)", func(t *testing.T) {
+		// PLT-2341: waitForClusterDeletion shares this refresh func with
+		// Target: nil - a pack in Error during teardown must not abort the
+		// delete wait, so failOnPackError=false must never inspect Packs.
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-running-pack-error", false)()
+		require.NoError(t, err)
+		assert.Equal(t, "Running", state)
+	})
+
 	t.Run("Status.State=Deleted → Deleted", func(t *testing.T) {
 		// GetCluster returns (nil, nil) for State=="Deleted"; the refresh
 		// func recognizes nil cluster as the Deleted state.
-		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-deleted-state")()
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-deleted-state", false)()
 		require.NoError(t, err)
 		assert.Equal(t, "Deleted", state)
 	})
 
 	t.Run("404 → Deleted", func(t *testing.T) {
 		// 404 also collapses to Deleted via GetCluster's nil-return path.
-		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-not-found")()
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-not-found", false)()
 		require.NoError(t, err)
 		assert.Equal(t, "Deleted", state)
 	})
 
 	t.Run("server error propagates", func(t *testing.T) {
-		_, _, err := resourceClusterStateRefreshFunc(c, "cluster-uid-server-error")()
+		_, _, err := resourceClusterStateRefreshFunc(c, "cluster-uid-server-error", false)()
 		require.Error(t, err)
 	})
 }
@@ -267,4 +298,23 @@ func TestWaitForClusterCreation_ContextCancelled(t *testing.T) {
 	diags, hadError := waitForClusterCreation(ctx, d, "test-cluster-id", nil, c, true)
 	assert.True(t, hadError)
 	assert.NotEmpty(t, diags)
+}
+
+// TestWaitForClusterCreation_PackError is the end-to-end PLT-2341 guard: a
+// pack in Error is detected on the very first poll (waitDelayOverride keeps
+// this instant, see wait_delay.go) and surfaces as a Warning - not an error,
+// exit 0 - naming the failing pack, instead of spinning until the create
+// timeout expires.
+func TestWaitForClusterCreation_PackError(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := resourceClusterAws().TestResourceData()
+	_ = d.Set("context", "project")
+
+	diags, hadError := waitForClusterCreation(context.Background(), d, "cluster-uid-running-pack-error", nil, c, true)
+	require.False(t, hadError, "a failed pack must be a warning, not an apply-time error: diags=%+v", diags)
+	require.Len(t, diags, 1)
+	assert.Equal(t, diag.Warning, diags[0].Severity)
+	assert.Equal(t, "Cluster creation: addon pack failed", diags[0].Summary)
+	assert.Contains(t, diags[0].Detail, "bad-addon-pack")
+	assert.Contains(t, diags[0].Detail, "replicaCount")
 }

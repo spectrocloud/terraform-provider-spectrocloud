@@ -112,6 +112,26 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Metadata.UID = "cluster-uid-running-unhealthy"
 		return c, http.StatusOK
 
+	case "cluster-uid-running-pack-error":
+		// PLT-2341: Running with an addon pack in a terminal Error condition.
+		// resourceClusterStateRefreshFunc(failOnPackError=true) must return
+		// this as an error (state "Pack:Error") instead of falling through to
+		// the health-overview lookup and polling forever.
+		c := getMockSpectroCluster()
+		c.Status.State = "Running"
+		c.Metadata.UID = "cluster-uid-running-pack-error"
+		c.Status.Packs = []*models.V1ClusterPackStatus{
+			{
+				Name: "bad-addon-pack",
+				Condition: &models.V1ClusterCondition{
+					Type:    strPtr("Error"),
+					Status:  strPtr("True"),
+					Message: "Helm install failed: invalid value for key \"replicaCount\"",
+				},
+			},
+		}
+		return c, http.StatusOK
+
 	case "cluster-uid-deleted-state":
 		// GetCluster returns nil when State=="Deleted"; drives the
 		// "Deleted" branch of resourceClusterStateRefreshFunc.
@@ -331,7 +351,7 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		Status: &models.V1SpectroClusterUIDStatusSummary{},
 	}
 	switch uid {
-	case "cluster-uid-running-unhealthy":
+	case "cluster-uid-running-unhealthy", "cluster-uid-running-pack-error":
 		summary.Status.Health = &models.V1SpectroClusterHealthStatus{State: "Unhealthy"}
 	case "cluster-uid-overview-missing-health":
 		// Health left nil — drives resourceClusterBrownfieldRead's
