@@ -43,7 +43,7 @@ terraform import spectrocloud_cloudaccount_azure.{cloud_account_uid}/{cloud_acco
 
 ### Required
 
-- `azure_client_id` (String) Unique client Id from Azure console.
+- `azure_client_id` (String) Unique client Id from Azure console. When `identity_type` is `ServicePrincipal` (the default), this is the service principal's application (client) ID. When `identity_type` is `UserAssignedMSI`, this must be the client ID of the user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs.
 - `azure_tenant_id` (String) Unique tenant Id from Azure console.
 - `name` (String) The name of the Azure cloud account.
 

@@ -50,9 +50,11 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Description: "Unique tenant Id from Azure console.",
 			},
 			"azure_client_id": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "Unique client Id from Azure console.",
+				Type:     schema.TypeString,
+				Required: true,
+				Description: "Unique client Id from Azure console. When `identity_type` is `ServicePrincipal` (the default), this is the service principal's " +
+					"application (client) ID. When `identity_type` is `UserAssignedMSI`, this must be the client ID of the user-assigned managed identity " +
+					"attached to the private cloud gateway or self-hosted Palette VMs.",
 			},
 			"azure_client_secret": {
 				Type:        schema.TypeString,
