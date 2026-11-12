@@ -18,21 +18,24 @@ import (
 // per PEM-12252) - see resource_cluster_azure_managed_identity_test.go for
 // those.
 
-// TestAksCloudConfig_ManagedIdentity_ForceNew guards immutability.
+// TestAksCloudConfig_ManagedIdentity_ForceNew pins the current schema: unlike
+// Azure IaaS's cloud_config.managed_identity (still ForceNew at the block
+// level - see resource_cluster_azure_managed_identity_test.go), AKS's
+// managed_identity block and both its nested fields are mutable in place.
 func TestAksCloudConfig_ManagedIdentity_ForceNew(t *testing.T) {
 	res := resourceClusterAks()
 	cloudConfigElem := res.Schema["cloud_config"].Elem.(*schema.Resource)
 	fieldSchema, ok := cloudConfigElem.Schema["managed_identity"]
 	require.True(t, ok)
-	assert.True(t, fieldSchema.ForceNew)
+	assert.False(t, fieldSchema.ForceNew)
 
 	managedIdentityElem := fieldSchema.Elem.(*schema.Resource)
 	aksServiceIdentitySchema, ok := managedIdentityElem.Schema["aks_service_identity_resource_id"]
 	require.True(t, ok)
-	assert.True(t, aksServiceIdentitySchema.ForceNew)
+	assert.False(t, aksServiceIdentitySchema.ForceNew)
 	kubeletIdentitySchema, ok := managedIdentityElem.Schema["kubelet_identity_resource_id"]
 	require.True(t, ok)
-	assert.True(t, kubeletIdentitySchema.ForceNew)
+	assert.False(t, kubeletIdentitySchema.ForceNew)
 }
 
 // TestAksMachinePool_NoIdentityFields confirms the IaaS-only

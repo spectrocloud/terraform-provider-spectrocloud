@@ -260,6 +260,15 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
+	// This resource manages exactly one cluster_profile slot per cluster (PLT-2503), and its own
+	// ID encodes exactly which profile it previously attached. Capture that here, before
+	// toAddonDeployment/d.SetId touch anything, so a profile-version swap (new UID, usually a new
+	// name too under create_before_destroy) can tell the backend which attached profile to
+	// replace without relying on UpdateAddonDeployment's name-match fallback - that only finds the
+	// right target when the new profile happens to share the old one's name, which isn't true
+	// across a create_before_destroy version bump.
+	oldProfileUID, _ := getClusterProfileUID(d.Id())
+
 	addonDeployment, err := toAddonDeployment(c, d)
 	if err != nil {
 		return diag.FromErr(err)
@@ -271,6 +280,9 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if oldProfileUID != "" && oldProfileUID != newProfile.Metadata.UID {
+		addonDeployment.Profiles[0].ReplaceWithProfile = oldProfileUID
 	}
 	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 	if err != nil {

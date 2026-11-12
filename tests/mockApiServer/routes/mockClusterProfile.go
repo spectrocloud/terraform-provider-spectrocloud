@@ -124,6 +124,15 @@ func clusterProfileFixtureFor(uid string) *models.V1ClusterProfile {
 		p.Spec.Published.Name = "test-cluster-profile-2"
 		p.Spec.Published.Type = "addon"
 		return p
+	case AddonProfileSwapNewProfileUID:
+		// PLT-2503 follow-up: deliberately a different Name than the
+		// attached profile in getMockSpectroClusterForAddonProfileSwap, so
+		// IsProfileAttachedByName's name match alone cannot resolve it.
+		p := getClusterProfileResponse()
+		p.Metadata.Name = "mgmt-plane-965"
+		p.Metadata.UID = AddonProfileSwapNewProfileUID
+		p.Spec.Published.Name = "mgmt-plane-965"
+		return p
 	default:
 		return getClusterProfileResponse()
 	}
