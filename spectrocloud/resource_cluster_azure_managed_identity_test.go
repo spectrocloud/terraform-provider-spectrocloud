@@ -14,13 +14,15 @@ import (
 // spectrocloud_cluster_azure (IaaS): cloud_config.managed_identity
 // (cluster_identity only - aks_service_identity/kubelet_identity are
 // AKS-only) and machine_pool.user_assigned_identities /
-// exclude_cluster_identity. cloud_config.managed_identity is immutable
-// after creation per the API contract (PEM-12252); the machine_pool-level
-// fields were later made mutable in place (see
+// exclude_cluster_identity. cloud_config.managed_identity itself is still
+// ForceNew (adding/removing the block forces a new resource), but its
+// cluster_identity_resource_id field was later made mutable in place - the
+// same direction as the machine_pool-level fields (see
 // TestAzureMachinePool_IdentityFields_Mutable).
 
 // TestAzureCloudConfig_ManagedIdentity_ForceNew guards the cloud_config-level
-// immutability requirement at the schema level.
+// schema: the managed_identity block itself is ForceNew, but
+// cluster_identity_resource_id underneath it is not.
 func TestAzureCloudConfig_ManagedIdentity_ForceNew(t *testing.T) {
 	res := resourceClusterAzure()
 	cloudConfigElem := res.Schema["cloud_config"].Elem.(*schema.Resource)
@@ -31,7 +33,7 @@ func TestAzureCloudConfig_ManagedIdentity_ForceNew(t *testing.T) {
 	managedIdentityElem := fieldSchema.Elem.(*schema.Resource)
 	resourceIDSchema, ok := managedIdentityElem.Schema["cluster_identity_resource_id"]
 	require.True(t, ok)
-	assert.True(t, resourceIDSchema.ForceNew)
+	assert.False(t, resourceIDSchema.ForceNew)
 }
 
 // TestAzureMachinePool_IdentityFields_Mutable pins the current design:

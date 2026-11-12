@@ -264,7 +264,7 @@ func resourceClusterAks() *schema.Resource {
 							Type:        schema.TypeList,
 							Optional:    true,
 							MaxItems:    1,
-							Description: "User-assigned managed identities used to authenticate to Azure. Immutable after cluster creation.",
+							Description: "User-assigned managed identities used to authenticate to Azure.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"aks_service_identity_resource_id": {

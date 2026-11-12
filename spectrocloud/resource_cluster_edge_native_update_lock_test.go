@@ -23,9 +23,10 @@ import (
 // reading the current state and explicitly enabling/disabling it.
 
 // TestCloudConfig_UpdateLock_Schema is the schema-level guard: update_lock
-// must be Optional+Computed (so an unset config doesn't fight the backend's
-// auto-engaged value) and not ForceNew (a lock toggle must not replace the
-// cluster).
+// must be Optional with a static "disabled" Default (not ForceNew - a lock
+// toggle must not replace the cluster). It is not Computed: Computed and
+// Default cannot be set together (the SDK rejects that combination at
+// InternalValidate time with "Default must be nil if computed").
 func TestCloudConfig_UpdateLock_Schema(t *testing.T) {
 	res := resourceClusterEdgeNative()
 	require.False(t, res.Schema["cloud_config"].ForceNew)
@@ -35,7 +36,8 @@ func TestCloudConfig_UpdateLock_Schema(t *testing.T) {
 	require.True(t, ok, "cloud_config must define update_lock")
 	assert.False(t, fieldSchema.ForceNew)
 	assert.True(t, fieldSchema.Optional)
-	assert.True(t, fieldSchema.Computed)
+	assert.False(t, fieldSchema.Computed)
+	assert.Equal(t, "disabled", fieldSchema.Default)
 }
 
 // TestToUpdateLockState covers the helper directly: a valid enabled/disabled
