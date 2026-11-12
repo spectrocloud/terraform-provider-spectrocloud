@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	v1 "github.com/spectrocloud/palette-sdk-go/api/client/version1"
@@ -153,6 +154,9 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	case "cluster-uid-addon-profile-not-attached":
 		return getMockSpectroClusterWithoutMatchingProfile(), http.StatusOK
 
+	case AddonProfileSwapClusterUID:
+		return getMockSpectroClusterForAddonProfileSwap(), http.StatusOK
+
 	case "test-gcp-cluster-id":
 		// Batch 3c GCP CRUD: the default fixture reports CloudType="aws"
 		// which fails ValidateCloudType inside resourceClusterGcpRead.
@@ -264,6 +268,21 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 // 204 success.
 const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
 
+var (
+	clusterProfilesPatchBodiesMu sync.Mutex
+	clusterProfilesPatchBodies   = map[string]*models.V1SpectroClusterProfiles{}
+)
+
+// LastClusterProfilesPatchBody returns the body of the most recent
+// PATCH /v1/spectroclusters/{uid}/profiles request recorded for uid, or nil
+// if none was recorded — lets tests assert on fields (e.g. ReplaceWithProfile)
+// the response alone doesn't expose (PLT-2503 follow-up).
+func LastClusterProfilesPatchBody(uid string) *models.V1SpectroClusterProfiles {
+	clusterProfilesPatchBodiesMu.Lock()
+	defer clusterProfilesPatchBodiesMu.Unlock()
+	return clusterProfilesPatchBodies[uid]
+}
+
 func clusterProfilesPatchHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
 	w.Header().Set("Content-Type", "application/json")
@@ -273,6 +292,12 @@ func clusterProfilesPatchHandler(w http.ResponseWriter, r *http.Request) {
 			"Kubernetes upgrade from 1.35 to 1.37 is not supported. Upgrades must stay on the same "+
 				"major version and advance at most one minor version at a time."))
 		return
+	}
+	var body models.V1SpectroClusterProfiles
+	if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+		clusterProfilesPatchBodiesMu.Lock()
+		clusterProfilesPatchBodies[uid] = &body
+		clusterProfilesPatchBodiesMu.Unlock()
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -453,6 +478,42 @@ func getMockSpectroClusterWithAddonReady() *models.V1SpectroCluster {
 	c.Status.Packs = []*models.V1ClusterPackStatus{
 		{
 			ProfileUID: "test-addon-profile-uid",
+			Name:       "kubernetes",
+			Condition: &models.V1ClusterCondition{
+				Status: &tru,
+				Type:   &ready,
+			},
+		},
+	}
+	return c
+}
+
+// AddonProfileSwapClusterUID, AddonProfileSwapOldProfileUID and
+// AddonProfileSwapNewProfileUID back getMockSpectroClusterForAddonProfileSwap
+// (PLT-2503 follow-up): a cluster with exactly one attached profile whose
+// NAME differs from the new profile it's being swapped to — the
+// create_before_destroy version-bump case IsProfileAttachedByName's name
+// match alone cannot resolve.
+const (
+	AddonProfileSwapClusterUID    = "cluster-uid-addon-profile-swap"
+	AddonProfileSwapOldProfileUID = "mgmt-plane-902-uid"
+	AddonProfileSwapNewProfileUID = "mgmt-plane-965-uid"
+)
+
+func getMockSpectroClusterForAddonProfileSwap() *models.V1SpectroCluster {
+	c := getMockSpectroCluster()
+	c.Metadata.UID = AddonProfileSwapClusterUID
+	c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+		{UID: AddonProfileSwapOldProfileUID, Name: "mgmt-plane-902", Type: "addon"},
+	}
+	tru := "True"
+	ready := "Ready"
+	c.Status.Conditions = []*models.V1ClusterCondition{
+		{Status: &tru, Type: &ready},
+	}
+	c.Status.Packs = []*models.V1ClusterPackStatus{
+		{
+			ProfileUID: AddonProfileSwapNewProfileUID,
 			Name:       "kubernetes",
 			Condition: &models.V1ClusterCondition{
 				Status: &tru,

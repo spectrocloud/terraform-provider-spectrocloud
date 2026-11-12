@@ -7,6 +7,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 // ---------------------------------------------------------------------------
@@ -125,6 +128,42 @@ func TestUpdateAddonDeployment_GetClusterProfileError(t *testing.T) {
 	var diags diag.Diagnostics
 	result := updateAddonDeployment(context.Background(), d, unitTestMockAPINegativeClient, cNeg, cluster, "cluster-uid-addon-ready", diags)
 	assert.True(t, result.HasError())
+}
+
+// TestUpdateAddonDeployment_SwapAcrossDifferentlyNamedProfiles is the PLT-2503
+// follow-up: a create_before_destroy profile version bump moves
+// cluster_profile.id to a brand new profile UID whose Name also differs from
+// the previously attached profile's Name (each version gets a distinct
+// name). IsProfileAttachedByName alone can't resolve a ReplaceWithProfile
+// target in that case - updateAddonDeployment must derive it from the
+// resource's own prior ID (encoded as clusterUid_oldProfileUid) instead, so
+// the PATCH actually replaces the old profile rather than just adding the
+// new one alongside it.
+func TestUpdateAddonDeployment_SwapAcrossDifferentlyNamedProfiles(t *testing.T) {
+	d := resourceAddonDeployment().TestResourceData()
+	d.SetId(routes.AddonProfileSwapClusterUID + "_" + routes.AddonProfileSwapOldProfileUID)
+	_ = d.Set("context", "project")
+	_ = d.Set("cluster_uid", routes.AddonProfileSwapClusterUID)
+	_ = d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{
+			"id": routes.AddonProfileSwapNewProfileUID,
+		},
+	})
+	c := castV1Client(t, unitTestMockAPIClient)
+
+	cluster, err := c.GetCluster(routes.AddonProfileSwapClusterUID)
+	require.NoError(t, err)
+	require.NotNil(t, cluster)
+
+	var diags diag.Diagnostics
+	result := updateAddonDeployment(context.Background(), d, unitTestMockAPIClient, c, cluster, routes.AddonProfileSwapClusterUID, diags)
+	assert.False(t, result.HasError(), "diags: %+v", result)
+
+	body := routes.LastClusterProfilesPatchBody(routes.AddonProfileSwapClusterUID)
+	require.NotNil(t, body, "PATCH /v1/spectroclusters/{uid}/profiles was never called")
+	require.Len(t, body.Profiles, 1)
+	assert.Equal(t, routes.AddonProfileSwapOldProfileUID, body.Profiles[0].ReplaceWithProfile,
+		"must replace the previously attached profile even though its name differs from the new one")
 }
 
 func TestGetAddonDeploymentIdANDReverse(t *testing.T) {
