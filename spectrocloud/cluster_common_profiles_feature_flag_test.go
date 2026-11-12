@@ -106,21 +106,32 @@ func TestShouldSyncClusterProfilesFromAPI(t *testing.T) {
 		},
 	}
 
-	t.Run("false when feature flag is off", func(t *testing.T) {
+	t.Run("true regardless of feature flag when cluster_template is not used (PLT-2508)", func(t *testing.T) {
+		// cluster_profile is a TypeSet, and terraform-plugin-sdk's ApplyResourceChange
+		// unconditionally overwrites a TypeSet value the provider computed during Update
+		// with the planned/config value once that value is wholly known - so a failed
+		// apply always leaves the rejected value in state for that one apply no matter
+		// what the provider does. Only Read can correct it afterward, so it must always
+		// resync from the API regardless of disable_addon_deployment_resource.
 		disableAddonDeploymentResource = false
 		d := baseSchema.TestResourceData()
-		assert.False(t, shouldSyncClusterProfilesFromAPI(d))
-	})
+		assert.True(t, shouldSyncClusterProfilesFromAPI(d))
 
-	t.Run("true when feature flag is on and cluster_template is not used", func(t *testing.T) {
 		disableAddonDeploymentResource = true
-		d := baseSchema.TestResourceData()
+		d = baseSchema.TestResourceData()
 		assert.True(t, shouldSyncClusterProfilesFromAPI(d))
 	})
 
-	t.Run("false when feature flag is on but cluster_template is set", func(t *testing.T) {
-		disableAddonDeploymentResource = true
+	t.Run("false when cluster_template is set, regardless of feature flag", func(t *testing.T) {
+		disableAddonDeploymentResource = false
 		d := baseSchema.TestResourceData()
+		_ = d.Set("cluster_template", []interface{}{
+			map[string]interface{}{"id": "template-1"},
+		})
+		assert.False(t, shouldSyncClusterProfilesFromAPI(d))
+
+		disableAddonDeploymentResource = true
+		d = baseSchema.TestResourceData()
 		_ = d.Set("cluster_template", []interface{}{
 			map[string]interface{}{"id": "template-1"},
 		})
