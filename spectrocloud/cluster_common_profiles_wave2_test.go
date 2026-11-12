@@ -28,6 +28,20 @@ const clusterTemplateVariablesPatchErrorUID = "cluster-template-uid-variables-pa
 // profiles endpoint returns a Hubble-style K8sUpgradeNotSupported rejection.
 const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
 
+// clusterProfileSwapVariablesPatchErrorUID mirrors the constant of the same
+// name in tests/mockApiServer/routes/mockCluster.go — PATCH against this
+// UID's variables endpoint returns 500, and GetCluster for this UID reports
+// the NEW (post-swap) profile already attached, modeling a failure that
+// happens after the cluster_profile PATCH already succeeded (PLT-2508).
+const clusterProfileSwapVariablesPatchErrorUID = "cluster-uid-profile-swap-variables-patch-error"
+
+// clusterProfileRollbackPreApplyUID mirrors the constant of the same name in
+// tests/mockApiServer/routes/mockCluster.go — GetCluster for this UID reports
+// "pre-apply-profile" attached, so rollbackClusterProfileOnUpdateError's
+// now-unconditional API resync (PLT-2508) finds the same value the pre-apply
+// snapshot already held, for tests whose failure happens before any PATCH.
+const clusterProfileRollbackPreApplyUID = "cluster-uid-rollback-pre-apply-profile"
+
 // ---------------------------------------------------------------------------
 // updateProfiles / rollbackClusterProfileOnUpdateError / computeProfilesToDelete /
 // enrichClusterProfilesWithPacks / toClusterTemplateReference /
@@ -226,7 +240,7 @@ func TestUpdateProfilesRollbackOnBadContext_RealDiff(t *testing.T) {
 		"cluster_profile":  []interface{}{map[string]interface{}{"id": "pre-apply-profile"}},
 	}
 	oldRD := schema.TestResourceDataRaw(t, res.Schema, oldRaw)
-	oldRD.SetId("test-cluster-id")
+	oldRD.SetId(clusterProfileRollbackPreApplyUID)
 	oldState := oldRD.State()
 	require.NotNil(t, oldState)
 
@@ -243,7 +257,7 @@ func TestUpdateProfilesRollbackOnBadContext_RealDiff(t *testing.T) {
 
 	d, err := schema.InternalMap(res.Schema).Data(oldState, diff)
 	require.NoError(t, err)
-	d.SetId("test-cluster-id")
+	d.SetId(clusterProfileRollbackPreApplyUID)
 
 	updateErr := updateProfiles(c, d)
 	require.Error(t, updateErr)
@@ -288,6 +302,7 @@ func TestUpdateProfilesSetReplaceWithProfileError_RealDiff(t *testing.T) {
 		[]interface{}{map[string]interface{}{"id": "cluster-profile-get-error-uid"}},
 		nil,
 	)
+	d.SetId(clusterProfileRollbackPreApplyUID)
 
 	err := updateProfiles(c, d)
 	require.Error(t, err)
@@ -321,6 +336,41 @@ func TestUpdateProfilesPatchProfileValuesError_RealDiff(t *testing.T) {
 	require.Len(t, profiles, 1)
 	assert.Equal(t, "k8s-1-35-profile-uid", profiles[0].(map[string]interface{})["id"],
 		"rollback must restore the pre-apply cluster_profile.id, not the rejected swap target")
+}
+
+// TestUpdateProfilesVariableUpdateErrorAfterSwap_RealDiff is the PLT-2508
+// partial-failure regression: PatchClusterProfileValues already succeeded
+// (the cluster swapped from the old profile to the new one), and only the
+// subsequent variable PATCH fails. Unlike a pre-PATCH failure, the backend
+// already has the new profile attached, so updateProfiles must resync
+// cluster_profile from the API (resyncProfilesFromAPI) rather than blindly
+// restoring the pre-apply snapshot — restoring the old profile UID here
+// would desync Terraform state from the actual cluster.
+func TestUpdateProfilesVariableUpdateErrorAfterSwap_RealDiff(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := buildClusterProfileChangeResourceData(t,
+		[]interface{}{map[string]interface{}{"id": "swap-profile-old-uid"}},
+		[]interface{}{
+			map[string]interface{}{
+				"id": "swap-profile-new-uid",
+				"variables": map[string]interface{}{
+					"region": "us-west-2",
+				},
+			},
+		},
+		nil,
+	)
+	d.SetId(clusterProfileSwapVariablesPatchErrorUID)
+	require.True(t, d.HasChange("cluster_profile"))
+
+	err := updateProfiles(c, d)
+	require.Error(t, err)
+
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	require.Len(t, profiles, 1)
+	assert.Equal(t, "swap-profile-new-uid", profiles[0].(map[string]interface{})["id"],
+		"a failure after the PATCH already succeeded must resync from the API (new profile), "+
+			"not revert to the pre-apply snapshot (old profile) - PLT-2508")
 }
 
 func mustGetCluster(t *testing.T, c interface {
@@ -471,6 +521,55 @@ func TestFlattenClusterTemplateVariables_VariablesAPIError(t *testing.T) {
 	assert.Equal(t, "cluster-profile-import-1", prof["id"])
 	vars, _ := prof["variables"].(map[string]interface{})
 	assert.Empty(t, vars, "a failed variables fetch must not populate variables, but must not error either")
+}
+
+// ---------------------------------------------------------------------------
+// resyncClusterProfileFromAPIAfterPartialFailure (PLT-2508) — unlike
+// rollbackClusterProfileOnUpdateError, this always re-reads the cluster
+// regardless of disableAddonDeploymentResource, since it's only ever called
+// after PatchClusterProfileValues has already succeeded.
+// ---------------------------------------------------------------------------
+
+func TestResyncClusterProfileFromAPIAfterPartialFailure(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	oldProfile := []interface{}{map[string]interface{}{"id": "pre-apply-profile"}}
+
+	t.Run("GetCluster succeeds, syncs cluster_profile from the cluster API document rather than oldProfile", func(t *testing.T) {
+		d := resourceClusterEks().TestResourceData()
+		d.SetId(clusterProfileSwapVariablesPatchErrorUID)
+		_ = d.Set("cluster_profile", []interface{}{map[string]interface{}{"id": "swap-profile-new-uid"}})
+
+		resyncClusterProfileFromAPIAfterPartialFailure(c, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "swap-profile-new-uid", profiles[0].(map[string]interface{})["id"],
+			"must reflect the already-applied new profile from the API, not oldProfile")
+	})
+
+	t.Run("GetCluster hard error falls back to the pre-apply snapshot", func(t *testing.T) {
+		d := resourceClusterEks().TestResourceData()
+		d.SetId("cluster-uid-server-error")
+		_ = d.Set("cluster_profile", []interface{}{map[string]interface{}{"id": "failed-desired-profile"}})
+
+		resyncClusterProfileFromAPIAfterPartialFailure(c, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+	})
+
+	t.Run("GetCluster returns nil cluster (404-swallowed) falls back to the pre-apply snapshot", func(t *testing.T) {
+		d := resourceClusterEks().TestResourceData()
+		d.SetId("cluster-uid-not-found")
+		_ = d.Set("cluster_profile", []interface{}{map[string]interface{}{"id": "failed-desired-profile"}})
+
+		resyncClusterProfileFromAPIAfterPartialFailure(c, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+	})
 }
 
 // ---------------------------------------------------------------------------

@@ -157,6 +157,59 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	case AddonProfileSwapClusterUID:
 		return getMockSpectroClusterForAddonProfileSwap(), http.StatusOK
 
+	case clusterVariablesPatchErrorUID:
+		// The cluster_profile PATCH already succeeded by the time
+		// UpdateClusterProfileVariableInCluster runs - GetCluster here must
+		// reflect that success (the profile already attached) so
+		// resyncProfilesFromAPI (cluster_common_profiles.go, PLT-2508) rebuilds
+		// cluster_profile from real post-PATCH backend state instead of the
+		// unrelated default fixture's profiles.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = clusterVariablesPatchErrorUID
+		c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+			{UID: "variable-profile-uid", Name: "variable-profile", Type: "addon"},
+		}
+		return c, http.StatusOK
+
+	case clusterProfileRollbackPreApplyUID:
+		// rollbackClusterProfileOnUpdateError now always resyncs from the API
+		// (PLT-2508, no longer gated behind disable_addon_deployment_resource) -
+		// this fixture lets pre-PATCH-failure tests that use "pre-apply-profile"
+		// as their old value see that same value come back from GetCluster.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = clusterProfileRollbackPreApplyUID
+		c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+			{UID: "pre-apply-profile", Name: "pre-apply-profile", Type: "addon"},
+		}
+		return c, http.StatusOK
+
+	case clusterProfilesPatchErrorUID:
+		// PatchClusterProfileValues rejects this UID's PATCH (K8sUpgradeNotSupported,
+		// see clusterProfilesPatchHandler) - GetCluster must still show the
+		// pre-apply profile ("k8s-1-35-profile-uid") attached, since nothing
+		// changed server-side, for rollbackClusterProfileOnUpdateError's
+		// now-unconditional API resync (PLT-2508) to restore the right value.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = clusterProfilesPatchErrorUID
+		c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+			{UID: "k8s-1-35-profile-uid", Name: "k8s-1-35-profile", Type: "addon"},
+		}
+		return c, http.StatusOK
+
+	case clusterProfileSwapVariablesPatchErrorUID:
+		// Models a profile SWAP (not just a variable-only change): the
+		// cluster_profile PATCH already replaced the old profile with the new
+		// one before the variables PATCH fails, so GetCluster must show the
+		// NEW profile UID already attached - proving resyncProfilesFromAPI
+		// (not a blind revert to the pre-apply snapshot) is what runs after a
+		// failure that happens post-PATCH-success (PLT-2508).
+		c := getMockSpectroCluster()
+		c.Metadata.UID = clusterProfileSwapVariablesPatchErrorUID
+		c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+			{UID: "swap-profile-new-uid", Name: "swap-profile-new", Type: "addon"},
+		}
+		return c, http.StatusOK
+
 	case "test-gcp-cluster-id":
 		// Batch 3c GCP CRUD: the default fixture reports CloudType="aws"
 		// which fails ValidateCloudType inside resourceClusterGcpRead.
@@ -268,6 +321,11 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 // 204 success.
 const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
 
+// clusterProfileRollbackPreApplyUID drives GetCluster showing "pre-apply-profile" attached -
+// used by pre-PATCH-failure tests exercising rollbackClusterProfileOnUpdateError's now-
+// unconditional API resync (PLT-2508, cluster_common_profiles.go).
+const clusterProfileRollbackPreApplyUID = "cluster-uid-rollback-pre-apply-profile"
+
 var (
 	clusterProfilesPatchBodiesMu sync.Mutex
 	clusterProfilesPatchBodies   = map[string]*models.V1SpectroClusterProfiles{}
@@ -306,10 +364,15 @@ func clusterProfilesPatchHandler(w http.ResponseWriter, r *http.Request) {
 // branch — any other UID gets the original blanket 204 success.
 const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
 
+// clusterProfileSwapVariablesPatchErrorUID is like clusterVariablesPatchErrorUID but models a
+// profile SWAP rather than a same-profile variable change - see the clusterFixtureFor case
+// above for why that distinction matters (PLT-2508).
+const clusterProfileSwapVariablesPatchErrorUID = "cluster-uid-profile-swap-variables-patch-error"
+
 func clusterVariablesPatchHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
 	w.Header().Set("Content-Type", "application/json")
-	if uid == clusterVariablesPatchErrorUID {
+	if uid == clusterVariablesPatchErrorUID || uid == clusterProfileSwapVariablesPatchErrorUID {
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(getError("500", "failed to update cluster profile variables"))
 		return
