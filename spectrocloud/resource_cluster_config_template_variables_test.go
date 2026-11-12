@@ -187,31 +187,6 @@ func TestRefreshProfileVariableValues_PreservesClusterIDsFromPriorState(t *testi
 	assert.Equal(t, "us-east-1", variable["value"])
 }
 
-// ---------------------------------------------------------------------
-// validateClusterConfigTemplateVariableAssignment — CustomizeDiff guard.
-// ---------------------------------------------------------------------
-
-func baseClusterConfigTemplateRaw(variables map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"name":       "test-template",
-		"cloud_type": "aws",
-		"cluster_profile": []interface{}{
-			map[string]interface{}{
-				"id":        "profile-1",
-				"variables": []interface{}{variables},
-			},
-		},
-	}
-}
-
-func diffClusterConfigTemplate(t *testing.T, raw map[string]interface{}) error {
-	t.Helper()
-	res := resourceClusterConfigTemplate()
-	config := terraform.NewResourceConfigRaw(raw)
-	_, err := res.Diff(context.Background(), nil, config, nil)
-	return err
-}
-
 // buildClusterConfigTemplateUpdateResourceData builds a real InstanceState +
 // config diff via Resource.Diff, the same real-diff pattern used throughout
 // this suite (e.g. buildEksUpdateResourceData), so HasChange behaves the way
@@ -285,42 +260,4 @@ func TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable(t *testin
 	oldProfiles, newProfiles := d.GetChange("cluster_profile")
 	assert.False(t, profileStructureChanged(oldProfiles, newProfiles),
 		"same profile id on both sides must still route to the variables-only PATCH path, not the PUT path")
-}
-
-func TestValidateClusterConfigTemplateVariableAssignment_RejectsMissingClusterIDs(t *testing.T) {
-	err := diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
-		"name":            "region",
-		"value":           "us-west-2",
-		"assign_strategy": "cluster",
-	}))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "cluster_ids is required")
-}
-
-func TestValidateClusterConfigTemplateVariableAssignment_RejectsClusterIDsWithAllStrategy(t *testing.T) {
-	err := diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
-		"name":            "region",
-		"value":           "us-west-2",
-		"assign_strategy": "all",
-		"cluster_ids":     []interface{}{"cluster-1"},
-	}))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "must be empty when assign_strategy is")
-}
-
-func TestValidateClusterConfigTemplateVariableAssignment_AcceptsValidCombinations(t *testing.T) {
-	err := diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
-		"name":            "region",
-		"value":           "us-west-2",
-		"assign_strategy": "cluster",
-		"cluster_ids":     []interface{}{"cluster-1"},
-	}))
-	require.NoError(t, err)
-
-	err = diffClusterConfigTemplate(t, baseClusterConfigTemplateRaw(map[string]interface{}{
-		"name":            "region",
-		"value":           "us-west-2",
-		"assign_strategy": "all",
-	}))
-	require.NoError(t, err)
 }

@@ -33,8 +33,6 @@ func resourceClusterConfigTemplate() *schema.Resource {
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 
-		CustomizeDiff: validateClusterConfigTemplateVariableAssignment,
-
 		SchemaVersion: 1,
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -111,7 +109,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 										Optional:    true,
 										Set:         schema.HashString,
 										Elem:        &schema.Schema{Type: schema.TypeString},
-										Description: "UIDs of the specific clusters `value` applies to. Required when `assign_strategy` is `cluster`; must be empty when `assign_strategy` is `all` (the value applies to every cluster attached to the template).",
+										Description: "UIDs of the specific clusters `value` applies to when `assign_strategy` is `cluster`. Ignored when `assign_strategy` is `all` (the value applies to every cluster attached to the template).",
 									},
 								},
 							},
@@ -458,56 +456,6 @@ func resourceClusterConfigTemplateVariableHash(v interface{}) int {
 	}
 
 	return schema.HashString(buf.String())
-}
-
-// validateClusterConfigTemplateVariableAssignment is a CustomizeDiff guard:
-// assign_strategy "cluster" requires at least one cluster_ids entry to have
-// any effect (buildProfilesVariablesBatchEntity only assigns the variable's
-// value to clusters listed there); assign_strategy "all" must not set
-// cluster_ids, since that value is sent to every attached cluster already
-// and a populated cluster_ids there would be silently ignored.
-func validateClusterConfigTemplateVariableAssignment(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
-	profilesRaw, ok := diff.Get("cluster_profile").(*schema.Set)
-	if !ok {
-		return nil
-	}
-
-	for _, profile := range profilesRaw.List() {
-		p, ok := profile.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		profileID, _ := p["id"].(string)
-
-		variablesSet, ok := p["variables"].(*schema.Set)
-		if !ok {
-			continue
-		}
-
-		for _, v := range variablesSet.List() {
-			varMap, ok := v.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			varName, _ := varMap["name"].(string)
-			assignStrategy, _ := varMap["assign_strategy"].(string)
-			clusterIDs, _ := varMap["cluster_ids"].(*schema.Set)
-			hasClusterIDs := clusterIDs != nil && clusterIDs.Len() > 0
-
-			switch assignStrategy {
-			case "cluster":
-				if !hasClusterIDs {
-					return fmt.Errorf("cluster_profile %q variable %q: cluster_ids is required when assign_strategy is \"cluster\"", profileID, varName)
-				}
-			case "all", "":
-				if hasClusterIDs {
-					return fmt.Errorf("cluster_profile %q variable %q: cluster_ids must be empty when assign_strategy is \"all\" (value is applied to every attached cluster)", profileID, varName)
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 // Helper functions for expanding and flattening
