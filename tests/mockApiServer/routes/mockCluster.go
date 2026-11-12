@@ -132,6 +132,24 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		}
 		return c, http.StatusOK
 
+	case "cluster-uid-provisioning-pack-error":
+		// PLT-2341: a pack fails while the cluster is still Provisioning.
+		// failOnPackError=true must surface it without waiting for Running.
+		c := getMockSpectroCluster()
+		c.Status.State = "Provisioning"
+		c.Metadata.UID = "cluster-uid-provisioning-pack-error"
+		c.Status.Packs = []*models.V1ClusterPackStatus{
+			{
+				Name: "bad-addon-pack",
+				Condition: &models.V1ClusterCondition{
+					Type:    strPtr("Error"),
+					Status:  strPtr("True"),
+					Message: "Helm install failed: invalid value for key \"replicaCount\"",
+				},
+			},
+		}
+		return c, http.StatusOK
+
 	case "cluster-uid-deleted-state":
 		// GetCluster returns nil when State=="Deleted"; drives the
 		// "Deleted" branch of resourceClusterStateRefreshFunc.

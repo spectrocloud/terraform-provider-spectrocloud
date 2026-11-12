@@ -139,6 +139,24 @@ func TestResourceClusterStateRefreshFunc(t *testing.T) {
 		assert.Equal(t, "Running", state)
 	})
 
+	t.Run("provisioning with failed pack, failOnPackError=true → Pack:Error", func(t *testing.T) {
+		// PLT-2341: pack failures are detected during Provisioning too, not
+		// only after the cluster reaches Running.
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-provisioning-pack-error", true)()
+		require.Error(t, err)
+		assert.Equal(t, "Pack:Error", state)
+		var packErr *resourceClusterPackError
+		require.ErrorAs(t, err, &packErr)
+		assert.Equal(t, "bad-addon-pack", packErr.packName)
+		assert.Equal(t, "Provisioning", packErr.clusterState)
+	})
+
+	t.Run("provisioning with failed pack, failOnPackError=false → Provisioning", func(t *testing.T) {
+		_, state, err := resourceClusterStateRefreshFunc(c, "cluster-uid-provisioning-pack-error", false)()
+		require.NoError(t, err)
+		assert.Equal(t, "Provisioning", state)
+	})
+
 	t.Run("Status.State=Deleted → Deleted", func(t *testing.T) {
 		// GetCluster returns (nil, nil) for State=="Deleted"; the refresh
 		// func recognizes nil cluster as the Deleted state.
@@ -317,4 +335,21 @@ func TestWaitForClusterCreation_PackError(t *testing.T) {
 	assert.Equal(t, "Cluster creation: addon pack failed", diags[0].Summary)
 	assert.Contains(t, diags[0].Detail, "bad-addon-pack")
 	assert.Contains(t, diags[0].Detail, "replicaCount")
+}
+
+// TestWaitForClusterCreation_PackErrorDuringProvisioning: PLT-2341 - a pack
+// failing while the cluster is still Provisioning surfaces the same Warning
+// immediately, without waiting for the cluster to reach Running.
+func TestWaitForClusterCreation_PackErrorDuringProvisioning(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+	d := resourceClusterAws().TestResourceData()
+	_ = d.Set("context", "project")
+
+	diags, hadError := waitForClusterCreation(context.Background(), d, "cluster-uid-provisioning-pack-error", nil, c, true)
+	require.False(t, hadError, "a failed pack must be a warning, not an apply-time error: diags=%+v", diags)
+	require.Len(t, diags, 1)
+	assert.Equal(t, diag.Warning, diags[0].Severity)
+	assert.Equal(t, "Cluster creation: addon pack failed", diags[0].Summary)
+	assert.Contains(t, diags[0].Detail, "bad-addon-pack")
+	assert.Contains(t, diags[0].Detail, "Provisioning")
 }
