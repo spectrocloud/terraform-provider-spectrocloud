@@ -21,7 +21,7 @@ func resourceClusterAws() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterAwsCreate,
 		ReadContext:   resourceClusterAwsRead,
-		UpdateContext: resourceClusterAwsUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterAwsUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterAwsImport,

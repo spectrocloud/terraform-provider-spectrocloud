@@ -99,8 +99,10 @@ func TestEnrichClusterProfilesWithPacks_OIDCSystemMacros_PerClusterOverride(t *t
 	require.NoError(t, d.Set("cluster_profile", []interface{}{
 		map[string]interface{}{
 			"id": "profile-with-ck8s",
+			// values must be declared for read to keep it; it differs from the API copy so the
+			// assertion below checks the API's macro string passes through unaltered.
 			"pack": []interface{}{
-				map[string]interface{}{"name": "ck8s"},
+				map[string]interface{}{"name": "ck8s", "values": "placeholder: true"},
 			},
 		},
 	}))

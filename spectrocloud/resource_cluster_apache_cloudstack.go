@@ -29,7 +29,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterApacheCloudStackCreate,
 		ReadContext:   resourceClusterApacheCloudStackRead,
-		UpdateContext: resourceClusterApacheCloudStackUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterApacheCloudStackUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterApacheCloudStackImport,

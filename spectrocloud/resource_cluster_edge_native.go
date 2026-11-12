@@ -22,7 +22,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterEdgeNativeCreate,
 		ReadContext:   resourceClusterEdgeNativeRead,
-		UpdateContext: resourceClusterEdgeNativeUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterEdgeNativeUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEdgeNativeImport,

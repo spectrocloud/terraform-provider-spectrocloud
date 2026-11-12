@@ -19,7 +19,7 @@ func resourceClusterBrownfield() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterBrownfieldImportCreate,
 		ReadContext:   resourceClusterBrownfieldRead,
-		UpdateContext: resourceClusterBrownfieldUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterBrownfieldUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterBrownfieldImport,
