@@ -67,6 +67,154 @@ func TestAlignPackStateWithConfig(t *testing.T) {
 		assert.Equal(t, "6023f4ff4fdd7f7047756474", pack["uid"])
 		assert.Equal(t, "spectro", pack["type"])
 	})
+
+	t.Run("keeps config values when API values differ only by whitespace", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		pack["values"] = "key: value\n\n"
+		alignPackStateWithConfig(pack, map[string]interface{}{"name": "heartbeat", "values": "key: value\n"})
+		assert.Equal(t, "key: value\n", pack["values"])
+	})
+
+	t.Run("keeps API values when content differs from config", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		pack["values"] = "key: from-api"
+		alignPackStateWithConfig(pack, map[string]interface{}{"name": "heartbeat", "values": "key: from-config"})
+		assert.Equal(t, "key: from-api", pack["values"])
+	})
+
+	t.Run("name-only config drops every other attribute", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		pack["registry_uid"] = "reg-1"
+		pack["manifest"] = []interface{}{map[string]interface{}{"name": "m1", "uid": "mu", "content": "c"}}
+		alignPackStateWithConfig(pack, map[string]interface{}{
+			"name": "heartbeat", "tag": "", "values": "", "uid": "", "type": "",
+			"registry_uid": "", "registry_name": "", "manifest": []interface{}{},
+		})
+		assert.Equal(t, map[string]interface{}{"name": "heartbeat"}, pack)
+	})
+
+	t.Run("declared tag and uid keep API values so real drift shows", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		alignPackStateWithConfig(pack, map[string]interface{}{"name": "heartbeat", "tag": "2.0.0", "uid": "config-uid"})
+		assert.Equal(t, "1.0.0", pack["tag"])
+		assert.Equal(t, "6023f4ff4fdd7f7047756474", pack["uid"])
+	})
+
+	t.Run("declared registry_name falls back to config when API lookup returned nothing", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		alignPackStateWithConfig(pack, map[string]interface{}{"name": "heartbeat", "registry_name": "Public Repo"})
+		assert.Equal(t, "Public Repo", pack["registry_name"])
+	})
+
+	t.Run("type keeps the config value", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		pack["type"] = "helm"
+		alignPackStateWithConfig(pack, map[string]interface{}{"name": "heartbeat", "type": "spectro"})
+		assert.Equal(t, "spectro", pack["type"])
+	})
+
+	t.Run("manifests keep only declared ones in config order with API content", func(t *testing.T) {
+		pack := copyPackMap(flattened)
+		pack["manifest"] = []interface{}{
+			map[string]interface{}{"name": "extra", "uid": "u-extra", "content": "x"},
+			map[string]interface{}{"name": "m2", "uid": "u2", "content": "from-api"},
+			map[string]interface{}{"name": "m1", "uid": "u1", "content": "kind: A\n\n"},
+		}
+		alignPackStateWithConfig(pack, map[string]interface{}{
+			"name": "heartbeat",
+			"manifest": []interface{}{
+				map[string]interface{}{"name": "m1", "content": "kind: A\n"},
+				map[string]interface{}{"name": "m2", "content": "from-config"},
+				map[string]interface{}{"name": "missing", "content": "y"},
+			},
+		})
+		assert.Equal(t, []interface{}{
+			map[string]interface{}{"name": "m1", "uid": "u1", "content": "kind: A\n"},
+			map[string]interface{}{"name": "m2", "uid": "u2", "content": "from-api"},
+		}, pack["manifest"])
+	})
+}
+
+func TestAlignPacksWithConfigOrderAndMissing(t *testing.T) {
+	api := []interface{}{
+		map[string]interface{}{"name": "a", "tag": "1"},
+		map[string]interface{}{"name": "b", "tag": "2"},
+	}
+	cfg := []interface{}{
+		map[string]interface{}{"name": "b", "tag": "2"},
+		map[string]interface{}{"name": "not-on-cluster", "tag": "9"},
+		map[string]interface{}{"name": "a", "tag": "1"},
+	}
+	got := alignPacksWithConfig(api, cfg)
+	require.Len(t, got, 2)
+	assert.Equal(t, "b", got[0].(map[string]interface{})["name"])
+	assert.Equal(t, "a", got[1].(map[string]interface{})["name"])
+}
+
+func TestAlignedNameOnlyPackHashMatchesConfig(t *testing.T) {
+	r := resourceClusterEks()
+	d := r.TestResourceData()
+	require.NoError(t, d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{
+			"id":   "profile-1",
+			"pack": []interface{}{map[string]interface{}{"name": "kubernetes-eks"}},
+		},
+	}))
+
+	fromAPI := []interface{}{map[string]interface{}{
+		"id": "profile-1",
+		"pack": []interface{}{
+			map[string]interface{}{"name": "amazon-linux-eks", "tag": "1.0.0", "values": "x"},
+			map[string]interface{}{
+				"name": "kubernetes-eks", "tag": "1.33", "type": "spectro", "uid": "u1", "values": "full: yaml\n",
+				"manifest": []interface{}{map[string]interface{}{"name": "m1", "uid": "mu", "content": "c"}},
+			},
+		},
+	}}
+	alignClusterProfilesStateWithConfig(d, fromAPI)
+
+	// Round-trip through ResourceData so missing keys read back as zero values, as the SDK does
+	// before hashing set elements.
+	state := r.TestResourceData()
+	require.NoError(t, state.Set("cluster_profile", fromAPI))
+
+	hash := schema.HashResource(r.Schema["cluster_profile"].Elem.(*schema.Resource))
+	configElem := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))[0]
+	stateElem := normalizeInterfaceSliceFromListOrSet(state.Get("cluster_profile"))[0]
+	assert.Equal(t, hash(configElem), hash(stateElem))
+}
+
+func TestAlignClusterProfilesStateWithConfigDropsUnconfiguredPacks(t *testing.T) {
+	d := resourceClusterEks().TestResourceData()
+	require.NoError(t, d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"pack": []interface{}{
+				map[string]interface{}{"name": "kubernetes-eks", "tag": "1.33", "values": "a: 1\n"},
+			},
+		},
+	}))
+
+	clusterProfiles := []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"pack": []interface{}{
+				map[string]interface{}{"name": "amazon-linux-eks", "tag": "1.0.0", "values": "x"},
+				map[string]interface{}{"name": "kubernetes-eks", "tag": "1.33", "type": "spectro", "uid": "pack-uid", "values": "a: 1\n\n"},
+				map[string]interface{}{"name": "cni-calico", "tag": "3.33.0", "values": "y"},
+			},
+		},
+	}
+
+	alignClusterProfilesStateWithConfig(d, clusterProfiles)
+
+	packs := clusterProfiles[0].(map[string]interface{})["pack"].([]interface{})
+	require.Len(t, packs, 1)
+	pack := packs[0].(map[string]interface{})
+	assert.Equal(t, "kubernetes-eks", pack["name"])
+	assert.Equal(t, "a: 1\n", pack["values"])
+	_, hasUID := pack["uid"]
+	assert.False(t, hasUID)
 }
 
 func copyPackMap(src map[string]interface{}) map[string]interface{} {

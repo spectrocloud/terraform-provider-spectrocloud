@@ -985,17 +985,7 @@ func enrichClusterProfilesWithPacks(c *client.V1Client, d *schema.ResourceData, 
 		if err != nil {
 			return clusterProfiles, err
 		}
-		configPacks := getClusterProfilePacksFromConfig(d, uid)
-		for j := range packs {
-			pack, ok := packs[j].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			name, _ := pack["name"].(string)
-			alignPackStateWithConfig(pack, findConfigPackByName(configPacks, name))
-			packs[j] = pack
-		}
-		p["pack"] = packs
+		p["pack"] = alignPacksWithConfig(packs, getClusterProfilePacksFromConfig(d, uid))
 	}
 
 	return clusterProfiles, nil

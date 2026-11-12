@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -223,43 +224,134 @@ func getClusterProfilePacksFromConfig(d *schema.ResourceData, profileUID string)
 	return nil
 }
 
-func findConfigPackByName(configPacks []interface{}, name string) map[string]interface{} {
-	for _, packRaw := range configPacks {
-		pack, ok := packRaw.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if packName, ok := pack["name"].(string); ok && packName == name {
-			return pack
-		}
-	}
-	return nil
-}
-
-// alignPackStateWithConfig limits flattened pack state to fields the user declared in config.
-// API read populates computed attributes (uid, type); omitting them from state when absent in
-// config keeps cluster_profile TypeSet hashes aligned and avoids perpetual drift.
+// alignPackStateWithConfig reduces an API-flattened pack to the attributes declared in its config
+// pack block. Declared attributes keep the API value so real drift shows; undeclared ones are
+// removed so they can't change the cluster_profile TypeSet hash and show as perpetual drift.
 func alignPackStateWithConfig(pack map[string]interface{}, configPack map[string]interface{}) {
 	if configPack == nil {
-		delete(pack, "uid")
-		delete(pack, "type")
-		delete(pack, "registry_uid")
-		delete(pack, "registry_name")
-		delete(pack, "manifest")
+		for _, field := range []string{"uid", "type", "registry_uid", "registry_name", "tag", "values", "manifest"} {
+			delete(pack, field)
+		}
 		return
 	}
 
-	for _, field := range []string{"uid", "type", "registry_uid", "registry_name"} {
-		if v, ok := configPack[field]; !ok || v == nil || v == "" {
+	// registry_uid/registry_name/uid fall back to the config value only when the API lookup
+	// returned nothing, so a failed registry resolution isn't reported as drift.
+	for _, field := range []string{"uid", "registry_uid", "registry_name"} {
+		cfg, _ := configPack[field].(string)
+		if cfg == "" {
 			delete(pack, field)
-		} else {
-			pack[field] = v
+			continue
+		}
+		if api, _ := pack[field].(string); api == "" {
+			pack[field] = cfg
 		}
 	}
 
-	if _, ok := configPack["manifest"]; !ok {
-		delete(pack, "manifest")
+	// type has a schema Default ("spectro"), so it is always set in config and can't tell us whether
+	// the user declared it; keep the config value as before rather than surface API type differences.
+	if cfg, _ := configPack["type"].(string); cfg == "" {
+		delete(pack, "type")
+	} else {
+		pack["type"] = cfg
 	}
+
+	if cfg, _ := configPack["tag"].(string); cfg == "" {
+		delete(pack, "tag")
+	}
+
+	if cfg, _ := configPack["values"].(string); cfg == "" {
+		delete(pack, "values")
+	} else {
+		pack["values"] = preferConfigIfWhitespaceEqual(pack["values"], cfg)
+	}
+
+	configManifests, _ := configPack["manifest"].([]interface{})
+	if len(configManifests) == 0 {
+		delete(pack, "manifest")
+	} else {
+		apiManifests, _ := pack["manifest"].([]interface{})
+		pack["manifest"] = alignManifestsWithConfig(apiManifests, configManifests)
+	}
+}
+
+// alignManifestsWithConfig keeps only the manifests declared in config, in config order (manifest is
+// a TypeList), with API content. Content that differs only by surrounding whitespace keeps the config
+// string, mirroring the content DiffSuppressFunc, which can't apply inside a TypeSet hash.
+func alignManifestsWithConfig(apiManifests, configManifests []interface{}) []interface{} {
+	apiByName := make(map[string]map[string]interface{}, len(apiManifests))
+	for _, raw := range apiManifests {
+		if m, ok := raw.(map[string]interface{}); ok {
+			if name, _ := m["name"].(string); name != "" {
+				apiByName[name] = m
+			}
+		}
+	}
+
+	aligned := make([]interface{}, 0, len(configManifests))
+	for _, raw := range configManifests {
+		cfg, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := cfg["name"].(string)
+		api, ok := apiByName[name]
+		if !ok {
+			continue
+		}
+		cfgContent, _ := cfg["content"].(string)
+		aligned = append(aligned, map[string]interface{}{
+			"name":    name,
+			"uid":     api["uid"],
+			"content": preferConfigIfWhitespaceEqual(api["content"], cfgContent),
+		})
+	}
+	return aligned
+}
+
+// preferConfigIfWhitespaceEqual returns the config string when the API value differs from it only by
+// surrounding whitespace, otherwise the API value. cluster_profile is a TypeSet hashed on raw values
+// before any DiffSuppressFunc runs, so a trailing newline alone would otherwise show a perpetual diff.
+func preferConfigIfWhitespaceEqual(apiRaw interface{}, cfg string) interface{} {
+	api, ok := apiRaw.(string)
+	if !ok {
+		return apiRaw
+	}
+	if strings.TrimSpace(api) == strings.TrimSpace(cfg) {
+		return cfg
+	}
+	return api
+}
+
+// alignPacksWithConfig keeps only the API packs declared in config (matched by name), in config
+// order since pack is a TypeList, each reduced to its declared attributes. The API returns every pack
+// in the profile, but pack blocks are per-pack overrides, so the rest would show as drift. A config
+// pack missing from the API is left out, which surfaces as real drift.
+func alignPacksWithConfig(apiPacks, configPacks []interface{}) []interface{} {
+	apiByName := make(map[string]map[string]interface{}, len(apiPacks))
+	for _, raw := range apiPacks {
+		if pack, ok := raw.(map[string]interface{}); ok {
+			if name, _ := pack["name"].(string); name != "" {
+				apiByName[name] = pack
+			}
+		}
+	}
+
+	aligned := make([]interface{}, 0, len(configPacks))
+	for _, raw := range configPacks {
+		cfg, ok := raw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := cfg["name"].(string)
+		pack, ok := apiByName[name]
+		if !ok {
+			continue
+		}
+		alignPackStateWithConfig(pack, cfg)
+		aligned = append(aligned, pack)
+	}
+	return aligned
 }
 
 // alignClusterProfilesStateWithConfig aligns refreshed profile state with config field presence.
@@ -279,17 +371,7 @@ func alignClusterProfilesStateWithConfig(d *schema.ResourceData, clusterProfiles
 		if !ok {
 			continue
 		}
-		configPacks := getClusterProfilePacksFromConfig(d, uid)
-		for j := range packs {
-			pack, ok := packs[j].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			name, _ := pack["name"].(string)
-			alignPackStateWithConfig(pack, findConfigPackByName(configPacks, name))
-			packs[j] = pack
-		}
-		p["pack"] = packs
+		p["pack"] = alignPacksWithConfig(packs, getClusterProfilePacksFromConfig(d, uid))
 	}
 }
 
