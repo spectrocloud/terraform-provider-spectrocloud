@@ -22,7 +22,7 @@ func resourceClusterAzure() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterAzureCreate,
 		ReadContext:   resourceClusterAzureRead,
-		UpdateContext: resourceClusterAzureUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterAzureUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterAzureImport,

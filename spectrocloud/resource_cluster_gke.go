@@ -18,7 +18,7 @@ func resourceClusterGke() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterGkeCreate,
 		ReadContext:   resourceClusterGkeRead,
-		UpdateContext: resourceClusterGkeUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterGkeUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterGkeImport,

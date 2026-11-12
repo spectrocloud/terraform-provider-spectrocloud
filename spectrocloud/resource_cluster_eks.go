@@ -22,7 +22,7 @@ func resourceClusterEks() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterEksCreate,
 		ReadContext:   resourceClusterEksRead,
-		UpdateContext: resourceClusterEksUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterEksUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEksImport,
