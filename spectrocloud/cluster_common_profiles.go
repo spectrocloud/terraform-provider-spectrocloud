@@ -729,15 +729,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	// Capture old cluster_profile to restore on error (pre-apply snapshot, or API sync when flag is on).
 	oldProfileRaw, _ := d.GetChange("cluster_profile")
 	oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
-	// rollbackProfiles is for failures BEFORE PatchClusterProfileValues succeeds - nothing has
-	// changed on the cluster yet, so restoring the pre-apply snapshot is accurate.
 	rollbackProfiles := func() {
 		rollbackClusterProfileOnUpdateError(c, d, oldProfile)
-	}
-	// resyncProfilesFromAPI is for failures AFTER PatchClusterProfileValues already succeeded
-	// (waitForProfileDownload / the variable PATCH below).
-	resyncProfilesFromAPI := func() {
-		resyncClusterProfileFromAPIAfterPartialFailure(c, d, oldProfile)
 	}
 
 	profiles, err := toAddonDeplProfiles(c, d)
@@ -803,7 +796,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	ctx := context.Background()
 	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
-		resyncProfilesFromAPI()
+		rollbackProfiles()
 		return err
 	}
 
@@ -854,7 +847,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if len(variableEntity) != 0 {
 		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
 		if err != nil {
-			resyncProfilesFromAPI()
+			rollbackProfiles()
 			return err
 		}
 	}
@@ -1049,26 +1042,10 @@ func enrichClusterProfilesWithVariables(c *client.V1Client, d *schema.ResourceDa
 	return clusterProfiles, nil
 }
 
-// shouldSyncClusterProfilesFromAPI used to gate the API resync behind the
-// disable_addon_deployment_resource feature flag (only sync when the
-// cluster resource is the sole manager of cluster_profile). It now always
-// syncs regardless of the flag (PLT-2508): cluster_profile is a TypeSet, and
-// terraform-plugin-sdk's ApplyResourceChange unconditionally overwrites any
-// TypeSet value the provider computes during Update with the planned
-// (config) value once that value is wholly known - so a failed apply always
-// leaves the rejected value in state for that one apply, no matter what
-// updateProfiles/rollbackClusterProfileOnUpdateError do. Read is the only
-// place that can correct it afterward (a plain refresh isn't subject to that
-// override), so it must always true-up from the API rather than trusting
-// whatever ended up in state.
-//
-// NOTE: for callers that pair a cluster resource's own cluster_profile with
-// a separate spectrocloud_addon_deployment resource attaching more profiles
-// to the same cluster, this will now pull those addon-managed profiles into
-// the cluster resource's own state too, since Read can no longer tell "my
-// profile" apart from "a profile something else attached" - matching
-// behavior previously reserved for disable_addon_deployment_resource=true.
 func shouldSyncClusterProfilesFromAPI(d *schema.ResourceData) bool {
+	if !addonDeploymentResourceDisabled() {
+		return false
+	}
 	if raw := d.Get("cluster_template"); raw != nil {
 		if list, ok := raw.([]interface{}); ok && len(list) > 0 {
 			return false
@@ -1119,27 +1096,6 @@ func rollbackClusterProfileOnUpdateError(c *client.V1Client, d *schema.ResourceD
 		return
 	}
 	_ = d.Set("cluster_profile", oldProfile)
-}
-
-// resyncClusterProfileFromAPIAfterPartialFailure restores cluster_profile after updateProfiles
-// fails AFTER PatchClusterProfileValues already succeeded (waitForProfileDownload or the
-// variable PATCH). Unlike rollbackClusterProfileOnUpdateError, it must not restore oldProfile
-// unconditionally: the cluster already has the new profile attached by this point, so doing so
-// would claim the swap never happened and desync Terraform state from the backend (PLT-2508).
-// It re-reads the cluster and lets state reflect whatever Palette actually has, falling back to
-// the pre-apply snapshot only if the re-read itself fails - at that point the backend state is
-// genuinely unknown, and the old snapshot is the least-wrong answer.
-func resyncClusterProfileFromAPIAfterPartialFailure(c *client.V1Client, d *schema.ResourceData, oldProfile []interface{}) {
-	refreshed, err := c.GetCluster(d.Id())
-	if err != nil || refreshed == nil {
-		log.Printf("Warning: could not refresh cluster after partial profile update failure: %v; restoring pre-apply cluster_profile", err)
-		rollbackClusterProfileOnUpdateError(c, d, oldProfile)
-		return
-	}
-	if err := setClusterProfilesFromAPI(c, d, refreshed); err != nil {
-		log.Printf("Warning: could not sync cluster_profile from API after partial failure: %v; restoring pre-apply cluster_profile", err)
-		rollbackClusterProfileOnUpdateError(c, d, oldProfile)
-	}
 }
 
 // syncClusterProfilesFromAPIWhenAddonDeploymentDisabled refreshes cluster_profile from the API during
