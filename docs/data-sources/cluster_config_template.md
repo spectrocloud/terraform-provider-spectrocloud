@@ -90,6 +90,7 @@ Read-Only:
 Read-Only:
 
 - `assign_strategy` (String)
+- `cluster_ids` (Set of String)
 - `name` (String)
 - `value` (String)
 

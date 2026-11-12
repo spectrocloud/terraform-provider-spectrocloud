@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,39 +127,6 @@ func TestFlattenClusterConfigPolicySchedulesForDataSource(t *testing.T) {
 	got = flattenClusterConfigPolicySchedulesForDataSource([]*models.V1Schedule{{}})
 	require.Len(t, got, 1)
 	assert.Empty(t, got[0].(map[string]interface{}))
-}
-
-// TestBuildProfilesVariablesBatchEntity — pure entity-builder helper.
-func TestBuildProfilesVariablesBatchEntity(t *testing.T) {
-	d := resourceClusterConfigTemplate().TestResourceData()
-
-	// Empty input → single-profile empty entity.
-	got := buildProfilesVariablesBatchEntity(d, nil)
-	require.NotNil(t, got)
-	assert.Empty(t, got.Profiles)
-
-	// Profile with no variables set → skipped by the len==0 guard.
-	got = buildProfilesVariablesBatchEntity(d, []interface{}{
-		map[string]interface{}{
-			"id":        "profile-1",
-			"variables": schema.NewSet(schema.HashString, nil),
-		},
-	})
-	assert.Empty(t, got.Profiles)
-
-	// Profile with variables set → included.
-	varsSet := schema.NewSet(func(v interface{}) int {
-		return schema.HashString(v.(map[string]interface{})["name"])
-	}, []interface{}{
-		map[string]interface{}{"name": "replicas"},
-	})
-	got = buildProfilesVariablesBatchEntity(d, []interface{}{
-		map[string]interface{}{
-			"id":        "profile-1",
-			"variables": varsSet,
-		},
-	})
-	require.Len(t, got.Profiles, 1)
 }
 
 // TestResolveNodeID_UnsupportedCloudType — reaches the "unsupported"

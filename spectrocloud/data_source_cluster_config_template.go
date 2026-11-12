@@ -77,6 +77,12 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 										Computed:    true,
 										Description: "Assignment strategy for the variable. Possible values: `all` or `cluster`.",
 									},
+									"cluster_ids": {
+										Type:        schema.TypeSet,
+										Computed:    true,
+										Elem:        &schema.Schema{Type: schema.TypeString},
+										Description: "UIDs of the specific clusters `value` applies to when `assign_strategy` is `cluster`.",
+									},
 								},
 							},
 						},

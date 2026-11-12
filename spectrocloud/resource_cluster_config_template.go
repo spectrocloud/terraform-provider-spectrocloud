@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
@@ -32,6 +30,8 @@ func resourceClusterConfigTemplate() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
+
+		CustomizeDiff: keepStoredClusterTemplateVariables,
 
 		SchemaVersion: 1,
 		Schema: map[string]*schema.Schema{
@@ -71,6 +71,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 			"cluster_profile": {
 				Type:        schema.TypeSet,
 				Optional:    true,
+				Computed:    true,
 				Description: "Set of cluster profile references.",
 				Set:         resourceClusterConfigTemplateProfileHash,
 				Elem: &schema.Resource{
@@ -81,10 +82,14 @@ func resourceClusterConfigTemplate() *schema.Resource {
 							Description: "ID of the cluster profile.",
 						},
 						"variables": {
-							Type:        schema.TypeSet,
-							Optional:    true,
-							Description: "Set of profile variable values and assignment strategies.",
-							Set:         resourceClusterConfigTemplateVariableHash,
+							Type:     schema.TypeSet,
+							Optional: true,
+							Computed: true,
+							Description: "Set of profile variable values and assignment strategies stored on the template. " +
+								"When omitted, the variables already stored on the template are kept. " +
+								"Values are applied to attached clusters on the next cluster profile version upgrade; " +
+								"a variable whose definition is unchanged keeps the value already running on each cluster.",
+							Set: resourceClusterConfigTemplateVariableHash,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {
@@ -95,7 +100,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 									"value": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										Description: "Value of the variable to be applied to all clusters launched from this template. This value is used when assign_strategy is set to 'all'.",
+										Description: "Value of the variable. Applied to every attached cluster when `assign_strategy` is `all`, or to each cluster in `cluster_ids` when `assign_strategy` is `cluster`.",
 									},
 									"assign_strategy": {
 										Type:         schema.TypeString,
@@ -241,15 +246,14 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 
-		// Set attached clusters first - refreshProfileVariableValues (below)
-		// needs attached_cluster already populated to resolve "all" strategy
-		// variables' target clusters.
 		if err := d.Set("attached_cluster", flattenAttachedClusters(template.Spec.Clusters)); err != nil {
 			return diag.FromErr(err)
 		}
 
-		profiles := refreshProfileVariableValues(c, d, uid, flattenClusterTemplateProfiles(template.Spec.Profiles))
-		if err := d.Set("cluster_profile", profiles); err != nil {
+		// Variables are read from the template's own stored spec, not from
+		// per-cluster assignments: per-cluster values are owned by each
+		// cluster and are not managed by this resource.
+		if err := d.Set("cluster_profile", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -308,31 +312,18 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	// Handle profile updates (add/remove profiles or update variables)
+	// Profile and variable changes both go through the profiles PUT, which is
+	// the only endpoint that persists variables on the template itself. The
+	// variables PATCH only writes per-cluster assignments, which Read never
+	// reflects back, so using it here caused permanent drift.
 	if d.HasChange("cluster_profile") {
-		oldProfiles, newProfiles := d.GetChange("cluster_profile")
+		profilesEntity := &models.V1ClusterTemplateProfilesUpdateEntity{
+			Profiles: expandClusterTemplateProfiles(d.Get("cluster_profile").(*schema.Set).List()),
+		}
 
-		// Check if profile set structure changed (IDs added/removed/changed)
-		if profileStructureChanged(oldProfiles, newProfiles) {
-			// Use PUT endpoint to update entire profiles list
-			profiles := newProfiles.(*schema.Set).List()
-			profilesEntity := &models.V1ClusterTemplateProfilesUpdateEntity{
-				Profiles: expandClusterTemplateProfiles(profiles),
-			}
-
-			err := c.UpdateClusterConfigTemplateProfiles(d.Id(), profilesEntity)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			// Only variables changed within existing profiles - use PATCH endpoint
-			profiles := newProfiles.(*schema.Set).List()
-			variablesEntity := buildProfilesVariablesBatchEntity(d, profiles)
-
-			err := c.UpdateClusterConfigTemplateProfilesVariables(d.Id(), variablesEntity)
-			if err != nil {
-				return diag.FromErr(err)
-			}
+		err := c.UpdateClusterConfigTemplateProfiles(d.Id(), profilesEntity)
+		if err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
@@ -458,281 +449,58 @@ func resourceClusterConfigTemplateVariableHash(v interface{}) int {
 	return schema.HashString(buf.String())
 }
 
-// Helper functions for expanding and flattening
-
-// profileStructureChanged checks if the profile set structure changed (IDs added/removed/changed)
-// Returns true if profiles were added, removed, or IDs changed
-// Returns false if only variables within existing profiles changed
-func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
-	oldProfiles := oldProfilesSet.(*schema.Set).List()
-	newProfiles := newProfilesSet.(*schema.Set).List()
-
-	// Different number of profiles = structure changed
-	if len(oldProfiles) != len(newProfiles) {
-		return true
+// keepStoredClusterTemplateVariables makes cluster_profile.variables behave as
+// Optional+Computed. The profile set hash includes each profile's variables
+// (so variable edits are diffed at all), which means a profile written without
+// a variables block hashes differently from the stored one and would plan a
+// replace that wipes the template's variables. For every configured profile
+// with no variables, carry the stored variables of the same profile id
+// forward into the plan.
+func keepStoredClusterTemplateVariables(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	if diff.Id() == "" || !diff.HasChange("cluster_profile") {
+		return nil
 	}
 
-	// Build a set of old profile IDs
-	oldIDs := make(map[string]bool)
-	for _, p := range oldProfiles {
-		profile := p.(map[string]interface{})
-		oldIDs[profile["id"].(string)] = true
-	}
-
-	// Check if all new IDs exist in old IDs
-	for _, p := range newProfiles {
-		profile := p.(map[string]interface{})
-		id := profile["id"].(string)
-		if !oldIDs[id] {
-			// New ID found = structure changed
-			return true
-		}
-	}
-
-	// Same IDs = only variables changed
-	return false
-}
-
-// variableTargeting holds assign_strategy/cluster_ids - the two fields that
-// only ever exist as Terraform-side config intent. The backend has no
-// queryable record of them independent of whichever write path last ran:
-// GET /v1/clusterTemplates/{uid} only reflects whatever was declared at
-// create time or a full-profile PUT, and a variables-only PATCH never
-// updates that declaration. So these must come from prior state, not from
-// the backend, or every Read after a PATCH-only update would silently
-// revert the user's targeting back to whatever (if anything) it was
-// before - typically empty.
-type variableTargeting struct {
-	assignStrategy string
-	clusterIDs     *schema.Set
-}
-
-// priorVariableTargeting reads cluster_profile from the current ResourceData
-// (prior state - must be called before d.Set("cluster_profile", ...)) and
-// indexes each variable's targeting by (profile id, variable name).
-func priorVariableTargeting(d *schema.ResourceData) map[[2]string]variableTargeting {
-	meta := make(map[[2]string]variableTargeting)
-	prior, ok := d.Get("cluster_profile").(*schema.Set)
-	if !ok || prior == nil {
-		return meta
-	}
-	for _, p := range prior.List() {
-		pm, ok := p.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		profileID, _ := pm["id"].(string)
-		variablesSet, ok := pm["variables"].(*schema.Set)
-		if !ok {
-			continue
-		}
-		for _, v := range variablesSet.List() {
-			vm, ok := v.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			varName, _ := vm["name"].(string)
-			assignStrategy, _ := vm["assign_strategy"].(string)
-			clusterIDs, _ := vm["cluster_ids"].(*schema.Set)
-			meta[[2]string{profileID, varName}] = variableTargeting{assignStrategy, clusterIDs}
-		}
-	}
-	return meta
-}
-
-// refreshProfileVariableValues replaces each variable's "value" with the
-// live per-cluster assigned value from GetClusterTemplateProfileVariables,
-// and restores assign_strategy/cluster_ids from prior state (see
-// variableTargeting). GET /v1/clusterTemplates/{uid} (which
-// flattenClusterTemplateProfiles reads) only ever returns the template's own
-// declared/create-time value - the Day-2 variables PATCH
-// (buildProfilesVariablesBatchEntity) writes to a completely separate
-// per-cluster assignment store that this GET never reads from. Without this
-// refresh, Read would write the stale declared value (and wipe cluster_ids)
-// straight back into state right after a successful variable update, making
-// the change look like it never took effect (persistent drift on the next
-// plan).
-func refreshProfileVariableValues(c *client.V1Client, d *schema.ResourceData, templateID string, profiles *schema.Set) *schema.Set {
-	priorMeta := priorVariableTargeting(d)
-	updated := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{})
-
-	for _, profile := range profiles.List() {
-		p := profile.(map[string]interface{})
-		profileID, _ := p["id"].(string)
-
-		variablesSet, ok := p["variables"].(*schema.Set)
-		if !ok || variablesSet.Len() == 0 {
-			updated.Add(p)
-			continue
-		}
-
-		resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID)
-		if err != nil {
-			log.Printf("Error fetching cluster_config_template profile variables for profile %s: %v", profileID, err)
-			updated.Add(p)
-			continue
-		}
-
-		// varName -> clusterUID -> assigned value
-		assignments := make(map[string]map[string]string)
-		for _, v := range resp.Variables {
-			if v == nil || v.Variable == nil || v.Variable.Name == nil {
-				continue
-			}
-			byCluster := make(map[string]string)
-			for _, assignment := range v.Clusters {
-				if assignment != nil && assignment.UID != nil && assignment.AssignedValue != "" {
-					byCluster[*assignment.UID] = assignment.AssignedValue
-				}
-			}
-			assignments[*v.Variable.Name] = byCluster
-		}
-
-		updatedVars := schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{})
-		for _, v := range variablesSet.List() {
-			varMap := v.(map[string]interface{})
-			varName, _ := varMap["name"].(string)
-			assignStrategy, _ := varMap["assign_strategy"].(string)
-			clusterIDs, _ := varMap["cluster_ids"].(*schema.Set)
-
-			// Prior state is authoritative for targeting (see variableTargeting);
-			// the backend-declared assign_strategy is only a bootstrap fallback
-			// for a variable Terraform has never seen before (e.g. right after
-			// Create, or a full-profile PUT that added it).
-			if meta, ok := priorMeta[[2]string{profileID, varName}]; ok {
-				assignStrategy = meta.assignStrategy
-				clusterIDs = meta.clusterIDs
-			}
-			if clusterIDs == nil {
-				clusterIDs = schema.NewSet(schema.HashString, nil)
-			}
-
-			var targetUIDs []string
-			if assignStrategy == "cluster" {
-				for _, id := range clusterIDs.List() {
-					targetUIDs = append(targetUIDs, id.(string))
-				}
-			} else {
-				targetUIDs = allAttachedClusterUIDs(d)
-			}
-
-			newValue, _ := varMap["value"].(string)
-			if byCluster, ok := assignments[varName]; ok {
-				for _, uid := range targetUIDs {
-					if val, ok := byCluster[uid]; ok {
-						newValue = val
-						break
-					}
-				}
-			}
-
-			updatedVars.Add(map[string]interface{}{
-				"name":            varName,
-				"value":           newValue,
-				"assign_strategy": assignStrategy,
-				"cluster_ids":     clusterIDs,
-			})
-		}
-
-		updated.Add(map[string]interface{}{
-			"id":        profileID,
-			"variables": updatedVars,
-		})
-	}
-
-	return updated
-}
-
-// allAttachedClusterUIDs reads attached_cluster (Computed, set on Read) and
-// returns every attached cluster's UID - the target set for a variable whose
-// assign_strategy is "all".
-func allAttachedClusterUIDs(d *schema.ResourceData) []string {
-	attached, ok := d.Get("attached_cluster").([]interface{})
+	oldRaw, newRaw := diff.GetChange("cluster_profile")
+	oldProfiles, ok := oldRaw.(*schema.Set)
 	if !ok {
 		return nil
 	}
-	uids := make([]string, 0, len(attached))
-	for _, a := range attached {
-		am, ok := a.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		if uid, ok := am["cluster_uid"].(string); ok && uid != "" {
-			uids = append(uids, uid)
-		}
-	}
-	return uids
-}
-
-// buildProfilesVariablesBatchEntity builds the request body for profile variables patch operation
-func buildProfilesVariablesBatchEntity(d *schema.ResourceData, profiles []interface{}) *models.V1ClusterTemplateProfilesVariablesBatchEntity {
-	if len(profiles) == 0 {
-		return &models.V1ClusterTemplateProfilesVariablesBatchEntity{
-			Profiles: []*models.V1ClusterTemplateProfileVariablesGroup{},
-		}
+	newProfiles, ok := newRaw.(*schema.Set)
+	if !ok {
+		return nil
 	}
 
-	profileGroups := make([]*models.V1ClusterTemplateProfileVariablesGroup, 0)
-
-	for _, profile := range profiles {
+	storedVariables := make(map[string]*schema.Set, oldProfiles.Len())
+	for _, profile := range oldProfiles.List() {
 		p := profile.(map[string]interface{})
-		profileUID := p["id"].(string)
-
-		// Check if this profile has variables (now a set)
-		variablesSet, hasVariables := p["variables"].(*schema.Set)
-		if !hasVariables || variablesSet.Len() == 0 {
-			continue
+		if variables, ok := p["variables"].(*schema.Set); ok && variables.Len() > 0 {
+			storedVariables[p["id"].(string)] = variables
 		}
-
-		variables := variablesSet.List()
-
-		// Build variable cluster mappings
-		variableMappings := make([]*models.V1ClusterTemplateVariableClusterMapping, 0)
-		for _, v := range variables {
-			varMap := v.(map[string]interface{})
-			varName := varMap["name"].(string)
-			value, _ := varMap["value"].(string)
-			assignStrategy, _ := varMap["assign_strategy"].(string)
-
-			var targetUIDs []string
-			if assignStrategy == "cluster" {
-				if clusterIDs, ok := varMap["cluster_ids"].(*schema.Set); ok {
-					for _, id := range clusterIDs.List() {
-						targetUIDs = append(targetUIDs, id.(string))
-					}
-				}
-			} else {
-				targetUIDs = allAttachedClusterUIDs(d)
-			}
-
-			clusters := make([]*models.V1ClusterVariableValue, 0, len(targetUIDs))
-			for _, uid := range targetUIDs {
-				clusters = append(clusters, &models.V1ClusterVariableValue{
-					UID:   uid,
-					Value: value,
-				})
-			}
-
-			mapping := &models.V1ClusterTemplateVariableClusterMapping{
-				Name:     &varName,
-				Clusters: clusters,
-			}
-
-			variableMappings = append(variableMappings, mapping)
-		}
-
-		profileGroup := &models.V1ClusterTemplateProfileVariablesGroup{
-			UID:       &profileUID,
-			Variables: variableMappings,
-		}
-
-		profileGroups = append(profileGroups, profileGroup)
 	}
 
-	return &models.V1ClusterTemplateProfilesVariablesBatchEntity{
-		Profiles: profileGroups,
+	merged := make([]interface{}, 0, newProfiles.Len())
+	carried := false
+	for _, profile := range newProfiles.List() {
+		p := profile.(map[string]interface{})
+		variables, _ := p["variables"].(*schema.Set)
+		if stored, found := storedVariables[p["id"].(string)]; found && (variables == nil || variables.Len() == 0) {
+			p = map[string]interface{}{
+				"id":        p["id"],
+				"variables": stored,
+			}
+			carried = true
+		}
+		merged = append(merged, p)
 	}
+
+	if !carried {
+		return nil
+	}
+	return diff.SetNew("cluster_profile", merged)
 }
+
+// Helper functions for expanding and flattening
 
 func expandClusterTemplateProfiles(profiles []interface{}) []*models.V1ClusterTemplateProfile {
 	if len(profiles) == 0 {
@@ -769,12 +537,29 @@ func expandClusterTemplateProfileVariables(variables []interface{}) []*models.V1
 			Name: v["name"].(string),
 		}
 
-		if value, ok := v["value"].(string); ok && value != "" {
-			varEntity.Value = value
-		}
+		value, _ := v["value"].(string)
+		varEntity.Value = value
 
 		if assignStrategy, ok := v["assign_strategy"].(string); ok && assignStrategy != "" {
 			varEntity.AssignStrategy = assignStrategy
+		}
+
+		// For "cluster" strategy the template resolves each cluster's value
+		// from its stored clusters list, so cluster_ids is persisted there.
+		if varEntity.AssignStrategy == "cluster" {
+			if clusterIDs, ok := v["cluster_ids"].(*schema.Set); ok {
+				ids := make([]string, 0, clusterIDs.Len())
+				for _, id := range clusterIDs.List() {
+					ids = append(ids, id.(string))
+				}
+				sort.Strings(ids)
+				for _, id := range ids {
+					varEntity.Clusters = append(varEntity.Clusters, &models.V1ClusterVariableValue{
+						UID:   id,
+						Value: value,
+					})
+				}
+			}
 		}
 
 		result[i] = varEntity
@@ -829,21 +614,36 @@ func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplat
 		return schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{})
 	}
 
-	result := make([]interface{}, len(variables))
-	for i, variable := range variables {
-		varMap := map[string]interface{}{
-			"name": variable.Name,
+	result := make([]interface{}, 0, len(variables))
+	for _, variable := range variables {
+		if variable == nil {
+			continue
 		}
 
-		if variable.Value != "" {
-			varMap["value"] = variable.Value
+		// The backend treats an empty assign strategy as "cluster".
+		assignStrategy := variable.AssignStrategy
+		if assignStrategy == "" {
+			assignStrategy = "cluster"
 		}
 
-		if variable.AssignStrategy != "" {
-			varMap["assign_strategy"] = variable.AssignStrategy
+		value := variable.Value
+		clusterIDs := make([]interface{}, 0, len(variable.Clusters))
+		for _, cluster := range variable.Clusters {
+			if cluster == nil || cluster.UID == "" {
+				continue
+			}
+			clusterIDs = append(clusterIDs, cluster.UID)
+			if value == "" {
+				value = cluster.Value
+			}
 		}
 
-		result[i] = varMap
+		result = append(result, map[string]interface{}{
+			"name":            variable.Name,
+			"value":           value,
+			"assign_strategy": assignStrategy,
+			"cluster_ids":     schema.NewSet(schema.HashString, clusterIDs),
+		})
 	}
 
 	return schema.NewSet(resourceClusterConfigTemplateVariableHash, result)
