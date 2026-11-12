@@ -133,7 +133,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running-Healthy"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id(), true),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      resolveWaitDelay(30 * time.Second),
@@ -142,6 +142,27 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 	// Wait, catching any errors
 	_, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
+		// A pack in Error is terminal: the cluster will not reach Running-Healthy
+		// without operator action, so surface it now instead of polling until the
+		// create timeout expires (PLT-2341). Kept at the same Warning severity /
+		// non-error return as the timeout branch below - this is not a breaking
+		// change, it just arrives sooner and names the failing pack.
+		var packErr *resourceClusterPackError
+		if errors.As(err, &packErr) {
+			log.Printf("waitForClusterCreation (Running-Healthy phase): pack %q failed while cluster in state %q, returning warning instead of waiting for timeout", packErr.packName, packErr.clusterState)
+
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Cluster creation: addon pack failed",
+				Detail: fmt.Sprintf(
+					"Pack %q failed while the cluster was in state '%s': %s. The cluster will not become 'Running-Healthy' until this pack is fixed. "+
+						"Correct the pack in your configuration and re-apply - the state lock is released now, so the fix can be applied immediately. "+
+						"If the profile has other addon packs, their install outcome is not yet known at this point; re-check after applying this fix.",
+					packErr.packName, packErr.clusterState, packErr.message),
+			})
+			return diags, false
+		}
+
 		// Always handle timeout errors gracefully (default behavior)
 		var timeoutErr *retry.TimeoutError
 		if errors.As(err, &timeoutErr) {
@@ -191,7 +212,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
 		Target:     nil, // wait for deleted
-		Refresh:    resourceClusterStateRefreshFunc(c, id),
+		Refresh:    resourceClusterStateRefreshFunc(c, id, false),
 		Timeout:    timeout,
 		MinTimeout: 10 * time.Second,
 		Delay:      resolveWaitDelay(30 * time.Second),
@@ -202,7 +223,24 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 	return err
 }
 
-func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
+// resourceClusterPackError is returned by resourceClusterStateRefreshFunc when
+// failOnPackError is true and a pack has reached a terminal Error condition
+// in any cluster state, including Provisioning (PLT-2341): the cluster will not reach Running-Healthy without operator
+// action, so polling until the create timeout wastes the full timeout window
+// and leaves the corrective apply locked out behind it. Only the first pack
+// found in Error is reported - other packs in the same profile may still be
+// installing and their outcome isn't known yet.
+type resourceClusterPackError struct {
+	packName     string
+	message      string
+	clusterState string // cluster Status.State when the failed pack was seen
+}
+
+func (e *resourceClusterPackError) Error() string {
+	return fmt.Sprintf("pack %q failed: %s", e.packName, e.message)
+}
+
+func resourceClusterStateRefreshFunc(c *client.V1Client, id string, failOnPackError bool) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
 		if err != nil {
@@ -212,6 +250,17 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateR
 		}
 
 		state := cluster.Status.State
+		// PLT-2341: check packs in every create-phase state (Provisioning,
+		// Pending, Running, ...), not only once the cluster reaches Running -
+		// a pack can fail while the cluster is still provisioning, and waiting
+		// for Running first just burns more of the create timeout.
+		if failOnPackError {
+			for _, ps := range cluster.Status.Packs {
+				if ps != nil && ps.Condition != nil && ps.Condition.Type != nil && *ps.Condition.Type == "Error" {
+					return cluster, "Pack:Error", &resourceClusterPackError{packName: ps.Name, message: ps.Condition.Message, clusterState: state}
+				}
+			}
+		}
 		if cluster.Status.State == "Running" {
 			clusterSummary, _ := c.GetClusterOverview(id)
 			if clusterSummary.Status.Health != nil && clusterSummary.Status.Health.State != "" {
