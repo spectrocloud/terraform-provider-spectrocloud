@@ -13,7 +13,7 @@ func TestFlattenClusterProfilesFromCluster(t *testing.T) {
 	cluster := &models.V1SpectroCluster{
 		Spec: &models.V1SpectroClusterSpec{
 			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
-				{UID: "profile-a"},
+				{UID: "profile-a", Name: "profile-a-name"},
 				{UID: "profile-b"},
 				nil,
 				{UID: ""},
@@ -25,6 +25,7 @@ func TestFlattenClusterProfilesFromCluster(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, profiles, 2)
 	assert.Equal(t, "profile-a", profiles[0].(map[string]interface{})["id"])
+	assert.Equal(t, "profile-a-name", profiles[0].(map[string]interface{})["name"])
 	_, hasVariables := profiles[0].(map[string]interface{})["variables"]
 	assert.False(t, hasVariables)
 	assert.Equal(t, []interface{}{}, profiles[0].(map[string]interface{})["pack"])

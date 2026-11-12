@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -77,6 +78,39 @@ func dropEmptyClusterProfileEntries(d *schema.ResourceData) error {
 		return d.Set("cluster_profile", clean)
 	}
 	return nil
+}
+
+// setClusterProfileNamesFromCluster fills the computed name of each cluster_profile entry already in
+// state from the cluster's attached profiles. It never adds or removes entries, so with
+// disable_addon_deployment_resource off it can't pull in profiles another resource attached.
+func setClusterProfileNamesFromCluster(d *schema.ResourceData, cluster *models.V1SpectroCluster) error {
+	if cluster == nil || cluster.Spec == nil {
+		return nil
+	}
+	raw, ok := d.GetOk("cluster_profile")
+	if !ok {
+		return nil
+	}
+
+	profiles := normalizeInterfaceSliceFromListOrSet(raw)
+	changed := false
+	for _, entry := range profiles {
+		p, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, _ := p["id"].(string)
+		name := getAttachedProfileName(cluster, id)
+		if name == "" || p["name"] == name {
+			continue
+		}
+		p["name"] = name
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return d.Set("cluster_profile", profiles)
 }
 
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
@@ -748,6 +782,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	// Get the current cluster state to find existing profile UIDs for replacement
 	cluster, err := c.GetCluster(d.Id())
 	if err != nil {
+		rollbackProfiles()
 		return fmt.Errorf("failed to get cluster for profile update: %w", err)
 	}
 
@@ -789,6 +824,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		rollbackProfiles()
 		return err
 	}
+	// From here on Palette has the new profiles attached, so failures must not roll state back.
+	markClusterProfilePatched(d)
 
 	if _, found := toTags(d)["skip_apply"]; found {
 		return nil
@@ -796,7 +833,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	ctx := context.Background()
 	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
-		rollbackProfiles()
+		syncClusterProfileAfterPatchError(c, d)
 		return err
 	}
 
@@ -847,7 +884,11 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if len(variableEntity) != 0 {
 		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
 		if err != nil {
-			rollbackProfiles()
+			if shouldSyncClusterProfilesFromAPI(d) {
+				syncClusterProfileAfterPatchError(c, d)
+			} else {
+				restoreClusterProfileVariables(d, oldProfile)
+			}
 			return err
 		}
 	}
@@ -938,6 +979,7 @@ func flattenClusterProfilesFromCluster(cluster *models.V1SpectroCluster) ([]inte
 		}
 		clusterProfiles = append(clusterProfiles, map[string]interface{}{
 			"id":   profileTemplate.UID,
+			"name": profileTemplate.Name,
 			"pack": []interface{}{},
 		})
 	}
@@ -1086,6 +1128,81 @@ func rollbackClusterProfileOnUpdateError(c *client.V1Client, d *schema.ResourceD
 		return
 	}
 	_ = d.Set("cluster_profile", oldProfile)
+}
+
+// patchedClusterProfiles records, per in-flight Update call, that updateProfiles' PATCH succeeded.
+// Keyed by the *schema.ResourceData of that call; withClusterProfileRollbackOnError clears it.
+var patchedClusterProfiles sync.Map
+
+func markClusterProfilePatched(d *schema.ResourceData) {
+	patchedClusterProfiles.Store(d, struct{}{})
+}
+
+// withClusterProfileRollbackOnError wraps a cluster resource's Update so that when it fails before
+// updateProfiles' PATCH succeeded - including failures in steps that run before updateProfiles,
+// such as machine pools - cluster_profile is restored to its pre-apply value instead of the
+// rejected config. This only sticks because cluster_profile's computed "name" leaves a changed
+// set element's planned value unknown; otherwise terraform-plugin-sdk would write the planned value.
+func withClusterProfileRollbackOnError(update schema.UpdateContextFunc) schema.UpdateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+		defer patchedClusterProfiles.Delete(d)
+		oldProfileRaw, _ := d.GetChange("cluster_profile")
+		oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
+
+		diags := update(ctx, d, m)
+		if !diags.HasError() || !d.HasChange("cluster_profile") {
+			return diags
+		}
+		if _, patched := patchedClusterProfiles.Load(d); patched {
+			return diags
+		}
+		resourceContext, _ := d.Get("context").(string)
+		rollbackClusterProfileOnUpdateError(getV1ClientWithResourceContext(m, resourceContext), d, oldProfile)
+		return diags
+	}
+}
+
+// syncClusterProfileAfterPatchError handles a failure after the profile PATCH succeeded: Palette
+// already has the new profiles, so state keeps the new value. With disable_addon_deployment_resource
+// on, it re-syncs from the API instead, which also picks up anything the PATCH partially applied.
+func syncClusterProfileAfterPatchError(c *client.V1Client, d *schema.ResourceData) {
+	if !shouldSyncClusterProfilesFromAPI(d) || c == nil || d.Id() == "" {
+		return
+	}
+	refreshed, err := c.GetCluster(d.Id())
+	if err != nil {
+		log.Printf("Warning: could not refresh cluster after profile update failure: %v; keeping new cluster_profile", err)
+		return
+	}
+	if err := setClusterProfilesFromAPI(c, d, refreshed); err != nil {
+		log.Printf("Warning: could not sync cluster_profile from API after profile update failure: %v; keeping new cluster_profile", err)
+	}
+}
+
+// restoreClusterProfileVariables handles a failed variables PATCH: the new profiles are attached, but
+// their variables were not applied. Each entry keeps its new id but gets the variables it had before
+// the apply (none, for a newly attached profile), so the variable change shows again on the next plan.
+func restoreClusterProfileVariables(d *schema.ResourceData, oldProfile []interface{}) {
+	oldVariables := make(map[string]interface{}, len(oldProfile))
+	for _, entry := range oldProfile {
+		if p, ok := entry.(map[string]interface{}); ok {
+			if id, _ := p["id"].(string); id != "" {
+				oldVariables[id] = p["variables"]
+			}
+		}
+	}
+
+	profiles := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
+	for _, entry := range profiles {
+		p := entry.(map[string]interface{})
+		id, _ := p["id"].(string)
+		if vars, ok := oldVariables[id]; ok && vars != nil {
+			p["variables"] = vars
+		} else {
+			delete(p, "variables")
+		}
+	}
+	_ = d.Set("cluster_profile", profiles)
 }
 
 // syncClusterProfilesFromAPIWhenAddonDeploymentDisabled refreshes cluster_profile from the API during

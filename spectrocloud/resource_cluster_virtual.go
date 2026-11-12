@@ -19,7 +19,7 @@ func resourceClusterVirtual() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterVirtualCreate,
 		ReadContext:   resourceClusterVirtualRead,
-		UpdateContext: resourceClusterVirtualUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterVirtualUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterVirtualImport,

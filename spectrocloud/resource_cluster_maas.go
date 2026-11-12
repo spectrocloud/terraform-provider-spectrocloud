@@ -22,7 +22,7 @@ func resourceClusterMaas() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterMaasCreate,
 		ReadContext:   resourceClusterMaasRead,
-		UpdateContext: resourceClusterMaasUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterMaasUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterMaasImport,

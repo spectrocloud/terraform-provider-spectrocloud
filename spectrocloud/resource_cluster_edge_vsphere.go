@@ -20,7 +20,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterEdgeVsphereCreate,
 		ReadContext:   resourceClusterEdgeVsphereRead,
-		UpdateContext: resourceClusterEdgeVsphereUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterEdgeVsphereUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEdgeVsphereImport,

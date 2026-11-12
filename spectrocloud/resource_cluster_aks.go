@@ -20,7 +20,7 @@ func resourceClusterAks() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterAksCreate,
 		ReadContext:   resourceClusterAksRead,
-		UpdateContext: resourceClusterAksUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterAksUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterAksImport,

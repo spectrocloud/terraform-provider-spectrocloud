@@ -180,8 +180,8 @@ func TestUpdateProfilesVariableUpdate_RealDiff(t *testing.T) {
 
 // TestUpdateProfilesVariableUpdateError_RealDiff forces
 // c.UpdateClusterProfileVariableInCluster to fail (clusterVariablesPatchErrorUID
-// in mockCluster.go), exercising the rollback branch at the tail of
-// updateProfiles and confirming cluster_profile reverts to the pre-apply value.
+// in mockCluster.go), exercising the branch at the tail of updateProfiles and
+// confirming the profile keeps its pre-apply variables.
 func TestUpdateProfilesVariableUpdateError_RealDiff(t *testing.T) {
 	c := castV1Client(t, unitTestMockAPIClient)
 	d := buildClusterProfileChangeResourceData(t,
@@ -209,7 +209,7 @@ func TestUpdateProfilesVariableUpdateError_RealDiff(t *testing.T) {
 	// populates the "variables" TypeMap sub-field (as an empty map) even when unset in
 	// config — so assert emptiness rather than key absence.
 	vars, _ := profiles[0].(map[string]interface{})["variables"].(map[string]interface{})
-	assert.Empty(t, vars, "rollback must restore the pre-apply cluster_profile, without the new variables")
+	assert.Empty(t, vars, "a failed variables PATCH must leave the pre-apply variables in state")
 }
 
 // TestUpdateProfilesRollbackOnBadContext_RealDiff forces toAddonDeplProfiles

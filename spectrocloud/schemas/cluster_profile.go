@@ -37,6 +37,14 @@ func ClusterProfileSchemaV2() *schema.Schema {
 				Required:    true,
 				Description: "The ID of the cluster profile.",
 			},
+			// Computed-only, so it is excluded from the set hash. It also makes a changed element's
+			// planned value unknown, which stops terraform-plugin-sdk from overwriting the
+			// provider's rollback with the planned value when an update fails (PLT-2508).
+			"name": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The name of the cluster profile, read from Palette.",
+			},
 			"pack": PackSchema(),
 			"variables": {
 				Type:        schema.TypeMap,
