@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -153,11 +154,59 @@ func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, det
 // it rejects the cluster_template -> cluster_profile "detach" transition at
 // plan time, before apply ever runs. Attach (the supported direction) is
 // intentionally allowed through here; it's handled in updateCommonFields.
-func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
-	if _, detach := classifyClusterTemplateTransition(diff); detach {
+func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	attach, detach := classifyClusterTemplateTransition(diff)
+	if detach {
 		return errors.New("removing cluster_template and adding cluster_profile is not supported: " +
 			"detaching a cluster from a cluster template has no backend API yet. " +
 			"The cluster must remain governed by cluster_template once attached")
+	}
+	if !attach || diff.Id() == "" || !diff.NewValueKnown("cluster_template.0.id") {
+		return nil
+	}
+	meta, ok := m.(*ProviderMeta)
+	if !ok || meta == nil {
+		return nil
+	}
+	resourceContext, _ := diff.Get("context").(string)
+	templateID, _ := diff.Get("cluster_template.0.id").(string)
+	return checkClusterTemplateAttachEligibility(getV1ClientWithResourceContext(meta, resourceContext), diff.Id(), templateID)
+}
+
+// checkClusterTemplateAttachEligibility fails the plan when Palette reports that the cluster cannot be
+// attached to the template (e.g. the template's Kubernetes version is an unsupported upgrade). A Day 2
+// attach removes every cluster_profile block, so a rejected attach at apply time cannot be rolled back
+// in state: terraform-plugin-sdk saves the empty planned cluster_profile over any rollback. Checking at
+// plan time stops it before anything is applied. If the check itself can't run, or the template isn't
+// listed, the plan goes ahead and the attach call reports any rejection.
+func checkClusterTemplateAttachEligibility(c *client.V1Client, clusterUID, templateID string) error {
+	if c == nil || clusterUID == "" || templateID == "" {
+		return nil
+	}
+	summary, err := c.ListAttachableClusterTemplates(clusterUID, true)
+	if err != nil {
+		log.Printf("Warning: could not check whether cluster %s can attach to cluster template %s: %v", clusterUID, templateID, err)
+		return nil
+	}
+	if summary == nil {
+		return nil
+	}
+	for _, item := range summary.Items {
+		if item == nil || item.Metadata == nil || item.Metadata.UID != templateID {
+			continue
+		}
+		if item.Status == nil || item.Status.IsEligible {
+			return nil
+		}
+		name := item.Metadata.Name
+		if name == "" {
+			name = templateID
+		}
+		reasons := "no reason given"
+		if len(item.Status.Reasons) > 0 {
+			reasons = strings.Join(item.Status.Reasons, "; ")
+		}
+		return fmt.Errorf("cluster %s cannot be attached to cluster template %q: %s", clusterUID, name, reasons)
 	}
 	return nil
 }

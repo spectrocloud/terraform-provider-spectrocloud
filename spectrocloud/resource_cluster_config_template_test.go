@@ -156,6 +156,29 @@ func TestValidateProfileSource_IgnoresPhantomProfileElement(t *testing.T) {
 	require.NoError(t, validateProfileSource(d))
 }
 
+func TestCheckClusterTemplateAttachEligibility(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+
+	t.Run("ineligible template fails with Palette's reasons", func(t *testing.T) {
+		err := checkClusterTemplateAttachEligibility(c, "test-cluster-id", routes.ClusterTemplateAttachIneligibleUID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ineligible-template")
+		assert.Contains(t, err.Error(), "K8sUpgradeNotSupported")
+	})
+
+	t.Run("eligible template passes", func(t *testing.T) {
+		require.NoError(t, checkClusterTemplateAttachEligibility(c, "test-cluster-id", "test-cluster-config-template-id"))
+	})
+
+	t.Run("template not listed is left to the attach call", func(t *testing.T) {
+		require.NoError(t, checkClusterTemplateAttachEligibility(c, "test-cluster-id", "unlisted-template"))
+	})
+
+	t.Run("no client skips the check", func(t *testing.T) {
+		require.NoError(t, checkClusterTemplateAttachEligibility(nil, "test-cluster-id", routes.ClusterTemplateAttachIneligibleUID))
+	})
+}
+
 func TestAttachClusterToTemplate_RequiresTemplateID(t *testing.T) {
 	d := resourceClusterAws().TestResourceData()
 	// cluster_template left unset: GetChange's "new" value is empty.

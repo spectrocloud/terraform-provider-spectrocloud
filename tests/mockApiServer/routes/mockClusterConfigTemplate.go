@@ -14,6 +14,36 @@ import (
 // e.g. when a user changes cluster_template.id while already attached.
 const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
 
+// ClusterTemplateAttachIneligibleUID is listed by the attach-eligibility API as not attachable, with
+// a K8sUpgradeNotSupported reason, so the plan-time eligibility check can be exercised.
+const ClusterTemplateAttachIneligibleUID = "cluster-template-attach-ineligible"
+
+// getClusterTemplatesAttachSummaryResponse — canned payload for POST
+// /v1/dashboard/clusterTemplates/attach: one eligible and one ineligible template.
+func getClusterTemplatesAttachSummaryResponse() *models.V1ClusterTemplatesAttachSummary {
+	return &models.V1ClusterTemplatesAttachSummary{
+		Items: []*models.V1ClusterTemplateAttachItem{
+			{
+				Metadata: &models.V1ObjectMeta{UID: "test-cluster-config-template-id", Name: "test-cluster-config-template"},
+				Status:   &models.V1ClusterTemplateAttachStatus{IsEligible: true, Reasons: []string{}},
+			},
+			{
+				Metadata: &models.V1ObjectMeta{UID: ClusterTemplateAttachIneligibleUID, Name: "ineligible-template"},
+				Status: &models.V1ClusterTemplateAttachStatus{
+					IsEligible: false,
+					Reasons:    []string{"K8sUpgradeNotSupported: Kubernetes upgrade from 1.33 to 1.36 is not supported"},
+				},
+			},
+		},
+	}
+}
+
+func clusterTemplatesAttachSummaryHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getClusterTemplatesAttachSummaryResponse())
+}
+
 // getClusterTemplateProfileVariablesResponse — canned payload for GET
 // /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
 // variable ("region") assigned to cluster "test-cluster-id", which is the
@@ -280,6 +310,12 @@ func ClusterConfigTemplateRoutes() []Route {
 			Method:  "POST",
 			Path:    "/v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach",
 			Handler: clusterTemplateAttachHandler,
+		},
+		{
+			// Attach eligibility for every template, checked at plan time before a Day 2 attach.
+			Method:  "POST",
+			Path:    "/v1/dashboard/clusterTemplates/attach",
+			Handler: clusterTemplatesAttachSummaryHandler,
 		},
 	}
 }
