@@ -153,9 +153,53 @@ func getClusterConfigTemplatesSummaryResponse() *models.V1ClusterTemplatesSummar
 	}
 }
 
+// ClusterTemplateReconcileAppliedClusterUID is the only cluster UID for which
+// GET /v1/clusterTemplates/{uid}/spectroclusters/{clusterUid}/reconcile
+// returns a reconcile document (state Applied: "region" resolved on
+// cluster-profile-import-1, "newVar" unresolved on cluster-profile-v2). Every
+// other cluster gets 404, so updateClusterTemplateVariables falls back to the
+// cluster template document as before.
+const ClusterTemplateReconcileAppliedClusterUID = "cluster-template-reconcile-applied"
+
+func clusterTemplateReconcileGetHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if mux.Vars(r)["clusterUid"] != ClusterTemplateReconcileAppliedClusterUID {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(getError("ResourceNotFound", "cluster reconcile not found"))
+		return
+	}
+	region, newVar := "region", "newVar"
+	profile1, profile2 := "cluster-profile-import-1", "cluster-profile-v2"
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(&models.V1ClusterReconcile{
+		Spec: &models.V1ClusterReconcileSpec{
+			Profiles: []*models.V1ClusterTemplateProfileVariables{
+				{
+					UID: &profile1,
+					Variables: &models.V1ClusterTemplateProfileVariablesVariables{
+						ResolvedVariables: []*models.V1SpectroClusterVariable{{Name: &region, Value: "us-east-1"}},
+					},
+				},
+				{
+					UID: &profile2,
+					Variables: &models.V1ClusterTemplateProfileVariablesVariables{
+						UnResolvedVariables: []*models.V1SpectroClusterVariable{{Name: &newVar}},
+					},
+				},
+			},
+		},
+		Status: &models.V1ClusterReconcileStatus{State: "Applied"},
+	})
+}
+
 // ClusterConfigTemplateRoutes defines routes for cluster config template operations
 func ClusterConfigTemplateRoutes() []Route {
 	return []Route{
+		{
+			Method:  "GET",
+			Path:    "/v1/clusterTemplates/{uid}/spectroclusters/{clusterUid}/reconcile",
+			Handler: clusterTemplateReconcileGetHandler,
+		},
 		{
 			// PLT-2410 follow-up: read side of the per-profile cluster_template
 			// variable assignments, used by flattenClusterTemplateVariables.
