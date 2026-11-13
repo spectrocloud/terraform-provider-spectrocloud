@@ -14,6 +14,31 @@ import (
 // e.g. when a user changes cluster_template.id while already attached.
 const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
 
+// ClusterTemplateAttachPaginatedClusterUID is a cluster whose attachable-template list reports more
+// pages, so a template missing from the first page must not block the plan.
+const ClusterTemplateAttachPaginatedClusterUID = "cluster-attach-list-paginated"
+
+// clusterTemplatesAttachSummaryHandler serves POST /v1/dashboard/clusterTemplates/attach. Only
+// "test-cluster-config-template-id" is attachable; any other template is treated as ineligible.
+func clusterTemplatesAttachSummaryHandler(w http.ResponseWriter, r *http.Request) {
+	var spec models.V1ClusterTemplatesAttachFilterSpec
+	_ = json.NewDecoder(r.Body).Decode(&spec)
+
+	summary := &models.V1ClusterTemplatesAttachSummary{
+		Items: []*models.V1ClusterTemplateAttachItem{{
+			Metadata: &models.V1ObjectMeta{UID: "test-cluster-config-template-id", Name: "test-cluster-config-template"},
+			Status:   &models.V1ClusterTemplateAttachStatus{IsEligible: true, Reasons: []string{}},
+		}},
+		Listmeta: &models.V1ListMetaData{Count: 1},
+	}
+	if spec.Filter != nil && spec.Filter.ClusterUID != nil && *spec.Filter.ClusterUID == ClusterTemplateAttachPaginatedClusterUID {
+		summary.Listmeta.Continue = "next-page-token"
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(summary)
+}
+
 // getClusterTemplateProfileVariablesResponse — canned payload for GET
 // /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
 // variable ("region") assigned to cluster "test-cluster-id", which is the
@@ -280,6 +305,12 @@ func ClusterConfigTemplateRoutes() []Route {
 			Method:  "POST",
 			Path:    "/v1/spectroclusters/{uid}/clusterTemplates/{templateUid}/attach",
 			Handler: clusterTemplateAttachHandler,
+		},
+		{
+			// Templates attachable to a cluster, checked at plan time before a Day 2 attach.
+			Method:  "POST",
+			Path:    "/v1/dashboard/clusterTemplates/attach",
+			Handler: clusterTemplatesAttachSummaryHandler,
 		},
 	}
 }
