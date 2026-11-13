@@ -93,7 +93,6 @@ func TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable(t *testin
 	d := buildClusterConfigTemplateUpdateResourceData(t, oldRaw, newRaw)
 	assert.True(t, d.HasChange("cluster_profile"),
 		"adding a variable to an existing cluster_profile must be detected as a change")
-
 }
 
 // Variables are Optional+Computed: a cluster_profile whose variables block is
