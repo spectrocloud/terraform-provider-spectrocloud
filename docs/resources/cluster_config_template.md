@@ -112,7 +112,7 @@ Required:
 
 Optional:
 
-- `variables` (Block Set) Set of profile variable values and assignment strategies stored on the template. When omitted, the variables already stored on the template are kept. Values are applied to attached clusters on the next cluster profile version upgrade; a variable whose definition is unchanged keeps the value already running on each cluster. (see [below for nested schema](#nestedblock--cluster_profile--variables))
+- `variables` (Block Set) Set of profile variable values and assignment strategies stored on the template. When omitted, the variables already stored on the template are kept. Only the variables listed here are managed; other variables on the template (for example, ones added by Palette or the UI) are left untouched. Values are applied to attached clusters on the next cluster profile version upgrade; a variable whose definition is unchanged keeps the value already running on each cluster. (see [below for nested schema](#nestedblock--cluster_profile--variables))
 
 <a id="nestedblock--cluster_profile--variables"></a>
 ### Nested Schema for `cluster_profile.variables`

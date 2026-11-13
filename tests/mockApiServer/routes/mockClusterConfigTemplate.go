@@ -2,7 +2,9 @@ package routes
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -205,7 +207,7 @@ func ClusterConfigTemplateRoutes() []Route {
 			// variable assignments, used by flattenClusterTemplateVariables.
 			Method:  "GET",
 			Path:    "/v1/clusterTemplates/{uid}/profiles/{profileUid}/variables",
-			Handler: clusterTemplateProfileVariablesGetHandler,
+			Handler: clusterTemplateProfileVariablesDispatchHandler,
 		},
 		{
 			Method: "POST",
@@ -224,12 +226,9 @@ func ClusterConfigTemplateRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/clusterTemplates/{uid}",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getClusterConfigTemplateResponse(),
-			},
+			Method:  "GET",
+			Path:    "/v1/clusterTemplates/{uid}",
+			Handler: clusterConfigTemplateGetHandler,
 		},
 		{
 			Method: "PATCH",
@@ -246,11 +245,9 @@ func ClusterConfigTemplateRoutes() []Route {
 			},
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/clusterTemplates/{uid}/profiles",
-			Response: ResponseData{
-				StatusCode: 204,
-			},
+			Method:  "PUT",
+			Path:    "/v1/clusterTemplates/{uid}/profiles",
+			Handler: clusterConfigTemplateRecordingHandler,
 		},
 		{
 			Method: "DELETE",
@@ -260,11 +257,9 @@ func ClusterConfigTemplateRoutes() []Route {
 			},
 		},
 		{
-			Method: "PATCH",
-			Path:   "/v1/clusterTemplates/{uid}/profiles/variables",
-			Response: ResponseData{
-				StatusCode: 204,
-			},
+			Method:  "PATCH",
+			Path:    "/v1/clusterTemplates/{uid}/profiles/variables",
+			Handler: clusterConfigTemplateRecordingHandler,
 		},
 		{
 			Method: "PATCH",
@@ -282,4 +277,117 @@ func ClusterConfigTemplateRoutes() []Route {
 			Handler: clusterTemplateAttachHandler,
 		},
 	}
+}
+
+// ClusterConfigTemplateRecorderUID is a template whose document mirrors what
+// Hubble stores after the UI or a cluster attach touched it: every variable
+// uses the "cluster" strategy and carries no value on the template itself,
+// and "csi" is not managed by Terraform. Its PUT and PATCH bodies are
+// recorded (see ClusterConfigTemplateCalls); any other template UID gets the
+// default canned responses.
+const (
+	ClusterConfigTemplateRecorderUID        = "cluster-config-template-recorder"
+	ClusterConfigTemplateRecorderProfileUID = "recorder-profile-1"
+)
+
+// RecordedClusterConfigTemplateCall is one PUT/PATCH received for the
+// recorder template.
+type RecordedClusterConfigTemplateCall struct {
+	Method string
+	Path   string
+	Body   []byte
+}
+
+var (
+	clusterConfigTemplateCallsMu sync.Mutex
+	clusterConfigTemplateCalls   []RecordedClusterConfigTemplateCall
+)
+
+// ResetClusterConfigTemplateCalls clears the recorded recorder-template calls.
+func ResetClusterConfigTemplateCalls() {
+	clusterConfigTemplateCallsMu.Lock()
+	defer clusterConfigTemplateCallsMu.Unlock()
+	clusterConfigTemplateCalls = nil
+}
+
+// ClusterConfigTemplateCalls returns the recorded recorder-template calls.
+func ClusterConfigTemplateCalls() []RecordedClusterConfigTemplateCall {
+	clusterConfigTemplateCallsMu.Lock()
+	defer clusterConfigTemplateCallsMu.Unlock()
+	return append([]RecordedClusterConfigTemplateCall(nil), clusterConfigTemplateCalls...)
+}
+
+func clusterConfigTemplateRecordingHandler(w http.ResponseWriter, r *http.Request) {
+	if mux.Vars(r)["uid"] == ClusterConfigTemplateRecorderUID {
+		body, _ := io.ReadAll(r.Body)
+		clusterConfigTemplateCallsMu.Lock()
+		clusterConfigTemplateCalls = append(clusterConfigTemplateCalls, RecordedClusterConfigTemplateCall{
+			Method: r.Method, Path: r.URL.Path, Body: body,
+		})
+		clusterConfigTemplateCallsMu.Unlock()
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func getClusterConfigTemplateRecorderResponse() *models.V1ClusterTemplate {
+	t := getClusterConfigTemplateResponse()
+	t.Metadata.UID = ClusterConfigTemplateRecorderUID
+	clusterVar := func(name, clusterUID string) *models.V1ClusterTemplateVariable {
+		return &models.V1ClusterTemplateVariable{
+			Name:           name,
+			AssignStrategy: "cluster",
+			Clusters:       []*models.V1ClusterVariableValue{{UID: clusterUID}},
+		}
+	}
+	t.Spec.Profiles = []*models.V1ClusterTemplateProfile{
+		{
+			UID: ClusterConfigTemplateRecorderProfileUID,
+			Variables: []*models.V1ClusterTemplateVariable{
+				clusterVar("type", "cid-1"),
+				clusterVar("policy", "cid-1"),
+				clusterVar("csi", "cid-2"),
+			},
+		},
+	}
+	return t
+}
+
+func clusterConfigTemplateGetHandler(w http.ResponseWriter, r *http.Request) {
+	payload := getClusterConfigTemplateResponse()
+	if mux.Vars(r)["uid"] == ClusterConfigTemplateRecorderUID {
+		payload = getClusterConfigTemplateRecorderResponse()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// Assignments for the recorder template: "type" is assigned gp3 on cid-1,
+// "policy" is still waiting for a value on cid-1, "csi" is ext4 on cid-2.
+func getClusterConfigTemplateRecorderProfileVariables() *models.V1ClusterTemplateProfileVariablesResponse {
+	assignment := func(clusterUID, state, value string) *models.V1ClusterTemplateVariableClusterAssignment {
+		u, st := clusterUID, state
+		return &models.V1ClusterTemplateVariableClusterAssignment{UID: &u, AssignmentState: &st, AssignedValue: value}
+	}
+	variable := func(name string, clusters ...*models.V1ClusterTemplateVariableClusterAssignment) *models.V1ClusterTemplateProfileVariableWithClusters {
+		n := name
+		return &models.V1ClusterTemplateProfileVariableWithClusters{Variable: &models.V1Variable{Name: &n}, Clusters: clusters}
+	}
+	return &models.V1ClusterTemplateProfileVariablesResponse{
+		Variables: []*models.V1ClusterTemplateProfileVariableWithClusters{
+			variable("type", assignment("cid-1", "Assigned", "gp3")),
+			variable("policy", assignment("cid-1", "Pending", "")),
+			variable("csi", assignment("cid-2", "Assigned", "ext4")),
+		},
+	}
+}
+
+func clusterTemplateProfileVariablesDispatchHandler(w http.ResponseWriter, r *http.Request) {
+	if mux.Vars(r)["uid"] != ClusterConfigTemplateRecorderUID {
+		clusterTemplateProfileVariablesGetHandler(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getClusterConfigTemplateRecorderProfileVariables())
 }

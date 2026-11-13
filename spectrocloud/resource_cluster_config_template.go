@@ -87,6 +87,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 							Computed: true,
 							Description: "Set of profile variable values and assignment strategies stored on the template. " +
 								"When omitted, the variables already stored on the template are kept. " +
+								"Only the variables listed here are managed; other variables on the template (for example, ones added by Palette or the UI) are left untouched. " +
 								"Values are applied to attached clusters on the next cluster profile version upgrade; " +
 								"a variable whose definition is unchanged keeps the value already running on each cluster.",
 							Set: resourceClusterConfigTemplateVariableHash,
@@ -250,10 +251,11 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 
-		// Variables are read from the template's own stored spec, not from
-		// per-cluster assignments: per-cluster values are owned by each
-		// cluster and are not managed by this resource.
-		if err := d.Set("cluster_profile", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
+		// Only the variables already managed in state are read back (all of
+		// them on import); "cluster"-strategy values come from the
+		// per-cluster assignments. See cluster_config_template_variables.go.
+		prior := templateProfilesFromSet(d.Get("cluster_profile"))
+		if err := d.Set("cluster_profile", flattenClusterTemplateProfilesForState(c, uid, template.Spec.Profiles, prior)); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -312,17 +314,11 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	// Profile and variable changes both go through the profiles PUT, which is
-	// the only endpoint that persists variables on the template itself. The
-	// variables PATCH only writes per-cluster assignments, which Read never
-	// reflects back, so using it here caused permanent drift.
+	// Structural changes go through the profiles PUT (merged with the
+	// variables Terraform does not manage); each changed "cluster"-strategy
+	// value goes through its own variables PATCH, as the UI does.
 	if d.HasChange("cluster_profile") {
-		profilesEntity := &models.V1ClusterTemplateProfilesUpdateEntity{
-			Profiles: expandClusterTemplateProfiles(d.Get("cluster_profile").(*schema.Set).List()),
-		}
-
-		err := c.UpdateClusterConfigTemplateProfiles(d.Id(), profilesEntity)
-		if err != nil {
+		if err := updateClusterConfigTemplateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
