@@ -153,13 +153,61 @@ func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, det
 // it rejects the cluster_template -> cluster_profile "detach" transition at
 // plan time, before apply ever runs. Attach (the supported direction) is
 // intentionally allowed through here; it's handled in updateCommonFields.
-func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
-	if _, detach := classifyClusterTemplateTransition(diff); detach {
+func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	attach, detach := classifyClusterTemplateTransition(diff)
+	if detach {
 		return errors.New("removing cluster_template and adding cluster_profile is not supported: " +
 			"detaching a cluster from a cluster template has no backend API yet. " +
 			"The cluster must remain governed by cluster_template once attached")
 	}
-	return nil
+	if !attach || diff.Id() == "" || !diff.NewValueKnown("cluster_template.0.id") {
+		return nil
+	}
+	meta, ok := m.(*ProviderMeta)
+	if !ok || meta == nil {
+		return nil
+	}
+	resourceContext, _ := diff.Get("context").(string)
+	templateID, _ := diff.Get("cluster_template.0.id").(string)
+	return checkClusterTemplateAttachable(getV1ClientWithResourceContext(meta, resourceContext), diff.Id(), templateID)
+}
+
+// checkClusterTemplateAttachable fails the plan when Palette does not list the template as attachable
+// to the cluster. Palette leaves out templates the cluster can't attach to, e.g. an unsupported
+// Kubernetes upgrade (K8sUpgradeNotSupported). A Day 2 attach removes every cluster_profile block, so
+// a rejection at apply time can't be rolled back in state: terraform-plugin-sdk saves the empty planned
+// cluster_profile over the rollback. Checking at plan time stops it before anything is applied.
+// If the check can't run, or the list is paginated so a missing template proves nothing, the plan
+// goes ahead and the attach call reports any rejection.
+func checkClusterTemplateAttachable(c *client.V1Client, clusterUID, templateID string) error {
+	if c == nil || clusterUID == "" || templateID == "" {
+		return nil
+	}
+	summary, err := c.ListAttachableClusterTemplates(clusterUID, false)
+	if err != nil {
+		log.Printf("Warning: could not list cluster templates attachable to cluster %s: %v", clusterUID, err)
+		return nil
+	}
+	if summary == nil {
+		return nil
+	}
+	for _, item := range summary.Items {
+		if item != nil && item.Metadata != nil && item.Metadata.UID == templateID {
+			return nil
+		}
+	}
+	if summary.Listmeta != nil && summary.Listmeta.Continue != "" {
+		log.Printf("Warning: attachable cluster templates for cluster %s span several pages; skipping the attach check for %s", clusterUID, templateID)
+		return nil
+	}
+
+	templateName := templateID
+	if template, err := c.GetClusterConfigTemplate(templateID); err == nil && template != nil && template.Metadata != nil && template.Metadata.Name != "" {
+		templateName = template.Metadata.Name
+	}
+	return fmt.Errorf("cluster template %q cannot be attached to cluster %s: Palette does not list it as attachable "+
+		"(for example, the template's Kubernetes version is not a supported upgrade, the cluster is not running, "+
+		"or it is already attached to a template). Check the template in Palette, or keep cluster_profile", templateName, clusterUID)
 }
 
 // attachClusterToTemplate binds the cluster to the template in the new
