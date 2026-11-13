@@ -6,20 +6,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// ---------------------------------------------------------------------
-// buildProfilesVariablesBatchEntity — assign_strategy "all" vs "cluster".
-//
-// Regression for a real bug: the builder used to send Clusters: []
-// unconditionally for every variable, so the configured value never
-// reached Palette's PATCH /v1/clusterTemplates/{uid}/profiles/variables
-// regardless of assign_strategy. "all" must now expand to every cluster in
-// attached_cluster; "cluster" must expand to exactly the configured
-// cluster_ids, both carrying the variable's value.
-// ---------------------------------------------------------------------
 
 func variableWithStrategy(name, value, assignStrategy string, clusterIDs ...string) map[string]interface{} {
 	ids := schema.NewSet(schema.HashString, nil)
@@ -32,159 +22,6 @@ func variableWithStrategy(name, value, assignStrategy string, clusterIDs ...stri
 		"assign_strategy": assignStrategy,
 		"cluster_ids":     ids,
 	}
-}
-
-func TestBuildProfilesVariablesBatchEntity_AllStrategyUsesAttachedClusters(t *testing.T) {
-	d := resourceClusterConfigTemplate().TestResourceData()
-	require.NoError(t, d.Set("attached_cluster", []interface{}{
-		map[string]interface{}{"cluster_uid": "cluster-1", "name": "c1"},
-		map[string]interface{}{"cluster_uid": "cluster-2", "name": "c2"},
-	}))
-
-	varsSet := schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
-		variableWithStrategy("region", "us-west-2", "all"),
-	})
-
-	got := buildProfilesVariablesBatchEntity(d, []interface{}{
-		map[string]interface{}{"id": "profile-1", "variables": varsSet},
-	})
-
-	require.Len(t, got.Profiles, 1)
-	require.Len(t, got.Profiles[0].Variables, 1)
-	clusters := got.Profiles[0].Variables[0].Clusters
-	require.Len(t, clusters, 2)
-	seen := map[string]string{}
-	for _, c := range clusters {
-		seen[c.UID] = c.Value
-	}
-	assert.Equal(t, "us-west-2", seen["cluster-1"])
-	assert.Equal(t, "us-west-2", seen["cluster-2"])
-}
-
-func TestBuildProfilesVariablesBatchEntity_ClusterStrategyUsesClusterIDs(t *testing.T) {
-	d := resourceClusterConfigTemplate().TestResourceData()
-	// attached_cluster deliberately includes a cluster NOT in cluster_ids,
-	// to confirm "cluster" strategy ignores it.
-	require.NoError(t, d.Set("attached_cluster", []interface{}{
-		map[string]interface{}{"cluster_uid": "cluster-1", "name": "c1"},
-		map[string]interface{}{"cluster_uid": "cluster-2", "name": "c2"},
-	}))
-
-	varsSet := schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
-		variableWithStrategy("region", "us-west-2", "cluster", "cluster-2"),
-	})
-
-	got := buildProfilesVariablesBatchEntity(d, []interface{}{
-		map[string]interface{}{"id": "profile-1", "variables": varsSet},
-	})
-
-	require.Len(t, got.Profiles, 1)
-	require.Len(t, got.Profiles[0].Variables, 1)
-	clusters := got.Profiles[0].Variables[0].Clusters
-	require.Len(t, clusters, 1)
-	assert.Equal(t, "cluster-2", clusters[0].UID)
-	assert.Equal(t, "us-west-2", clusters[0].Value)
-}
-
-// TestRefreshProfileVariableValues_OverridesStaleDeclaredValue is the
-// regression for a real customer-reported bug: after a successful Day-2
-// variable update via buildProfilesVariablesBatchEntity, the next Read would
-// write the OLD value straight back into state, making the change look like
-// it never took effect (persistent drift). Root cause: GET
-// /v1/clusterTemplates/{uid} (what flattenClusterTemplateProfiles reads) only
-// ever returns the template's own declared/create-time value - the PATCH
-// writes to a separate per-cluster assignment store this GET never reads
-// from. refreshProfileVariableValues must override that stale value with the
-// live per-cluster assignment from GetClusterTemplateProfileVariables - the
-// mock fixture (getClusterTemplateProfileVariablesResponse) returns
-// "region" assigned "us-east-1" for cluster "test-cluster-id".
-func TestRefreshProfileVariableValues_OverridesStaleDeclaredValue(t *testing.T) {
-	c := castV1Client(t, unitTestMockAPIClient)
-	d := resourceClusterConfigTemplate().TestResourceData()
-	require.NoError(t, d.Set("attached_cluster", []interface{}{
-		map[string]interface{}{"cluster_uid": "test-cluster-id", "name": "c1"},
-	}))
-
-	// "stale" declared value, as if it just came back from GetClusterConfigTemplate
-	staleProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
-		map[string]interface{}{
-			"id": "profile-1",
-			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
-				variableWithStrategy("region", "stale-declared-value", "all"),
-			}),
-		},
-	})
-
-	refreshed := refreshProfileVariableValues(c, d, "template-uid-1", staleProfiles)
-
-	require.Equal(t, 1, refreshed.Len())
-	profile := refreshed.List()[0].(map[string]interface{})
-	variables := profile["variables"].(*schema.Set)
-	require.Equal(t, 1, variables.Len())
-	variable := variables.List()[0].(map[string]interface{})
-	assert.Equal(t, "us-east-1", variable["value"],
-		"must reflect the live per-cluster assignment, not the stale declared value")
-}
-
-// TestRefreshProfileVariableValues_PreservesClusterIDsFromPriorState is the
-// regression for the reported "cluster_ids shows null/empty after apply,
-// drift persists" bug: GET /v1/clusterTemplates/{uid} (what
-// flattenClusterTemplateProfiles builds "fresh" from) has no concept of
-// cluster_ids at all - it's pure Terraform-side targeting intent, never
-// persisted anywhere the backend can be asked about independent of the
-// PATCH that used it. refreshProfileVariableValues must restore
-// assign_strategy/cluster_ids from prior state (via priorVariableTargeting),
-// not leave them at whatever the backend-sourced "fresh" value carried
-// (nothing, for cluster_ids - or a stale assign_strategy, for a PATCH-only
-// update that never touched the template's own declared Spec).
-func TestRefreshProfileVariableValues_PreservesClusterIDsFromPriorState(t *testing.T) {
-	c := castV1Client(t, unitTestMockAPIClient)
-	d := resourceClusterConfigTemplate().TestResourceData()
-	require.NoError(t, d.Set("attached_cluster", []interface{}{
-		map[string]interface{}{"cluster_uid": "test-cluster-id", "name": "c1"},
-	}))
-
-	// Prior state: what the user actually configured and successfully applied.
-	require.NoError(t, d.Set("cluster_profile", []interface{}{
-		map[string]interface{}{
-			"id": "profile-1",
-			"variables": []interface{}{
-				variableWithStrategy("region", "us-east-1", "cluster", "test-cluster-id"),
-			},
-		},
-	}))
-
-	// "fresh" from GET /v1/clusterTemplates/{uid}: no cluster_ids concept at
-	// all (base flatten never sets that key), and assign_strategy may be
-	// stale/whatever the template's own declared Spec says.
-	freshFromBackend := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
-		map[string]interface{}{
-			"id": "profile-1",
-			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
-				map[string]interface{}{
-					"name":            "region",
-					"value":           "stale-declared-value",
-					"assign_strategy": "all",
-				},
-			}),
-		},
-	})
-
-	refreshed := refreshProfileVariableValues(c, d, "template-uid-1", freshFromBackend)
-
-	require.Equal(t, 1, refreshed.Len())
-	profile := refreshed.List()[0].(map[string]interface{})
-	variables := profile["variables"].(*schema.Set)
-	require.Equal(t, 1, variables.Len())
-	variable := variables.List()[0].(map[string]interface{})
-
-	assert.Equal(t, "cluster", variable["assign_strategy"],
-		"assign_strategy must come from prior state, not the stale backend declaration")
-	clusterIDs, ok := variable["cluster_ids"].(*schema.Set)
-	require.True(t, ok)
-	assert.Equal(t, []interface{}{"test-cluster-id"}, clusterIDs.List(),
-		"cluster_ids must be preserved from prior state, not wiped to empty")
-	assert.Equal(t, "us-east-1", variable["value"])
 }
 
 // buildClusterConfigTemplateUpdateResourceData builds a real InstanceState +
@@ -256,8 +93,153 @@ func TestResourceClusterConfigTemplateProfileHash_DetectsAddedVariable(t *testin
 	d := buildClusterConfigTemplateUpdateResourceData(t, oldRaw, newRaw)
 	assert.True(t, d.HasChange("cluster_profile"),
 		"adding a variable to an existing cluster_profile must be detected as a change")
+}
 
-	oldProfiles, newProfiles := d.GetChange("cluster_profile")
-	assert.False(t, profileStructureChanged(oldProfiles, newProfiles),
-		"same profile id on both sides must still route to the variables-only PATCH path, not the PUT path")
+// Variables are Optional+Computed: a cluster_profile whose variables block is
+// omitted must keep whatever the template already stores, with no diff.
+func TestResourceClusterConfigTemplate_OmittedVariablesShowNoDiff(t *testing.T) {
+	oldRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{
+				"id": "profile-1",
+				"variables": []interface{}{
+					map[string]interface{}{
+						"name":            "region",
+						"value":           "us-west-2",
+						"assign_strategy": "all",
+					},
+				},
+			},
+		},
+	}
+	newRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{"id": "profile-1"},
+		},
+	}
+
+	d := buildClusterConfigTemplateUpdateResourceData(t, oldRaw, newRaw)
+	assert.False(t, d.HasChange("cluster_profile"),
+		"omitting variables must keep the stored template variables without a diff")
+}
+
+func TestExpandClusterTemplateProfileVariables_ClusterStrategySendsClusterIDs(t *testing.T) {
+	got := expandClusterTemplateProfileVariables([]interface{}{
+		variableWithStrategy("region", "us-west-2", "cluster", "cluster-2", "cluster-1"),
+	})
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "region", got[0].Name)
+	assert.Equal(t, "us-west-2", got[0].Value)
+	assert.Equal(t, "cluster", got[0].AssignStrategy)
+	require.Len(t, got[0].Clusters, 2)
+	assert.Equal(t, "cluster-1", got[0].Clusters[0].UID)
+	assert.Equal(t, "us-west-2", got[0].Clusters[0].Value)
+	assert.Equal(t, "cluster-2", got[0].Clusters[1].UID)
+	assert.Equal(t, "us-west-2", got[0].Clusters[1].Value)
+}
+
+func TestExpandClusterTemplateProfileVariables_AllStrategySendsNoClusters(t *testing.T) {
+	got := expandClusterTemplateProfileVariables([]interface{}{
+		variableWithStrategy("region", "us-west-2", "all", "cluster-1"),
+	})
+
+	require.Len(t, got, 1)
+	assert.Equal(t, "all", got[0].AssignStrategy)
+	assert.Empty(t, got[0].Clusters)
+}
+
+func TestFlattenClusterTemplateProfileVariables_ReadsClusterIDsFromTemplate(t *testing.T) {
+	got := flattenClusterTemplateProfileVariables([]*models.V1ClusterTemplateVariable{
+		{
+			Name:           "region",
+			AssignStrategy: "cluster",
+			Clusters: []*models.V1ClusterVariableValue{
+				{UID: "cluster-1", Value: "us-east-1"},
+				{UID: "cluster-2", Value: "us-east-1"},
+			},
+		},
+	})
+
+	require.Equal(t, 1, got.Len())
+	variable := got.List()[0].(map[string]interface{})
+	assert.Equal(t, "cluster", variable["assign_strategy"])
+	assert.Equal(t, "us-east-1", variable["value"],
+		"value falls back to the per-cluster value when the template stores none")
+	assert.ElementsMatch(t, []interface{}{"cluster-1", "cluster-2"}, variable["cluster_ids"].(*schema.Set).List())
+}
+
+func TestFlattenClusterTemplateProfileVariables_EmptyStrategyIsCluster(t *testing.T) {
+	got := flattenClusterTemplateProfileVariables([]*models.V1ClusterTemplateVariable{
+		{Name: "region", Value: "us-west-2"},
+	})
+
+	require.Equal(t, 1, got.Len())
+	variable := got.List()[0].(map[string]interface{})
+	assert.Equal(t, "cluster", variable["assign_strategy"])
+	assert.Equal(t, "us-west-2", variable["value"])
+	assert.Equal(t, 0, variable["cluster_ids"].(*schema.Set).Len())
+}
+
+// A config -> API -> state round trip must hash identically, or every plan
+// after apply shows drift.
+func TestClusterTemplateVariables_RoundTripHashIsStable(t *testing.T) {
+	for _, v := range []map[string]interface{}{
+		variableWithStrategy("region", "us-west-2", "all"),
+		variableWithStrategy("region", "us-west-2", "cluster", "cluster-1", "cluster-2"),
+	} {
+		roundTripped := flattenClusterTemplateProfileVariables(expandClusterTemplateProfileVariables([]interface{}{v}))
+		require.Equal(t, 1, roundTripped.Len())
+		assert.Equal(t, resourceClusterConfigTemplateVariableHash(v),
+			resourceClusterConfigTemplateVariableHash(roundTripped.List()[0]),
+			"strategy %q", v["assign_strategy"])
+	}
+}
+
+// When the profile set does change, a profile with omitted variables must
+// still carry its stored variables into the PUT, not clear them.
+func TestResourceClusterConfigTemplate_OmittedVariablesCarriedOnProfileAdd(t *testing.T) {
+	oldRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{
+				"id": "profile-1",
+				"variables": []interface{}{
+					map[string]interface{}{
+						"name":            "region",
+						"value":           "us-west-2",
+						"assign_strategy": "all",
+					},
+				},
+			},
+		},
+	}
+	newRaw := map[string]interface{}{
+		"name":       "test-template",
+		"cloud_type": "aws",
+		"cluster_profile": []interface{}{
+			map[string]interface{}{"id": "profile-1"},
+			map[string]interface{}{"id": "profile-2"},
+		},
+	}
+
+	d := buildClusterConfigTemplateUpdateResourceData(t, oldRaw, newRaw)
+	require.True(t, d.HasChange("cluster_profile"))
+
+	profiles := expandClusterTemplateProfiles(d.Get("cluster_profile").(*schema.Set).List())
+	require.Len(t, profiles, 2)
+	for _, p := range profiles {
+		if p.UID == "profile-1" {
+			require.Len(t, p.Variables, 1)
+			assert.Equal(t, "region", p.Variables[0].Name)
+			assert.Equal(t, "us-west-2", p.Variables[0].Value)
+		} else {
+			assert.Empty(t, p.Variables)
+		}
+	}
 }
