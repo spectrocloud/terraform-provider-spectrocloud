@@ -168,6 +168,7 @@ Optional:
 - `control_plane_cidr` (String) CIDR block for the control plane subnet. Changing this forces a new resource.
 - `control_plane_subnet_name` (String) Name of the control plane subnet in the virtual network. Changing this forces a new resource.
 - `control_plane_subnet_security_group_name` (String) Security group name attached to the control plane subnet. Changing this forces a new resource.
+- `managed_identity` (Block List, Max: 1) User-assigned managed identities used to authenticate to Azure. (see [below for nested schema](#nestedblock--cloud_config--managed_identity))
 - `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_cluster` (Boolean) Whether to create a private cluster(API endpoint). Default is `false`.
 - `vnet_cidr_block` (String) CIDR block assigned to the virtual network. Changing this forces a new resource.
@@ -176,6 +177,15 @@ Optional:
 - `worker_cidr` (String) CIDR block for the worker subnet. Changing this forces a new resource.
 - `worker_subnet_name` (String) Name of the worker subnet in the virtual network. Changing this forces a new resource.
 - `worker_subnet_security_group_name` (String) Security group name attached to the worker subnet. Changing this forces a new resource.
+
+<a id="nestedblock--cloud_config--managed_identity"></a>
+### Nested Schema for `cloud_config.managed_identity`
+
+Optional:
+
+- `aks_service_identity_resource_id` (String) Azure resource ID of the user-assigned managed identity used by the AKS control plane.
+- `kubelet_identity_resource_id` (String) Azure resource ID of the user-assigned managed identity used by the AKS kubelet.
+
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -265,6 +275,10 @@ Optional:
 
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--cluster_profile--pack))
 - `variables` (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: `priority = "5"`.
+
+Read-Only:
+
+- `name` (String) The name of the cluster profile, read from Palette.
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`

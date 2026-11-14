@@ -1001,6 +1001,53 @@ func TestResourceMachinePoolAzureHashIncludesSkipK8sUpgrade(t *testing.T) {
 		"Azure machine pool hash should change when skip_k8s_upgrade changes")
 }
 
+// resourceMachinePoolAzureHash did not hash exclude_cluster_identity or
+// user_assigned_identities, so a TypeSet worker pool with only one of those
+// fields changed hashed identically to the prior pool, and the change was
+// silently dropped by resourceClusterAzureUpdate (gated on the hash changing).
+func TestResourceMachinePoolAzureHashIncludesExcludeClusterIdentity(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                     "pool-a",
+		"count":                    2,
+		"control_plane":            false,
+		"instance_type":            "Standard_D2s_v3",
+		"os_type":                  "Linux",
+		"exclude_cluster_identity": false,
+	}
+	changed := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		changed[k] = v
+	}
+	changed["exclude_cluster_identity"] = true
+
+	assert.NotEqual(t, resourceMachinePoolAzureHash(base), resourceMachinePoolAzureHash(changed),
+		"Azure machine pool hash should change when exclude_cluster_identity changes")
+}
+
+func TestResourceMachinePoolAzureHashIncludesUserAssignedIdentities(t *testing.T) {
+	base := map[string]interface{}{
+		"name":          "pool-a",
+		"count":         2,
+		"control_plane": false,
+		"instance_type": "Standard_D2s_v3",
+		"os_type":       "Linux",
+		"user_assigned_identities": schema.NewSet(schema.HashString, []interface{}{
+			"/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-a",
+		}),
+	}
+	changed := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		changed[k] = v
+	}
+	changed["user_assigned_identities"] = schema.NewSet(schema.HashString, []interface{}{
+		"/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-a",
+		"/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-b",
+	})
+
+	assert.NotEqual(t, resourceMachinePoolAzureHash(base), resourceMachinePoolAzureHash(changed),
+		"Azure machine pool hash should change when user_assigned_identities changes")
+}
+
 // PLT-2406: same bug as Azure — resourceMachinePoolGcpHash did not hash
 // skip_k8s_upgrade.
 func TestResourceMachinePoolGcpHashIncludesSkipK8sUpgrade(t *testing.T) {

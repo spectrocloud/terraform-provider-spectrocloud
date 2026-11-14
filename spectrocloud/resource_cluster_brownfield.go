@@ -19,7 +19,7 @@ func resourceClusterBrownfield() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterBrownfieldImportCreate,
 		ReadContext:   resourceClusterBrownfieldRead,
-		UpdateContext: resourceClusterBrownfieldUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterBrownfieldUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterBrownfieldImport,
@@ -740,6 +740,10 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
 	// Set tags (always present)
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+		return diag.FromErr(err), true
+	}
+
+	if err := dropEmptyClusterProfileEntries(d); err != nil {
 		return diag.FromErr(err), true
 	}
 

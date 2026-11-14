@@ -1,8 +1,68 @@
 package routes
 
 import (
+	"encoding/json"
+	"net/http"
+
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// AzureMSIAccountUID (PLT-2489) drives a GET /v1/cloudaccounts/azure/{uid}
+// response whose Spec.IdentityType is UserAssignedMSI with a resolved
+// ManagementIdentityResourceID, so flattenCloudAccountAzure's identity_type
+// and management_identity_resource_id round-trip can be exercised directly.
+// Any other UID keeps the original static ServicePrincipal fixture so
+// pre-existing azure cloud account tests are unaffected.
+const AzureMSIAccountUID = "test-azure-msi-account-id"
+
+// azureServicePrincipalValidateHandler serves POST
+// /v1/clouds/azure/account/validate (service-principal accounts only). It
+// rejects a UserAssignedMSI body so tests can distinguish "the SDK correctly
+// skipped this endpoint for MSI" from "this endpoint happens to accept
+// anything" - see PLT-2489.
+func azureServicePrincipalValidateHandler(w http.ResponseWriter, r *http.Request) {
+	var body models.V1AzureCloudAccount
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewDecoder(r.Body).Decode(&body); err == nil &&
+		body.IdentityType != nil && *body.IdentityType == models.V1AzureCloudAccountIdentityTypeUserAssignedMSI {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("InvalidRequest", "clientSecret is required for ServicePrincipal validation"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func azureAccountGetHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	account := &models.V1AzureAccount{
+		Metadata: &models.V1ObjectMeta{
+			Annotations: map[string]string{"scope": "project", "overlordUid": ""},
+			Name:        "test-azure-account-1",
+			UID:         "test-azure-account-id-1",
+		},
+		Spec: &models.V1AzureCloudAccount{
+			AzureEnvironment: strPtr("test-env"),
+			ClientID:         strPtr("test-client-id"),
+			ClientSecret:     strPtr("test-secret"),
+			Settings: &models.V1CloudAccountSettings{
+				DisablePropertiesRequest: false,
+			},
+			TenantID:   strPtr("tenant-id"),
+			TenantName: "test",
+		},
+	}
+	if uid == AzureMSIAccountUID {
+		account.Metadata.UID = AzureMSIAccountUID
+		account.Spec.ClientSecret = nil
+		account.Spec.IdentityType = strPtr(models.V1AzureCloudAccountIdentityTypeUserAssignedMSI)
+		account.Spec.ManagementIdentityResourceID = "test-managed-identity-resource-id"
+	}
+	_ = json.NewEncoder(w).Encode(account)
+}
 
 func getAccountResponse(cloud string) interface{} {
 	switch cloud {
@@ -589,11 +649,24 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 		{
+			// PLT-2489: rejects a UserAssignedMSI account body so a test can
+			// tell whether Create/Update actually called the overlord-scoped
+			// MSI validate endpoint below instead of this (service-principal
+			// only) one - a mock that accepted both would pass even if the
+			// SDK's identity_type branch were deleted entirely.
+			Method:  "POST",
+			Path:    "/v1/clouds/azure/account/validate",
+			Handler: azureServicePrincipalValidateHandler,
+		},
+		{
+			// PLT-2489: MSI-identity accounts validate from inside the
+			// private gateway instead of the service-principal endpoint
+			// above, and get managementIdentityResourceId resolved here.
 			Method: "POST",
-			Path:   "/v1/clouds/azure/account/validate",
+			Path:   "/v1/overlords/azure/{uid}/account/validate",
 			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
+				StatusCode: 200,
+				Payload:    map[string]string{"managementIdentityResourceId": "test-managed-identity-resource-id"},
 			},
 		},
 		{
@@ -613,32 +686,9 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/azure/{uid}",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1AzureAccount{
-					APIVersion: "",
-					Kind:       "",
-					Metadata: &models.V1ObjectMeta{
-						Annotations: map[string]string{"scope": "project", "overlordUid": ""},
-						Labels:      nil,
-						Name:        "test-azure-account-1",
-						UID:         "test-azure-account-id-1",
-					},
-					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: strPtr("test-env"),
-						ClientID:         strPtr("test-client-id"),
-						ClientSecret:     strPtr("test-secret"),
-						Settings: &models.V1CloudAccountSettings{
-							DisablePropertiesRequest: false,
-						},
-						TenantID:   strPtr("tenant-id"),
-						TenantName: "test",
-					},
-					Status: nil,
-				},
-			},
+			Method:  "GET",
+			Path:    "/v1/cloudaccounts/azure/{uid}",
+			Handler: azureAccountGetHandler,
 		},
 		{
 			Method: "GET",

@@ -74,6 +74,9 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
 }
 ```
+
+!> Creating a cluster without `cloud_config.overlay_cidr_range` set deploys it in DHCP mode without overlay networking. Terraform prints a warning on creation in this case, because DHCP-assigned IP changes can cause cluster instability; the cluster is still created. This warning only appears on creation, not on subsequent updates.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -146,10 +149,12 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Optional:
 
+- `image_registry_ref` (String) UID of an OCI registry (`spectrocloud_registry_oci`, `provider_type = "image"`) that the Edge hosts use to pull the Edge Native provider (OS/bootstrap) image. Can be set on create or changed later without replacing the cluster.
 - `is_two_node_cluster` (Boolean) Set to `true` to enable a two-node cluster.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
-- `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
+- `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`. If left unset, the cluster is created in DHCP mode without overlay networking, and Terraform prints a warning on creation since DHCP-assigned IP changes can cause cluster instability.
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
+- `update_lock` (String) Profile update lock state for the edge native cluster. When `enabled`, cluster profile updates targeting the device are held until a local operator releases the lock from the Edge Local UI - releasing the lock is out of scope for this provider and can only be done locally on the device. Palette re-engages the lock automatically once a held update is applied. Defaults to the value set to  `disabled`.
 - `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`. When not specified, Palette assigns the VIP and the assigned value is populated on read.
 
 
@@ -267,6 +272,10 @@ Optional:
 
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--cluster_profile--pack))
 - `variables` (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: `priority = "5"`.
+
+Read-Only:
+
+- `name` (String) The name of the cluster profile, read from Palette.
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -60,6 +61,56 @@ func filterEntriesWithID(entries []interface{}) []interface{} {
 		}
 	}
 	return filtered
+}
+
+// dropEmptyClusterProfileEntries removes phantom empty-id cluster_profile
+// entries from state. Changing a cluster_profile element that carries both
+// pack overrides and variables leaves such an entry behind after apply, and
+// the default Read never rewrites cluster_profile, so without this every
+// following plan shows a spurious removal (PLT-2493).
+func dropEmptyClusterProfileEntries(d *schema.ResourceData) error {
+	raw, ok := d.GetOk("cluster_profile")
+	if !ok {
+		return nil
+	}
+	all := normalizeInterfaceSliceFromListOrSet(raw)
+	if clean := filterEntriesWithID(all); len(clean) != len(all) {
+		return d.Set("cluster_profile", clean)
+	}
+	return nil
+}
+
+// setClusterProfileNamesFromCluster fills the computed name of each cluster_profile entry already in
+// state from the cluster's attached profiles. It never adds or removes entries, so with
+// disable_addon_deployment_resource off it can't pull in profiles another resource attached.
+func setClusterProfileNamesFromCluster(d *schema.ResourceData, cluster *models.V1SpectroCluster) error {
+	if cluster == nil || cluster.Spec == nil {
+		return nil
+	}
+	raw, ok := d.GetOk("cluster_profile")
+	if !ok {
+		return nil
+	}
+
+	profiles := normalizeInterfaceSliceFromListOrSet(raw)
+	changed := false
+	for _, entry := range profiles {
+		p, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, _ := p["id"].(string)
+		name := getAttachedProfileName(cluster, id)
+		if name == "" || p["name"] == name {
+			continue
+		}
+		p["name"] = name
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	return d.Set("cluster_profile", profiles)
 }
 
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
@@ -731,6 +782,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	// Get the current cluster state to find existing profile UIDs for replacement
 	cluster, err := c.GetCluster(d.Id())
 	if err != nil {
+		rollbackProfiles()
 		return fmt.Errorf("failed to get cluster for profile update: %w", err)
 	}
 
@@ -772,6 +824,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		rollbackProfiles()
 		return err
 	}
+	// From here on Palette has the new profiles attached, so failures must not roll state back.
+	markClusterProfilePatched(d)
 
 	if _, found := toTags(d)["skip_apply"]; found {
 		return nil
@@ -779,7 +833,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	ctx := context.Background()
 	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
-		rollbackProfiles()
+		syncClusterProfileAfterPatchError(c, d)
 		return err
 	}
 
@@ -830,7 +884,11 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if len(variableEntity) != 0 {
 		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
 		if err != nil {
-			rollbackProfiles()
+			if shouldSyncClusterProfilesFromAPI(d) {
+				syncClusterProfileAfterPatchError(c, d)
+			} else {
+				restoreClusterProfileVariables(d, oldProfile)
+			}
 			return err
 		}
 	}
@@ -921,6 +979,7 @@ func flattenClusterProfilesFromCluster(cluster *models.V1SpectroCluster) ([]inte
 		}
 		clusterProfiles = append(clusterProfiles, map[string]interface{}{
 			"id":   profileTemplate.UID,
+			"name": profileTemplate.Name,
 			"pack": []interface{}{},
 		})
 	}
@@ -968,17 +1027,7 @@ func enrichClusterProfilesWithPacks(c *client.V1Client, d *schema.ResourceData, 
 		if err != nil {
 			return clusterProfiles, err
 		}
-		configPacks := getClusterProfilePacksFromConfig(d, uid)
-		for j := range packs {
-			pack, ok := packs[j].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			name, _ := pack["name"].(string)
-			alignPackStateWithConfig(pack, findConfigPackByName(configPacks, name))
-			packs[j] = pack
-		}
-		p["pack"] = packs
+		p["pack"] = alignPacksWithConfig(packs, getClusterProfilePacksFromConfig(d, uid))
 	}
 
 	return clusterProfiles, nil
@@ -1081,6 +1130,81 @@ func rollbackClusterProfileOnUpdateError(c *client.V1Client, d *schema.ResourceD
 	_ = d.Set("cluster_profile", oldProfile)
 }
 
+// patchedClusterProfiles records, per in-flight Update call, that updateProfiles' PATCH succeeded.
+// Keyed by the *schema.ResourceData of that call; withClusterProfileRollbackOnError clears it.
+var patchedClusterProfiles sync.Map
+
+func markClusterProfilePatched(d *schema.ResourceData) {
+	patchedClusterProfiles.Store(d, struct{}{})
+}
+
+// withClusterProfileRollbackOnError wraps a cluster resource's Update so that when it fails before
+// updateProfiles' PATCH succeeded - including failures in steps that run before updateProfiles,
+// such as machine pools - cluster_profile is restored to its pre-apply value instead of the
+// rejected config. This only sticks because cluster_profile's computed "name" leaves a changed
+// set element's planned value unknown; otherwise terraform-plugin-sdk would write the planned value.
+func withClusterProfileRollbackOnError(update schema.UpdateContextFunc) schema.UpdateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+		defer patchedClusterProfiles.Delete(d)
+		oldProfileRaw, _ := d.GetChange("cluster_profile")
+		oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
+
+		diags := update(ctx, d, m)
+		if !diags.HasError() || !d.HasChange("cluster_profile") {
+			return diags
+		}
+		if _, patched := patchedClusterProfiles.Load(d); patched {
+			return diags
+		}
+		resourceContext, _ := d.Get("context").(string)
+		rollbackClusterProfileOnUpdateError(getV1ClientWithResourceContext(m, resourceContext), d, oldProfile)
+		return diags
+	}
+}
+
+// syncClusterProfileAfterPatchError handles a failure after the profile PATCH succeeded: Palette
+// already has the new profiles, so state keeps the new value. With disable_addon_deployment_resource
+// on, it re-syncs from the API instead, which also picks up anything the PATCH partially applied.
+func syncClusterProfileAfterPatchError(c *client.V1Client, d *schema.ResourceData) {
+	if !shouldSyncClusterProfilesFromAPI(d) || c == nil || d.Id() == "" {
+		return
+	}
+	refreshed, err := c.GetCluster(d.Id())
+	if err != nil {
+		log.Printf("Warning: could not refresh cluster after profile update failure: %v; keeping new cluster_profile", err)
+		return
+	}
+	if err := setClusterProfilesFromAPI(c, d, refreshed); err != nil {
+		log.Printf("Warning: could not sync cluster_profile from API after profile update failure: %v; keeping new cluster_profile", err)
+	}
+}
+
+// restoreClusterProfileVariables handles a failed variables PATCH: the new profiles are attached, but
+// their variables were not applied. Each entry keeps its new id but gets the variables it had before
+// the apply (none, for a newly attached profile), so the variable change shows again on the next plan.
+func restoreClusterProfileVariables(d *schema.ResourceData, oldProfile []interface{}) {
+	oldVariables := make(map[string]interface{}, len(oldProfile))
+	for _, entry := range oldProfile {
+		if p, ok := entry.(map[string]interface{}); ok {
+			if id, _ := p["id"].(string); id != "" {
+				oldVariables[id] = p["variables"]
+			}
+		}
+	}
+
+	profiles := filterEntriesWithID(normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")))
+	for _, entry := range profiles {
+		p := entry.(map[string]interface{})
+		id, _ := p["id"].(string)
+		if vars, ok := oldVariables[id]; ok && vars != nil {
+			p["variables"] = vars
+		} else {
+			delete(p, "variables")
+		}
+	}
+	_ = d.Set("cluster_profile", profiles)
+}
+
 // syncClusterProfilesFromAPIWhenAddonDeploymentDisabled refreshes cluster_profile from the API during
 // read when disable_addon_deployment_resource is true (addon profiles are owned by the cluster resource).
 func syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) diag.Diagnostics {
@@ -1111,178 +1235,4 @@ func toClusterTemplateReference(d *schema.ResourceData) *models.V1ClusterTemplat
 	return &models.V1ClusterTemplateRef{
 		UID: templateID,
 	}
-}
-
-// updateClusterTemplateVariables handles variable updates for cluster_template using the variables API
-// This is a separate flow from updateProfiles and only patches variables without triggering full cluster update
-func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) error {
-	log.Printf("Updating cluster_template variables using variables API")
-
-	_, newTemplateData := d.GetChange("cluster_template")
-	if len(newTemplateData.([]interface{})) == 0 {
-		return nil
-	}
-
-	// Extract profiles with variables from the new template data
-	profiles, err := extractProfilesFromTemplateData(newTemplateData.([]interface{}))
-	if err != nil {
-		return err
-	}
-
-	// Build variable update entities
-	variableEntity := make([]*models.V1ClusterTemplateProfileVariable, 0)
-	for _, profile := range profiles {
-		if profile == nil {
-			continue
-		}
-
-		p := profile.(map[string]interface{})
-		profileID, hasID := p["id"]
-		if !hasID || profileID == nil || profileID.(string) == "" {
-			continue
-		}
-
-		// Extract variables
-		pVars := make([]*models.V1SpectroClusterVariable, 0)
-		if pv, ok := p["variables"]; ok && pv != nil {
-			variables := p["variables"].(map[string]interface{})
-			for key, value := range variables {
-				if key != "" && value != nil {
-					pVars = append(pVars, &models.V1SpectroClusterVariable{
-						Name:  StringPtr(key),
-						Value: value.(string),
-					})
-				}
-			}
-		}
-
-		// Only add if there are variables to update
-		if len(pVars) > 0 {
-			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
-			variableEntity = append(variableEntity, &models.V1ClusterTemplateProfileVariable{
-				UID:       profileID.(string),
-				Variables: pVars,
-			})
-		}
-	}
-
-	// Patch variables using the cluster_template-scoped variables API (not
-	// UpdateClusterProfileVariableInCluster, which targets a cluster governed
-	// directly by cluster_profile and is not aware of the template's profile set).
-	if len(variableEntity) > 0 {
-		log.Printf("Patching %d profile variables using cluster_template variables API", len(variableEntity))
-		err = c.UpdateClusterTemplateVariablesForCluster(d.Id(), &models.V1ClusterTemplateVariablesUpdateEntity{
-			Profiles: variableEntity,
-		})
-		if err != nil {
-			// Rollback on error
-			oldTemplate, _ := d.GetChange("cluster_template")
-			_ = d.Set("cluster_template", oldTemplate)
-			return err
-		}
-
-		// Refresh variables from API after update
-		log.Printf("Refreshing cluster_template variables after update")
-		if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
-			log.Printf("Warning: Failed to refresh variables after update: %v", err)
-			// Don't fail the update if refresh fails
-		}
-	} else {
-		log.Printf("No variables to update for cluster_template")
-	}
-
-	return nil
-}
-
-// flattenClusterTemplateVariables reads variables from the cluster and updates only the variables
-// in the cluster_template state, keeping the profile IDs from config
-func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData, clusterUID string) error {
-	// Only process if cluster_template is used
-	clusterTemplateRaw := d.Get("cluster_template")
-	if clusterTemplateRaw == nil {
-		return nil
-	}
-	clusterTemplate := clusterTemplateRaw.([]interface{})
-	if len(clusterTemplate) == 0 {
-		return nil
-	}
-
-	// Get configured profile IDs from current state
-	templateData := clusterTemplate[0].(map[string]interface{})
-	templateID := templateData["id"].(string)
-	configuredProfileIDs := make(map[string]bool)
-
-	// Build updated profile set with variables from API
-	updatedProfileSet := schema.NewSet(schema.HashResource(&schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"id": {
-				Type: schema.TypeString,
-			},
-			"variables": {
-				Type: schema.TypeMap,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-		},
-	}), []interface{}{})
-
-	// Update only the profiles that were in config with latest variables from API
-	if clusterProfiles, ok := templateData["cluster_profile"]; ok && clusterProfiles != nil {
-		profilesSet := clusterProfiles.(*schema.Set)
-		for _, profile := range profilesSet.List() {
-			p := profile.(map[string]interface{})
-			profileID := p["id"].(string)
-			configuredProfileIDs[profileID] = true
-
-			// Get configured variable names from config
-			configuredVarNames := make(map[string]bool)
-			if configVars, hasVars := p["variables"]; hasVars && configVars != nil {
-				configVarsMap := configVars.(map[string]interface{})
-				for varName := range configVarsMap {
-					configuredVarNames[varName] = true
-				}
-			}
-
-			// Create updated profile with variables from API
-			updatedProfile := make(map[string]interface{})
-			updatedProfile["id"] = profileID
-
-			// Fetch this profile's cluster_template-scoped variable
-			// assignments and filter down to this cluster, since the
-			// response covers every cluster attached to the template.
-			if resp, err := c.GetClusterTemplateProfileVariables(templateID, profileID); err != nil {
-				log.Printf("Error fetching cluster_template profile variables for profile %s: %v", profileID, err)
-			} else if resp != nil {
-				variablesInterface := make(map[string]interface{})
-				for _, v := range resp.Variables {
-					if v == nil || v.Variable == nil || v.Variable.Name == nil || !configuredVarNames[*v.Variable.Name] {
-						continue
-					}
-					for _, assignment := range v.Clusters {
-						if assignment != nil && assignment.UID != nil && *assignment.UID == clusterUID && assignment.AssignedValue != "" {
-							variablesInterface[*v.Variable.Name] = assignment.AssignedValue
-						}
-					}
-				}
-				if len(variablesInterface) > 0 {
-					updatedProfile["variables"] = variablesInterface
-				}
-			}
-
-			updatedProfileSet.Add(updatedProfile)
-		}
-	}
-
-	log.Printf("flattenClusterTemplateVariables: updated %d profiles with variables (filtered to match config)", len(configuredProfileIDs))
-
-	// Update cluster_template in state with refreshed variables
-	updatedTemplate := []interface{}{
-		map[string]interface{}{
-			"id":              templateID,
-			"cluster_profile": updatedProfileSet,
-		},
-	}
-
-	return d.Set("cluster_template", updatedTemplate)
 }

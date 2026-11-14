@@ -18,11 +18,11 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
-// ociBasicTLSConfigForRead builds the tls_config list to store in state for a
-// basic OCI registry. It returns an empty list when the block should be
-// omitted so that HCL configs which don't set tls_config produce a clean
-// plan even though the Palette API always returns a default TLS block
-// (see PLT-2300).
+// ociBasicTLSConfigForRead builds the tls_config list to store in state for
+// an OCI registry (basic or ecr). It returns an empty list when the block
+// should be omitted so that HCL configs which don't set tls_config produce
+// a clean plan even though the Palette API always returns a default TLS
+// block (see PLT-2300, PLT-2509).
 //
 // The block is preserved when either:
 //   - the user's current state already contains a tls_config entry (round
@@ -139,8 +139,8 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "helm",
-				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack"}, false),
-				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`  ",
+				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack", "image"}, false),
+				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf`, `pack` and `image`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`. `image` registries are not used as a pack source and host Edge Native provider (OS/bootstrap) images instead.",
 			},
 			"wait_for_sync": {
 				Type:        schema.TypeBool,
@@ -411,15 +411,11 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			err = errors.New(errMsg)
 			return diag.FromErr(err)
 		}
-		// tls configuration handling
-		tlsConfig := make([]interface{}, 0, 1)
-		if registry.Spec.TLS != nil {
-			tls := make(map[string]interface{})
-			tls["certificate"] = registry.Spec.TLS.Certificate
-			tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
-			tlsConfig = append(tlsConfig, tls)
-		}
-		acc["tls_config"] = tlsConfig
+		// Materialize tls_config only when it's meaningful, otherwise Read
+		// will inject the API's default TLS block into state and produce
+		// perpetual plan drift for configs that omit tls_config entirely
+		// (see PLT-2300, PLT-2509).
+		acc["tls_config"] = ociBasicTLSConfigForRead(d, registry.Spec.TLS)
 		credentials = append(credentials, acc)
 
 		if err := d.Set("credentials", credentials); err != nil {

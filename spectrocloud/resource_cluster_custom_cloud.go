@@ -23,7 +23,7 @@ func resourceClusterCustomCloud() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterCustomCloudCreate,
 		ReadContext:   resourceClusterCustomCloudRead,
-		UpdateContext: resourceClusterCustomCloudUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterCustomCloudUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 

@@ -20,7 +20,7 @@ func resourceClusterGcp() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterGcpCreate,
 		ReadContext:   resourceClusterGcpRead,
-		UpdateContext: resourceClusterGcpUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterGcpUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterGcpImport,

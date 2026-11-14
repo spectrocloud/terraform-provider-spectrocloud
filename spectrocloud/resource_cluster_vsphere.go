@@ -24,7 +24,7 @@ func resourceClusterVsphere() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterVsphereCreate,
 		ReadContext:   resourceClusterVsphereRead,
-		UpdateContext: resourceClusterVsphereUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterVsphereUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterVsphereImport,

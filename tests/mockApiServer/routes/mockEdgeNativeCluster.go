@@ -18,6 +18,27 @@ const EdgeNativeCloudConfigErrorUID = "edge-native-cloud-config-error"
 // exercised.
 const EdgeNativeCloudConfigUpdateRejectUID = "edge-native-cloud-config-update-reject"
 
+// EdgeNativeCloudConfigImageRegistryRefUID (PLT-2484) drives a
+// GetCloudConfigEdgeNative response whose ClusterConfig.ImageRegistryRef is
+// populated, so flattenClusterConfigsEdgeNative's image_registry_ref
+// round-trip can be exercised through the full Read path.
+const EdgeNativeCloudConfigImageRegistryRefUID = "edge-native-cloud-config-image-registry-ref"
+
+// EdgeNativeImageRegistryRefUID is the registry UID returned for
+// EdgeNativeCloudConfigImageRegistryRefUID.
+const EdgeNativeImageRegistryRefUID = "test-image-registry-uid"
+
+// EdgeNativeCloudConfigUpdateLockUID (PLT-2476) drives a GetCloudConfigEdgeNative
+// response whose ClusterConfig.UpdateLock is populated (state "enabled"), so
+// flattenClusterConfigsEdgeNative's update_lock round-trip can be exercised
+// through the full Read path.
+const EdgeNativeCloudConfigUpdateLockUID = "edge-native-cloud-config-update-lock"
+
+// EdgeNativeUpdateLockRejectUID drives the UpdateLockEdgeNative API-error
+// branch so resourceClusterEdgeNativeUpdate's update_lock error
+// propagation can be exercised.
+const EdgeNativeUpdateLockRejectUID = "edge-native-update-lock-reject"
+
 // EdgeNativePoolMachinesFoundHostName / UID is the host name the mock
 // machines-list handler reports for the "pool-to-change" and
 // "pool-to-remove" machine pool names used by
@@ -92,7 +113,29 @@ func edgeNativeCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(getMockEdgeNativeCloudConfig())
+	config := getMockEdgeNativeCloudConfig()
+	if configUID == EdgeNativeCloudConfigImageRegistryRefUID {
+		config.Spec.ClusterConfig.ImageRegistryRef = &models.V1ObjectReference{UID: EdgeNativeImageRegistryRefUID}
+	}
+	if configUID == EdgeNativeCloudConfigUpdateLockUID {
+		config.Spec.ClusterConfig.UpdateLock = &models.V1UpdateLock{State: models.V1UpdateLockStateEnabled}
+	}
+	_ = json.NewEncoder(w).Encode(config)
+}
+
+// edgeNativeUpdateLockPatchHandler serves PATCH
+// /v1/cloudconfigs/edge-native/{configUid}/updateLock, dispatching on the
+// config UID so UpdateLockEdgeNative's error branch (PLT-2476) can be
+// simulated.
+func edgeNativeUpdateLockPatchHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	if configUID == EdgeNativeUpdateLockRejectUID {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("400", "profile update lock cannot be changed in the current cluster state"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // edgeNativeCloudConfigUpdateHandler serves PUT
@@ -163,6 +206,13 @@ func EdgeNativeClusterRoutes() []Route {
 			Method:  "PUT",
 			Path:    "/v1/cloudconfigs/edge-native/{configUid}/clusterConfig",
 			Handler: edgeNativeCloudConfigUpdateHandler,
+		},
+		{
+			// UID-dispatched (PLT-2476) — see edgeNativeUpdateLockPatchHandler
+			// for the EdgeNativeUpdateLockRejectUID branch.
+			Method:  "PATCH",
+			Path:    "/v1/cloudconfigs/edge-native/{configUid}/updateLock",
+			Handler: edgeNativeUpdateLockPatchHandler,
 		},
 		{
 			Method: "POST",

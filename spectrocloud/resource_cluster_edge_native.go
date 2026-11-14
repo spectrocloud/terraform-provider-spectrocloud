@@ -22,7 +22,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterEdgeNativeCreate,
 		ReadContext:   resourceClusterEdgeNativeRead,
-		UpdateContext: resourceClusterEdgeNativeUpdate,
+		UpdateContext: withClusterProfileRollbackOnError(resourceClusterEdgeNativeUpdate),
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEdgeNativeImport,
@@ -184,7 +184,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							ForceNew:    true,
-							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`",
+							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`. If left unset, the cluster is created in DHCP mode without overlay networking, and Terraform prints a warning on creation since DHCP-assigned IP changes can cause cluster instability.",
 						},
 						"is_two_node_cluster": {
 							Type:        schema.TypeBool,
@@ -200,6 +200,21 @@ func resourceClusterEdgeNative() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Description: "A list of NTP servers to be used by the cluster.",
+						},
+						"image_registry_ref": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "UID of an OCI registry (`spectrocloud_registry_oci`, `provider_type = \"image\"`) that the Edge hosts use to pull the Edge Native provider (OS/bootstrap) image. Can be set on create or changed later without replacing the cluster.",
+						},
+						"update_lock": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description: "Profile update lock state for the edge native cluster. When `enabled`, cluster profile " +
+								"updates targeting the device are held until a local operator releases the lock from the Edge Local UI - " +
+								"releasing the lock is out of scope for this provider and can only be done locally on the device. Palette " +
+								"re-engages the lock automatically once a held update is applied. Defaults to the value set to  `disabled`.",
 						},
 					},
 				},
@@ -412,6 +427,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
+	appendOverlayNetworkDisabledWarning(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -526,6 +542,12 @@ func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []i
 	}
 	if config.Spec.ClusterConfig != nil {
 		m["is_two_node_cluster"] = config.Spec.ClusterConfig.IsTwoNodeCluster
+	}
+	if config.Spec.ClusterConfig.ImageRegistryRef != nil && config.Spec.ClusterConfig.ImageRegistryRef.UID != "" {
+		m["image_registry_ref"] = config.Spec.ClusterConfig.ImageRegistryRef.UID
+	}
+	if config.Spec.ClusterConfig.UpdateLock != nil && config.Spec.ClusterConfig.UpdateLock.State != "" {
+		m["update_lock"] = string(config.Spec.ClusterConfig.UpdateLock.State)
 	}
 
 	return []interface{}{m}
@@ -642,13 +664,27 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
-	if d.HasChange("cloud_config") {
+	// update_lock is excluded here: a lock-only change must not trigger the general cloud
+	// config PUT, which needs the broader cloud config update permission.
+	if hasCloudConfigChangeExceptUpdateLock(d) {
 		clusterConfig, err := toClusterConfigEdgeNativeUpdate(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		if err := c.UpdateCloudConfigEdgeNative(cloudConfigId, clusterConfig); err != nil {
 			return diag.FromErr(err)
+		}
+	}
+
+	// Profile update lock (PLT-2476) is patched through its own endpoint, separate from the
+	// general cloud config update above, so changing it doesn't require the broader cloud
+	// config update permission.
+	if d.HasChange("cloud_config.0.update_lock") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if state, ok := toUpdateLockState(cloudConfig); ok {
+			if err := c.UpdateLockEdgeNative(cloudConfigId, state); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -845,6 +881,8 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				ControlPlaneEndpoint:        controlPlaneEndpoint,
 				OverlayNetworkConfiguration: overlayConfig,
 				IsTwoNodeCluster:            isTwoNodeCluster.(bool),
+				ImageRegistryRef:            toImageRegistryRef(cloudConfig),
+				UpdateLock:                  toUpdateLock(cloudConfig),
 			},
 		},
 	}
@@ -1075,8 +1113,58 @@ func toClusterConfigEdgeNativeUpdate(d *schema.ResourceData) (*models.V1EdgeNati
 			ControlPlaneEndpoint:        controlPlaneEndpoint,
 			OverlayNetworkConfiguration: overlayConfig,
 			IsTwoNodeCluster:            cloudConfig["is_two_node_cluster"].(bool),
+			ImageRegistryRef:            toImageRegistryRef(cloudConfig),
 		},
 	}, nil
+}
+
+// toImageRegistryRef builds the imageRegistryRef sent to the API from
+// cloud_config's image_registry_ref UID (PLT-2484). Returns nil - the field
+// is omitempty on V1EdgeNativeClusterConfig - when unset, rather than an
+// empty V1ObjectReference, so Create/Update requests for clusters that don't
+// use this field are unaffected.
+func toImageRegistryRef(cloudConfig map[string]interface{}) *models.V1ObjectReference {
+	if v, ok := cloudConfig["image_registry_ref"].(string); ok && v != "" {
+		return &models.V1ObjectReference{UID: v}
+	}
+	return nil
+}
+
+// toUpdateLock builds the Day-1 create body's updateLock from cloud_config's update_lock
+// (PLT-2476). Returns nil - the field is omitempty - when unset, so Palette applies its default.
+func toUpdateLock(cloudConfig map[string]interface{}) *models.V1UpdateLock {
+	if state, ok := toUpdateLockState(cloudConfig); ok {
+		return &models.V1UpdateLock{State: state}
+	}
+	return nil
+}
+
+// hasCloudConfigChangeExceptUpdateLock reports whether any cloud_config field other than
+// update_lock changed, i.e. whether the general Day-2 cloud config PUT is needed.
+func hasCloudConfigChangeExceptUpdateLock(d *schema.ResourceData) bool {
+	if !d.HasChange("cloud_config") {
+		return false
+	}
+	cloudConfigElem := resourceClusterEdgeNative().Schema["cloud_config"].Elem.(*schema.Resource)
+	for key := range cloudConfigElem.Schema {
+		if key != "update_lock" && d.HasChange("cloud_config.0."+key) {
+			return true
+		}
+	}
+	return false
+}
+
+// toUpdateLockState reads cloud_config's update_lock (PLT-2476). On Day 2 it is sent through
+// the dedicated profile-update-lock endpoint rather than the general cloud config PUT/PATCH,
+// since Palette scopes the permission to change it separately from the permission to trigger
+// cluster updates. Returns ok=false when left unset in config, so callers can leave the
+// backend's current/auto-engaged state untouched instead of forcing a value.
+func toUpdateLockState(cloudConfig map[string]interface{}) (state models.V1UpdateLockState, ok bool) {
+	v, exists := cloudConfig["update_lock"].(string)
+	if !exists || v == "" {
+		return "", false
+	}
+	return models.V1UpdateLockState(v), true
 }
 
 func getFirstIPRange(cidr string) (string, error) {

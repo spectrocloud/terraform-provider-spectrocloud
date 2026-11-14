@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/mux"
 	v1 "github.com/spectrocloud/palette-sdk-go/api/client/version1"
@@ -112,6 +113,44 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Metadata.UID = "cluster-uid-running-unhealthy"
 		return c, http.StatusOK
 
+	case "cluster-uid-running-pack-error":
+		// PLT-2341: Running with an addon pack in a terminal Error condition.
+		// resourceClusterStateRefreshFunc(failOnPackError=true) must return
+		// this as an error (state "Pack:Error") instead of falling through to
+		// the health-overview lookup and polling forever.
+		c := getMockSpectroCluster()
+		c.Status.State = "Running"
+		c.Metadata.UID = "cluster-uid-running-pack-error"
+		c.Status.Packs = []*models.V1ClusterPackStatus{
+			{
+				Name: "bad-addon-pack",
+				Condition: &models.V1ClusterCondition{
+					Type:    strPtr("Error"),
+					Status:  strPtr("True"),
+					Message: "Helm install failed: invalid value for key \"replicaCount\"",
+				},
+			},
+		}
+		return c, http.StatusOK
+
+	case "cluster-uid-provisioning-pack-error":
+		// PLT-2341: a pack fails while the cluster is still Provisioning.
+		// failOnPackError=true must surface it without waiting for Running.
+		c := getMockSpectroCluster()
+		c.Status.State = "Provisioning"
+		c.Metadata.UID = "cluster-uid-provisioning-pack-error"
+		c.Status.Packs = []*models.V1ClusterPackStatus{
+			{
+				Name: "bad-addon-pack",
+				Condition: &models.V1ClusterCondition{
+					Type:    strPtr("Error"),
+					Status:  strPtr("True"),
+					Message: "Helm install failed: invalid value for key \"replicaCount\"",
+				},
+			},
+		}
+		return c, http.StatusOK
+
 	case "cluster-uid-deleted-state":
 		// GetCluster returns nil when State=="Deleted"; drives the
 		// "Deleted" branch of resourceClusterStateRefreshFunc.
@@ -152,6 +191,9 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 
 	case "cluster-uid-addon-profile-not-attached":
 		return getMockSpectroClusterWithoutMatchingProfile(), http.StatusOK
+
+	case AddonProfileSwapClusterUID:
+		return getMockSpectroClusterForAddonProfileSwap(), http.StatusOK
 
 	case "test-gcp-cluster-id":
 		// Batch 3c GCP CRUD: the default fixture reports CloudType="aws"
@@ -258,6 +300,46 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	}
 }
 
+// clusterProfilesPatchErrorUID drives the PatchClusterProfileValues error branch inside
+// updateProfiles (cluster_common_profiles.go) — e.g. Hubble rejecting a cluster_profile.id
+// swap with K8sUpgradeNotSupported (PLT-2508). Any other UID gets the original blanket
+// 204 success.
+const clusterProfilesPatchErrorUID = "cluster-uid-profiles-patch-k8s-upgrade-rejected"
+
+var (
+	clusterProfilesPatchBodiesMu sync.Mutex
+	clusterProfilesPatchBodies   = map[string]*models.V1SpectroClusterProfiles{}
+)
+
+// LastClusterProfilesPatchBody returns the body of the most recent
+// PATCH /v1/spectroclusters/{uid}/profiles request recorded for uid, or nil
+// if none was recorded — lets tests assert on fields (e.g. ReplaceWithProfile)
+// the response alone doesn't expose (PLT-2503 follow-up).
+func LastClusterProfilesPatchBody(uid string) *models.V1SpectroClusterProfiles {
+	clusterProfilesPatchBodiesMu.Lock()
+	defer clusterProfilesPatchBodiesMu.Unlock()
+	return clusterProfilesPatchBodies[uid]
+}
+
+func clusterProfilesPatchHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterProfilesPatchErrorUID {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(getError("K8sUpgradeNotSupported",
+			"Kubernetes upgrade from 1.35 to 1.37 is not supported. Upgrades must stay on the same "+
+				"major version and advance at most one minor version at a time."))
+		return
+	}
+	var body models.V1SpectroClusterProfiles
+	if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+		clusterProfilesPatchBodiesMu.Lock()
+		clusterProfilesPatchBodies[uid] = &body
+		clusterProfilesPatchBodiesMu.Unlock()
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // clusterVariablesPatchErrorUID drives the UpdateClusterProfileVariableInCluster error
 // branch — any other UID gets the original blanket 204 success.
 const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
@@ -312,7 +394,7 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		Status: &models.V1SpectroClusterUIDStatusSummary{},
 	}
 	switch uid {
-	case "cluster-uid-running-unhealthy":
+	case "cluster-uid-running-unhealthy", "cluster-uid-running-pack-error":
 		summary.Status.Health = &models.V1SpectroClusterHealthStatus{State: "Unhealthy"}
 	case "cluster-uid-overview-missing-health":
 		// Health left nil — drives resourceClusterBrownfieldRead's
@@ -434,6 +516,42 @@ func getMockSpectroClusterWithAddonReady() *models.V1SpectroCluster {
 	c.Status.Packs = []*models.V1ClusterPackStatus{
 		{
 			ProfileUID: "test-addon-profile-uid",
+			Name:       "kubernetes",
+			Condition: &models.V1ClusterCondition{
+				Status: &tru,
+				Type:   &ready,
+			},
+		},
+	}
+	return c
+}
+
+// AddonProfileSwapClusterUID, AddonProfileSwapOldProfileUID and
+// AddonProfileSwapNewProfileUID back getMockSpectroClusterForAddonProfileSwap
+// (PLT-2503 follow-up): a cluster with exactly one attached profile whose
+// NAME differs from the new profile it's being swapped to — the
+// create_before_destroy version-bump case IsProfileAttachedByName's name
+// match alone cannot resolve.
+const (
+	AddonProfileSwapClusterUID    = "cluster-uid-addon-profile-swap"
+	AddonProfileSwapOldProfileUID = "mgmt-plane-902-uid"
+	AddonProfileSwapNewProfileUID = "mgmt-plane-965-uid"
+)
+
+func getMockSpectroClusterForAddonProfileSwap() *models.V1SpectroCluster {
+	c := getMockSpectroCluster()
+	c.Metadata.UID = AddonProfileSwapClusterUID
+	c.Spec.ClusterProfileTemplates = []*models.V1ClusterProfileTemplate{
+		{UID: AddonProfileSwapOldProfileUID, Name: "mgmt-plane-902", Type: "addon"},
+	}
+	tru := "True"
+	ready := "Ready"
+	c.Status.Conditions = []*models.V1ClusterCondition{
+		{Status: &tru, Type: &ready},
+	}
+	c.Status.Packs = []*models.V1ClusterPackStatus{
+		{
+			ProfileUID: AddonProfileSwapNewProfileUID,
 			Name:       "kubernetes",
 			Condition: &models.V1ClusterCondition{
 				Status: &tru,
@@ -613,12 +731,13 @@ func ClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "PATCH",
-			Path:   "/v1/spectroclusters/{uid}/profiles",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
+			// UID-dispatched so tests can drive the PatchClusterProfileValues
+			// error branch inside updateProfiles (cluster_common_profiles.go) —
+			// see clusterProfilesPatchErrorUID for the K8sUpgradeNotSupported
+			// rejection branch (PLT-2508).
+			Method:  "PATCH",
+			Path:    "/v1/spectroclusters/{uid}/profiles",
+			Handler: clusterProfilesPatchHandler,
 		},
 		{
 			Method: "DELETE",
