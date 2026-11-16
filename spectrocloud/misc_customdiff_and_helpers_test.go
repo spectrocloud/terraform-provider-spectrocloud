@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -257,10 +258,44 @@ func TestGetCommonRegistryOci_EmptyID(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGetRegistryIsSyncSupported(t *testing.T) {
-	defer func() { _ = recover() }()
-
 	c := castV1Client(t, unitTestMockAPIClient)
-	_, _ = getRegistryIsSyncSupported(c, "some-registry-uid", models.V1PackTypeOci)
-	_, _ = getRegistryIsSyncSupported(c, "some-registry-uid", models.V1PackTypeHelm)
-	_, _ = getRegistryIsSyncSupported(c, "some-registry-uid", models.V1PackTypeSpectro)
+
+	tests := []struct {
+		name          string
+		registryUID   string
+		packType      models.V1PackType
+		wantSupported bool
+		wantFound     bool
+	}{
+		{name: "oci basic registry", registryUID: "some-registry-uid", packType: models.V1PackTypeOci, wantSupported: true, wantFound: true},
+		// PLT-2497: ECR-type registries such as Palette Registry 404 on the basic endpoint.
+		{name: "oci ecr registry falls back to ecr endpoint", registryUID: routes.OciEcrOnlyRegistryUID, packType: models.V1PackTypeOci, wantSupported: true, wantFound: true},
+		// A basic registry that answers with isSyncSupported=false must not fall through to ECR.
+		{name: "oci basic registry without sync support", registryUID: "oci-sync-not-supported", packType: models.V1PackTypeOci, wantSupported: false, wantFound: true},
+		{name: "oci registry unknown to both endpoints", registryUID: routes.OciUnknownRegistryUID, packType: models.V1PackTypeOci, wantSupported: false, wantFound: false},
+		{name: "empty registry uid", registryUID: "", packType: models.V1PackTypeOci, wantSupported: false, wantFound: false},
+		{name: "helm registry", registryUID: "some-registry-uid", packType: models.V1PackTypeHelm, wantSupported: true, wantFound: true},
+		{name: "manifest pack type", registryUID: "some-registry-uid", packType: models.V1PackTypeManifest, wantSupported: false, wantFound: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			supported, found := getRegistryIsSyncSupported(c, tt.registryUID, tt.packType)
+			assert.Equal(t, tt.wantSupported, supported)
+			assert.Equal(t, tt.wantFound, found)
+		})
+	}
+}
+
+func TestGetOciRegistrySyncStatusByUID(t *testing.T) {
+	c := castV1Client(t, unitTestMockAPIClient)
+
+	status, err := getOciRegistrySyncStatusByUID(c, routes.OciEcrOnlyRegistryUID)
+	require.NoError(t, err)
+	assert.True(t, status.IsSyncSupported)
+
+	status, err = getOciRegistrySyncStatusByUID(c, routes.OciUnknownRegistryUID)
+	require.Error(t, err)
+	assert.Nil(t, status)
+	assert.Contains(t, err.Error(), "basic:")
+	assert.Contains(t, err.Error(), "ecr:")
 }

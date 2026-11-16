@@ -322,8 +322,20 @@ func ociRegistrySyncStatusFixtureFor(uid string) *models.V1RegistrySyncStatus {
 	}
 }
 
+const (
+	// OciEcrOnlyRegistryUID is an ECR-type OCI registry (like Palette Registry): the basic
+	// sync-status endpoint 404s for it and only the ECR one answers.
+	OciEcrOnlyRegistryUID = "oci-ecr-only-registry"
+	// OciUnknownRegistryUID 404s on both the basic and ECR sync-status endpoints.
+	OciUnknownRegistryUID = "oci-unknown-registry"
+)
+
 func ociBasicRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
+	if uid == OciEcrOnlyRegistryUID || uid == OciUnknownRegistryUID {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(ociRegistrySyncStatusFixtureFor(uid))
@@ -336,7 +348,7 @@ const ociEcrRegistrySyncStatusErrorUID = "test-oci-registry-uid"
 
 func ociEcrRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
-	if uid == ociEcrRegistrySyncStatusErrorUID {
+	if uid == ociEcrRegistrySyncStatusErrorUID || uid == OciUnknownRegistryUID {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
