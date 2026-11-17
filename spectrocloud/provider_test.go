@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 )
@@ -147,4 +149,81 @@ func TestClientHeaderReachesWire(t *testing.T) {
 	_, err := c.GetProjectUID("Default")
 	assert.NoError(t, err)
 	assert.Equal(t, "terraform-v1.2.3", got)
+}
+
+// PLT-2495: request_timeout and response_idle_timeout are passed to the SDK in seconds; unset (0) keeps the SDK
+// defaults and -1 removes the limit.
+func TestProviderTimeouts(t *testing.T) {
+	t.Setenv("SPECTROCLOUD_REQUEST_TIMEOUT", "")
+	t.Setenv("SPECTROCLOUD_RESPONSE_IDLE_TIMEOUT", "")
+	providerSchema := New("test")().Schema
+
+	request, idle := providerTimeouts(schema.TestResourceDataRaw(t, providerSchema, map[string]interface{}{}))
+	assert.Zero(t, request, "unset keeps the SDK default")
+	assert.Zero(t, idle, "unset keeps the SDK default")
+
+	request, idle = providerTimeouts(schema.TestResourceDataRaw(t, providerSchema, map[string]interface{}{
+		"request_timeout":       120,
+		"response_idle_timeout": -1,
+	}))
+	assert.Equal(t, 120*time.Second, request)
+	assert.Equal(t, -1*time.Second, idle, "negative is passed through so the SDK disables the check")
+
+	t.Setenv("SPECTROCLOUD_REQUEST_TIMEOUT", "45")
+	t.Setenv("SPECTROCLOUD_RESPONSE_IDLE_TIMEOUT", "15")
+	request, idle = providerTimeouts(schema.TestResourceDataRaw(t, providerSchema, map[string]interface{}{}))
+	assert.Equal(t, 45*time.Second, request)
+	assert.Equal(t, 15*time.Second, idle)
+
+	// A ResourceData built from a schema without these keys (as in prepareBaseProviderConfig) must not panic.
+	request, idle = providerTimeouts(prepareBaseProviderConfig())
+	assert.Zero(t, request)
+	assert.Zero(t, idle)
+}
+
+func TestProviderTimeoutsValidation(t *testing.T) {
+	providerSchema := New("test")().Schema
+	for _, key := range []string{"request_timeout", "response_idle_timeout"} {
+		_, errs := providerSchema[key].ValidateFunc(-2, key)
+		assert.NotEmpty(t, errs, "%s below -1 must be rejected", key)
+		_, errs = providerSchema[key].ValidateFunc(-1, key)
+		assert.Empty(t, errs, "%s = -1 disables the limit", key)
+	}
+}
+
+// TestResponseIdleTimeoutReachesWire proves the provider's response_idle_timeout reaches the SDK's HTTP calls: a
+// response that stalls fails instead of hanging the provider, which is what left Terraform on "Still creating...".
+func TestResponseIdleTimeoutReachesWire(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"items":[{"metadata":`))
+		w.(http.Flusher).Flush()
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	request, idle := providerTimeouts(schema.TestResourceDataRaw(t, New("test")().Schema, map[string]interface{}{
+		"response_idle_timeout": 1,
+	}))
+	c := client.New(
+		client.WithPaletteURI(srv.Listener.Addr().String()),
+		client.WithAPIKey("k"),
+		client.WithSchemes([]string{"http"}),
+		client.WithRetries(0),
+		client.WithRequestTimeout(request),
+		client.WithResponseIdleTimeout(idle),
+	)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.GetProjectUID("Default")
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		assert.ErrorIs(t, err, transport.ErrResponseStalled)
+	case <-time.After(15 * time.Second):
+		t.Fatal("GetProjectUID still blocked on a stalled response")
+	}
 }
