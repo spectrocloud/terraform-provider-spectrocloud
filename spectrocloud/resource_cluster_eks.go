@@ -10,6 +10,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -209,14 +210,11 @@ func resourceClusterEks() *schema.Resource {
 							},
 						},
 						"az_subnets": {
-							Type:        schema.TypeMap,
-							Description: "Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.",
-							Optional:    true,
-							ForceNew:    true,
-							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-								// UI strips the trailing newline on save
-								return strings.TrimSpace(old) == strings.TrimSpace(new)
-							},
+							Type:             schema.TypeMap,
+							Description:      "Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.",
+							Optional:         true,
+							ForceNew:         true,
+							DiffSuppressFunc: suppressEksAzSubnetsRemoval,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -645,10 +643,10 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 		ret["private_access_cidrs"] = cloudConfig.Spec.ClusterConfig.EndpointAccess.PrivateCIDRs
 	}
 
-	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
-		if pool.Name == "cp-pool" {
-			ret["az_subnets"] = pool.SubnetIds
-		}
+	// Static clusters carry their control-plane subnets on the control-plane pool; dynamic clusters have no
+	// control-plane pool (or one without subnets), so az_subnets stays empty and the cluster keeps reading as dynamic.
+	if cpPool := eksControlPlanePool(cloudConfig.Spec.MachinePoolConfig); cpPool != nil && len(cpPool.SubnetIds) > 0 {
+		ret["az_subnets"] = cpPool.SubnetIds
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -674,6 +672,61 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
+}
+
+// eksControlPlanePool returns the EKS control-plane pool. Terraform names it "cp-pool", while the Palette UI and
+// Hubble name it "control-plane-pool", so match on IsControlPlane and fall back to the Terraform name.
+func eksControlPlanePool(pools []*models.V1EksMachinePoolConfig) *models.V1EksMachinePoolConfig {
+	var byName *models.V1EksMachinePoolConfig
+	for _, pool := range pools {
+		if pool == nil {
+			continue
+		}
+		if pool.IsControlPlane != nil && *pool.IsControlPlane {
+			return pool
+		}
+		if byName == nil && pool.Name == "cp-pool" {
+			byName = pool
+		}
+	}
+	return byName
+}
+
+// suppressEksAzSubnetsRemoval keeps cloud_config.az_subnets from forcing replacement when the configuration leaves it
+// empty but state holds the control-plane subnets read from Palette. That happens for static clusters imported before
+// Read populated az_subnets, whose generated configuration has az_subnets = {}. Changing between static and dynamic
+// placement also changes vpc_id, which forces replacement by itself.
+func suppressEksAzSubnetsRemoval(k, old, new string, d *schema.ResourceData) bool {
+	if strings.TrimSpace(old) == strings.TrimSpace(new) {
+		// UI strips the trailing newline on save
+		return true
+	}
+	if d == nil || eksAzSubnetsConfigured(d) {
+		return false
+	}
+	if strings.HasSuffix(k, ".%") {
+		return new == "0" || new == ""
+	}
+	return new == ""
+}
+
+// eksAzSubnetsConfigured reports whether the configuration sets a non-empty cloud_config.az_subnets. It reads the raw
+// configuration because d.Get falls back to state when the attribute is left out of the configuration.
+func eksAzSubnetsConfigured(d *schema.ResourceData) bool {
+	raw := d.GetRawConfig()
+	if raw.IsNull() || !raw.IsKnown() {
+		configured, _ := d.Get("cloud_config.0.az_subnets").(map[string]interface{})
+		return len(configured) > 0
+	}
+	cloudConfig := raw.GetAttr("cloud_config")
+	if cloudConfig.IsNull() || !cloudConfig.IsKnown() || cloudConfig.LengthInt() == 0 {
+		return false
+	}
+	azSubnets := cloudConfig.Index(cty.NumberIntVal(0)).GetAttr("az_subnets")
+	if !azSubnets.IsKnown() {
+		return true
+	}
+	return !azSubnets.IsNull() && azSubnets.LengthInt() > 0
 }
 
 // isKarpenterManagedPool checks if a machine pool is managed by Karpenter
