@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,8 +18,9 @@ import (
 )
 
 // resourceRegistryPack manages Spectro Cloud Pack registries (Tenant Settings > Registries > Pack Registries), the
-// counterpart of spectrocloud_registry_helm and spectrocloud_registry_oci. The API shares the Helm registry's
-// credential model (V1RegistryAuth), so credentials and TLS handling reuse the Helm helpers.
+// counterpart of spectrocloud_registry_helm and spectrocloud_registry_oci. Pack registries only support basic
+// (username and password) authentication. The API shares the Helm registry's credential model (V1RegistryAuth), so
+// reading back the password and TLS configuration reuses the Helm read helpers.
 func resourceRegistryPack() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceRegistryPackCreate,
@@ -53,31 +55,26 @@ func resourceRegistryPack() *schema.Resource {
 				Type:        schema.TypeList,
 				Required:    true,
 				MaxItems:    1,
-				Description: "Authentication credentials for accessing the Pack registry.",
+				Description: "Authentication credentials for accessing the Pack registry. Pack registries support username and password (`basic`) authentication only.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"credential_type": {
 							Type:         schema.TypeString,
-							Required:     true,
-							Description:  "The type of authentication used for the Pack registry. Supported values are `noAuth` for no authentication, `basic` for username and password, and `token` for token-based authentication.",
-							ValidateFunc: validation.StringInSlice([]string{"noAuth", "basic", "token"}, false),
+							Optional:     true,
+							Default:      "basic",
+							Description:  "The type of authentication used for the Pack registry. The only supported value is `basic` (username and password), which is also the default.",
+							ValidateFunc: validation.StringInSlice([]string{"basic"}, false),
 						},
 						"username": {
 							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "The username. Required when `credential_type` is `basic`.",
+							Required:    true,
+							Description: "The username for the Pack registry.",
 						},
 						"password": {
 							Type:        schema.TypeString,
-							Optional:    true,
+							Required:    true,
 							Sensitive:   true,
-							Description: "The password. Required when `credential_type` is `basic`.",
-						},
-						"token": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Sensitive:   true,
-							Description: "The authentication token. Required when `credential_type` is `token`.",
+							Description: "The password for the Pack registry.",
 						},
 						"tls_config": {
 							Type:        schema.TypeList,
@@ -261,7 +258,7 @@ func toRegistryPack(d *schema.ResourceData) *models.V1PackRegistry {
 		Spec: &models.V1PackRegistrySpec{
 			Name:     name,
 			Endpoint: &endpoint,
-			Auth:     toRegistryHelmCredential(credentials),
+			Auth:     toRegistryPackCredential(credentials),
 		},
 	}
 }
@@ -288,30 +285,37 @@ func flattenRegistryPack(d *schema.ResourceData, registry *models.V1PackRegistry
 
 	auth := registry.Spec.Auth
 	if auth == nil {
-		auth = &models.V1RegistryAuth{Type: "noAuth"}
+		auth = &models.V1RegistryAuth{}
 	}
 	credential := map[string]interface{}{
+		// Pack registries only support basic authentication.
+		"credential_type": "basic",
+		"username":        auth.Username,
+		// Palette does not return the password in clear text; keep the configured value so it does not show as drift.
+		"password":   helmRegistryCredentialFieldForRead(d, "password", auth.Password.String()),
 		"tls_config": helmRegistryTLSConfigForRead(d, auth.TLS),
 	}
-	switch auth.Type {
-	case "basic":
-		credential["credential_type"] = "basic"
-		credential["username"] = auth.Username
-		// Palette does not return secrets in clear text; keep the configured value so it does not show as drift.
-		credential["password"] = helmRegistryCredentialFieldForRead(d, "password", auth.Password.String())
-	case "token":
-		credential["credential_type"] = "token"
-		credential["username"] = auth.Username
-		credential["token"] = helmRegistryCredentialFieldForRead(d, "token", auth.Token.String())
-	default:
-		credential["credential_type"] = "noAuth"
-		// Palette ignores username, password and token for noAuth and does not return them; keep whatever is
-		// configured so they do not show as drift.
-		for _, field := range []string{"username", "password", "token"} {
-			credential[field] = helmRegistryCredentialFieldForRead(d, field, "")
+	return d.Set("credentials", []interface{}{credential})
+}
+
+// toRegistryPackCredential builds the Pack registry's basic authentication, with TLS only when it is configured.
+func toRegistryPackCredential(credentials map[string]interface{}) *models.V1RegistryAuth {
+	auth := &models.V1RegistryAuth{
+		Type:     "basic",
+		Username: credentials["username"].(string),
+		Password: strfmt.Password(credentials["password"].(string)),
+	}
+	if tlsCfg, ok := credentials["tls_config"].([]interface{}); ok && len(tlsCfg) > 0 && tlsCfg[0] != nil {
+		tlsMap := tlsCfg[0].(map[string]interface{})
+		auth.TLS = &models.V1TLSConfiguration{
+			Enabled:            tlsMap["enabled"].(bool),
+			Ca:                 tlsMap["ca"].(string),
+			Certificate:        tlsMap["certificate"].(string),
+			Key:                tlsMap["key"].(string),
+			InsecureSkipVerify: tlsMap["insecure_skip_verify"].(bool),
 		}
 	}
-	return d.Set("credentials", []interface{}{credential})
+	return auth
 }
 
 // waitForPackRegistrySync waits for a Pack registry to complete its synchronization. It mirrors waitForRegistrySync

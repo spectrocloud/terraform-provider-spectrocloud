@@ -20,16 +20,6 @@ resource "spectrocloud_registry_pack" "pack_registry" {
   wait_for_sync = true
 }
 
-# Pack registry that needs no authentication.
-resource "spectrocloud_registry_pack" "public_pack_registry" {
-  name     = "public-pack-registry"
-  endpoint = "https://public-registry.example.com"
-
-  credentials {
-    credential_type = "noAuth"
-  }
-}
-
 variable "pack_registry_username" {
   type = string
 }

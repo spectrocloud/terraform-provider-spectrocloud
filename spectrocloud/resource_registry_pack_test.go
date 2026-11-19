@@ -50,8 +50,22 @@ func TestResourceRegistryPackSchema(t *testing.T) {
 	assert.False(t, s["endpoint"].ForceNew, "the endpoint is updated in place")
 	cred := s["credentials"].Elem.(*schema.Resource).Schema
 	assert.True(t, cred["password"].Sensitive)
-	assert.True(t, cred["token"].Sensitive)
+	assert.True(t, cred["username"].Required)
+	assert.True(t, cred["password"].Required)
+	assert.NotContains(t, cred, "token", "Pack registries do not support token authentication")
 	assert.True(t, cred["tls_config"].Elem.(*schema.Resource).Schema["key"].Sensitive)
+	assert.Equal(t, "basic", cred["credential_type"].Default)
+}
+
+// Pack registries only support basic (username and password) authentication.
+func TestResourceRegistryPackCredentialTypeValidation(t *testing.T) {
+	validate := resourceRegistryPack().Schema["credentials"].Elem.(*schema.Resource).Schema["credential_type"].ValidateFunc
+	_, errs := validate("basic", "credential_type")
+	assert.Empty(t, errs)
+	for _, unsupported := range []string{"noAuth", "token"} {
+		_, errs = validate(unsupported, "credential_type")
+		assert.NotEmpty(t, errs, "%s must be rejected at plan time", unsupported)
+	}
 }
 
 func TestResourceRegistryPackCRUD(t *testing.T) {
@@ -85,9 +99,9 @@ func TestResourceRegistryPackCreateFailsValidation(t *testing.T) {
 
 func TestToRegistryPack(t *testing.T) {
 	d := prepareResourceRegistryPack()
-	_ = d.Set("credentials", packRegistryCredentials("token", map[string]interface{}{
+	_ = d.Set("credentials", packRegistryCredentials("basic", map[string]interface{}{
 		"username": "pack-user",
-		"token":    "pack-token",
+		"password": "pack-password",
 		"tls_config": []interface{}{map[string]interface{}{
 			"enabled":              true,
 			"ca":                   "ca-pem",
@@ -103,40 +117,33 @@ func TestToRegistryPack(t *testing.T) {
 	assert.Equal(t, "test-pack-registry", registry.Spec.Name)
 	assert.Equal(t, "https://pack.example.com:5000", *registry.Spec.Endpoint)
 	assert.False(t, registry.Spec.Private, "the resource does not expose private; the API default false is sent")
-	assert.Equal(t, "token", registry.Spec.Auth.Type)
-	assert.Equal(t, "pack-token", registry.Spec.Auth.Token.String())
+	assert.Equal(t, "basic", registry.Spec.Auth.Type)
+	assert.Equal(t, "pack-user", registry.Spec.Auth.Username)
+	assert.Equal(t, "pack-password", registry.Spec.Auth.Password.String())
 	require.NotNil(t, registry.Spec.Auth.TLS)
 	assert.Equal(t, "ca-pem", registry.Spec.Auth.TLS.Ca)
 	assert.Equal(t, "key-pem", registry.Spec.Auth.TLS.Key)
 
-	_ = d.Set("credentials", packRegistryCredentials("noAuth", nil))
+	_ = d.Set("credentials", packRegistryCredentials("basic", map[string]interface{}{
+		"username": "pack-user",
+		"password": "pack-password",
+	}))
 	registry = toRegistryPack(d)
-	assert.Equal(t, "noAuth", registry.Spec.Auth.Type)
+	assert.Equal(t, "basic", registry.Spec.Auth.Type)
 	assert.Nil(t, registry.Spec.Auth.TLS, "no tls_config block means no TLS configuration is sent")
 }
 
 func TestResourceRegistryPackRead(t *testing.T) {
-	t.Run("token keeps the configured token", func(t *testing.T) {
+	t.Run("basic reads the username and keeps the configured password", func(t *testing.T) {
 		d := prepareResourceRegistryPack()
-		d.SetId(routes.PackRegistryTokenUID)
-		_ = d.Set("credentials", packRegistryCredentials("token", map[string]interface{}{"username": "pack-user", "token": "pack-token"}))
+		d.SetId(routes.PackRegistryUID)
 
 		require.Empty(t, resourceRegistryPackRead(context.Background(), d, unitTestMockAPIClient))
 		cred := packRegistryCredentialFromState(t, d)
-		assert.Equal(t, "token", cred["credential_type"])
-		assert.Equal(t, "pack-token", cred["token"])
-	})
-
-	t.Run("noAuth keeps configured fields Palette ignores", func(t *testing.T) {
-		d := prepareResourceRegistryPack()
-		d.SetId(routes.PackRegistryNoAuthUID)
-		_ = d.Set("credentials", packRegistryCredentials("noAuth", map[string]interface{}{"username": "abc", "password": "def"}))
-
-		require.Empty(t, resourceRegistryPackRead(context.Background(), d, unitTestMockAPIClient))
-		cred := packRegistryCredentialFromState(t, d)
-		assert.Equal(t, "noAuth", cred["credential_type"])
-		assert.Equal(t, "abc", cred["username"])
-		assert.Equal(t, "def", cred["password"])
+		assert.Equal(t, "basic", cred["credential_type"])
+		assert.Equal(t, "pack-user", cred["username"])
+		assert.Equal(t, "pack-password", cred["password"], "Palette does not return the password; the configured value must stay")
+		assert.Empty(t, cred["tls_config"], "no TLS configured and none returned")
 	})
 
 	t.Run("tls configuration is read back", func(t *testing.T) {
@@ -174,7 +181,7 @@ func packRegistryUpdateData(t *testing.T, oldEndpoint, newEndpoint string) *sche
 		return map[string]interface{}{
 			"name":        "test-pack-registry",
 			"endpoint":    endpoint,
-			"credentials": packRegistryCredentials("noAuth", nil),
+			"credentials": packRegistryCredentials("basic", map[string]interface{}{"username": "pack-user", "password": "pack-password"}),
 		}
 	}
 	old := schema.TestResourceDataRaw(t, res.Schema, raw(oldEndpoint))

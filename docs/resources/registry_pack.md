@@ -42,16 +42,6 @@ resource "spectrocloud_registry_pack" "pack_registry" {
   wait_for_sync = true
 }
 
-# Pack registry that needs no authentication.
-resource "spectrocloud_registry_pack" "public_pack_registry" {
-  name     = "public-pack-registry"
-  endpoint = "https://public-registry.example.com"
-
-  credentials {
-    credential_type = "noAuth"
-  }
-}
-
 variable "pack_registry_username" {
   type = string
 }
@@ -79,7 +69,7 @@ import {
 }
 ```
 
-The import reads the name, endpoint, credential type, username and TLS configuration from Palette. Palette does not return passwords or tokens, so set `password` or `token` in the configuration after importing; until then, `terraform plan` shows them as a change.
+The import reads the name, endpoint, username and TLS configuration from Palette. Palette does not return the password, so set `password` in the configuration after importing; until then, `terraform plan` shows it as a change.
 
 **Note**: Since this is a tenant-level resource, make sure the provider is configured with credentials that have tenant-level access.
 
@@ -88,7 +78,7 @@ The import reads the name, endpoint, credential type, username and TLS configura
 
 ### Required
 
-- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Pack registry. (see [below for nested schema](#nestedblock--credentials))
+- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Pack registry. Pack registries support username and password (`basic`) authentication only. (see [below for nested schema](#nestedblock--credentials))
 - `endpoint` (String) The URL of the Pack registry, for example `https://registry.example.com:5000`.
 - `name` (String) The name of the Pack registry. This must be unique. Changing the name creates a new registry.
 
@@ -106,14 +96,13 @@ The import reads the name, endpoint, credential type, username and TLS configura
 
 Required:
 
-- `credential_type` (String) The type of authentication used for the Pack registry. Supported values are `noAuth` for no authentication, `basic` for username and password, and `token` for token-based authentication.
+- `password` (String, Sensitive) The password for the Pack registry.
+- `username` (String) The username for the Pack registry.
 
 Optional:
 
-- `password` (String, Sensitive) The password. Required when `credential_type` is `basic`.
+- `credential_type` (String) The type of authentication used for the Pack registry. The only supported value is `basic` (username and password), which is also the default.
 - `tls_config` (Block List, Max: 1) TLS configuration for the registry. If omitted, no TLS configuration is sent. (see [below for nested schema](#nestedblock--credentials--tls_config))
-- `token` (String, Sensitive) The authentication token. Required when `credential_type` is `token`.
-- `username` (String) The username. Required when `credential_type` is `basic`.
 
 <a id="nestedblock--credentials--tls_config"></a>
 ### Nested Schema for `credentials.tls_config`

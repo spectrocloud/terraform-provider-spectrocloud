@@ -361,8 +361,6 @@ func ociEcrRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 // TLS handling, not-found handling and sync wait can each be exercised.
 const (
 	PackRegistryUID          = "test-pack-registry-uid"
-	PackRegistryTokenUID     = "test-pack-registry-token-uid"
-	PackRegistryNoAuthUID    = "test-pack-registry-noauth-uid"
 	PackRegistryTLSUID       = "test-pack-registry-tls-uid"
 	PackRegistryMissingUID   = "test-pack-registry-missing-uid"
 	PackRegistrySyncFailUID  = "test-pack-registry-sync-failed-uid"
@@ -377,18 +375,12 @@ func packRegistryFixtureFor(uid string) (*models.V1PackRegistry, int) {
 		Spec: &models.V1PackRegistrySpec{
 			Name:     "test-pack-registry",
 			Endpoint: &endpoint,
-			Private:  true,
 			// Palette does not return the password in clear text.
 			Auth: &models.V1RegistryAuth{Type: "basic", Username: "pack-user"},
 		},
 	}
 	switch uid {
 	case PackRegistryUID, PackRegistrySyncFailUID, "test-registry-uid":
-	case PackRegistryTokenUID:
-		r.Spec.Auth = &models.V1RegistryAuth{Type: "token", Username: "pack-user"}
-	case PackRegistryNoAuthUID:
-		r.Spec.Private = false
-		r.Spec.Auth = &models.V1RegistryAuth{Type: "noAuth"}
 	case PackRegistryTLSUID:
 		r.Spec.Auth.TLS = &models.V1TLSConfiguration{Enabled: true, Ca: "test-ca-pem", InsecureSkipVerify: true}
 	default:

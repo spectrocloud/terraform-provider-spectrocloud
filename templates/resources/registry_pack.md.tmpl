@@ -38,7 +38,7 @@ import {
 }
 ```
 
-The import reads the name, endpoint, credential type, username and TLS configuration from Palette. Palette does not return passwords or tokens, so set `password` or `token` in the configuration after importing; until then, `terraform plan` shows them as a change.
+The import reads the name, endpoint, username and TLS configuration from Palette. Palette does not return the password, so set `password` in the configuration after importing; until then, `terraform plan` shows it as a change.
 
 **Note**: Since this is a tenant-level resource, make sure the provider is configured with credentials that have tenant-level access.
 
