@@ -194,6 +194,7 @@ func New(version string) func() *schema.Provider {
 
 				"spectrocloud_registry_oci":  resourceRegistryOciEcr(),
 				"spectrocloud_registry_helm": resourceRegistryHelm(),
+				"spectrocloud_registry_pack": resourceRegistryPack(),
 
 				"spectrocloud_appliance": resourceAppliance(),
 
