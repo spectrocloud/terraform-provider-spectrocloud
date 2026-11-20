@@ -1430,7 +1430,7 @@ func getRegistryIsSyncSupported(c *client.V1Client, registryUID string, packType
 	case models.V1PackTypeHelm:
 		status, err = c.GetHelmRegistrySyncStatus(registryUID)
 	case models.V1PackTypeOci:
-		status, err = c.GetOciBasicRegistrySyncStatus(registryUID)
+		status, err = getOciRegistrySyncStatusByUID(c, registryUID)
 	case models.V1PackTypeSpectro:
 		status, err = c.GetPackRegistrySyncStatus(registryUID)
 	default:
@@ -1440,6 +1440,21 @@ func getRegistryIsSyncSupported(c *client.V1Client, registryUID string, packType
 		return false, false
 	}
 	return status.IsSyncSupported, true
+}
+
+// getOciRegistrySyncStatusByUID returns the sync status of an OCI registry known only by UID. Basic and
+// ECR registries (Palette Registry is ECR-type) have separate sync-status endpoints, and each returns 404
+// for a registry of the other type, so try basic first and fall back to ECR.
+func getOciRegistrySyncStatusByUID(c *client.V1Client, registryUID string) (*models.V1RegistrySyncStatus, error) {
+	status, basicErr := c.GetOciBasicRegistrySyncStatus(registryUID)
+	if basicErr == nil && status != nil {
+		return status, nil
+	}
+	status, ecrErr := c.GetOciEcrRegistrySyncStatus(registryUID)
+	if ecrErr == nil && status != nil {
+		return status, nil
+	}
+	return nil, fmt.Errorf("sync status for OCI registry %s: basic: %v; ecr: %v", registryUID, basicErr, ecrErr)
 }
 
 // resolvePackUID resolves the pack UID based on name, tag, and registry_uid

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -55,6 +56,26 @@ func New(version string) func() *schema.Provider {
 					Optional:    true,
 					Description: "Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", 10),
+				},
+				"request_timeout": {
+					Type:     schema.TypeInt,
+					Optional: true,
+					Description: "Maximum time, in seconds, for a single Palette API call, from sending the request to reading the whole response. " +
+						"It applies to every call the provider makes, including the status checks while it waits for a cluster to become ready. " +
+						"A timed-out read is retried up to `retry_attempts` times with exponential backoff, so with the default of 10 retries a call that keeps timing out can take tens of minutes to fail; a timed-out write is not retried, because it may already have been applied. " +
+						"Set to `-1` to remove the limit. Can also be set with the `SPECTROCLOUD_REQUEST_TIMEOUT` environment variable. Defaults to 300.",
+					DefaultFunc:  schema.EnvDefaultFunc("SPECTROCLOUD_REQUEST_TIMEOUT", 0),
+					ValidateFunc: validation.IntAtLeast(-1),
+				},
+				"response_idle_timeout": {
+					Type:     schema.TypeInt,
+					Optional: true,
+					Description: "Time, in seconds, that a Palette API response may go without sending any data before the call is cancelled. " +
+						"The timer starts once the response begins and restarts whenever data arrives, so a large response that keeps arriving is not cut off. " +
+						"Cancelled reads are retried as described for `request_timeout`. " +
+						"Set to `-1` to disable. Can also be set with the `SPECTROCLOUD_RESPONSE_IDLE_TIMEOUT` environment variable. Defaults to 60.",
+					DefaultFunc:  schema.EnvDefaultFunc("SPECTROCLOUD_RESPONSE_IDLE_TIMEOUT", 0),
+					ValidateFunc: validation.IntAtLeast(-1),
 				},
 				"project_name": {
 					Type:     schema.TypeString,
@@ -173,6 +194,7 @@ func New(version string) func() *schema.Provider {
 
 				"spectrocloud_registry_oci":  resourceRegistryOciEcr(),
 				"spectrocloud_registry_helm": resourceRegistryHelm(),
+				"spectrocloud_registry_pack": resourceRegistryPack(),
 
 				"spectrocloud_appliance": resourceAppliance(),
 
@@ -271,6 +293,18 @@ func providerConfigureFunc(version string) schema.ConfigureContextFunc {
 	}
 }
 
+// providerTimeouts returns the provider's request and response idle timeouts. Zero (unset) keeps the SDK default and
+// a negative value removes the limit; the SDK interprets both, so values are passed through unchanged.
+func providerTimeouts(d *schema.ResourceData) (request, responseIdle time.Duration) {
+	if v, ok := d.Get("request_timeout").(int); ok {
+		request = time.Duration(v) * time.Second
+	}
+	if v, ok := d.Get("response_idle_timeout").(int); ok {
+		responseIdle = time.Duration(v) * time.Second
+	}
+	return request, responseIdle
+}
+
 func providerConfigure(ctx context.Context, d *schema.ResourceData, version string) (interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -316,6 +350,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, version stri
 		client.WithRetries(retryAttempts),
 		client.WithClientHeader(resolveClientHeader(version)),
 	}
+	requestTimeout, responseIdleTimeout := providerTimeouts(d)
+	clientOpts = append(clientOpts,
+		client.WithRequestTimeout(requestTimeout),
+		client.WithResponseIdleTimeout(responseIdleTimeout),
+	)
 	if transportDebug {
 		clientOpts = append(clientOpts, client.WithTransportDebug())
 	}

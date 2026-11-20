@@ -1,0 +1,45 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+Pack registries appear in Palette under **Tenant Settings > Registries > Pack Registries**. Use `spectrocloud_registry_oci` for OCI registries and `spectrocloud_registry_helm` for Helm registries.
+
+## Validation and synchronization
+
+Before creating the registry, and whenever `endpoint` or `credentials` change, the provider asks Palette to validate the endpoint and credentials, the same check the Palette UI runs when you save a Pack registry. If Palette cannot reach the registry or the credentials are rejected, the apply fails with Palette's reason and nothing is created or changed.
+
+After the registry is created, Palette synchronizes its packs so they can be used in cluster profiles. Set `wait_for_sync = true` to make Terraform wait for that synchronization. If it fails, the apply fails with the reason Palette reports; if it does not finish within the create or update timeout, Terraform returns a warning instead.
+
+## Example Usage
+
+{{ tffile "examples/resources/spectrocloud_registry_pack/resource.tf" }}
+
+## Import
+
+Pack registries can be imported using the registry UID or name. This is a tenant-level resource.
+
+```bash
+terraform import spectrocloud_registry_pack.example <registry_uid_or_name>
+```
+
+You can also use an `import` block:
+
+```terraform
+import {
+  to = spectrocloud_registry_pack.example
+  id = "my-pack-registry"
+}
+```
+
+The import reads the name, endpoint, username and TLS configuration from Palette. Palette does not return the password, so set `password` in the configuration after importing; until then, `terraform plan` shows it as a change.
+
+**Note**: Since this is a tenant-level resource, make sure the provider is configured with credentials that have tenant-level access.
+
+{{ .SchemaMarkdown | trimspace }}

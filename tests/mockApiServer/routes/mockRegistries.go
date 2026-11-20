@@ -322,8 +322,20 @@ func ociRegistrySyncStatusFixtureFor(uid string) *models.V1RegistrySyncStatus {
 	}
 }
 
+const (
+	// OciEcrOnlyRegistryUID is an ECR-type OCI registry (like Palette Registry): the basic
+	// sync-status endpoint 404s for it and only the ECR one answers.
+	OciEcrOnlyRegistryUID = "oci-ecr-only-registry"
+	// OciUnknownRegistryUID 404s on both the basic and ECR sync-status endpoints.
+	OciUnknownRegistryUID = "oci-unknown-registry"
+)
+
 func ociBasicRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
+	if uid == OciEcrOnlyRegistryUID || uid == OciUnknownRegistryUID {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(ociRegistrySyncStatusFixtureFor(uid))
@@ -336,13 +348,95 @@ const ociEcrRegistrySyncStatusErrorUID = "test-oci-registry-uid"
 
 func ociEcrRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
-	if uid == ociEcrRegistrySyncStatusErrorUID {
+	if uid == ociEcrRegistrySyncStatusErrorUID || uid == OciUnknownRegistryUID {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(ociRegistrySyncStatusFixtureFor(uid))
+}
+
+// Pack registry fixtures (PLT-2441), dispatched by UID so the spectrocloud_registry_pack resource's credential types,
+// TLS handling, not-found handling and sync wait can each be exercised.
+const (
+	PackRegistryUID          = "test-pack-registry-uid"
+	PackRegistryTLSUID       = "test-pack-registry-tls-uid"
+	PackRegistryMissingUID   = "test-pack-registry-missing-uid"
+	PackRegistrySyncFailUID  = "test-pack-registry-sync-failed-uid"
+	PackRegistryUnreachable  = "https://unreachable.pack.example.com"
+	packRegistryNotFoundBody = `{"code":"ResourceNotFound","message":"pack registry not found"}`
+)
+
+func packRegistryFixtureFor(uid string) (*models.V1PackRegistry, int) {
+	endpoint := "https://pack.example.com:5000"
+	r := &models.V1PackRegistry{
+		Metadata: &models.V1ObjectMeta{Name: "test-pack-registry", UID: uid},
+		Spec: &models.V1PackRegistrySpec{
+			Name:     "test-pack-registry",
+			Endpoint: &endpoint,
+			// Palette does not return the password in clear text.
+			Auth: &models.V1RegistryAuth{Type: "basic", Username: "pack-user"},
+		},
+	}
+	switch uid {
+	case PackRegistryUID, PackRegistrySyncFailUID, "test-registry-uid":
+	case PackRegistryTLSUID:
+		r.Spec.Auth.TLS = &models.V1TLSConfiguration{Enabled: true, Ca: "test-ca-pem", InsecureSkipVerify: true}
+	default:
+		// Like the real API, an unknown UID (including PackRegistryMissingUID or a registry name) is not found.
+		return nil, http.StatusNotFound
+	}
+	return r, http.StatusOK
+}
+
+func writePackRegistryNotFound(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write([]byte(packRegistryNotFoundBody))
+}
+
+func packRegistryGetHandler(w http.ResponseWriter, r *http.Request) {
+	payload, status := packRegistryFixtureFor(mux.Vars(r)["uid"])
+	if status == http.StatusNotFound {
+		writePackRegistryNotFound(w)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func packRegistryDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if mux.Vars(r)["uid"] == PackRegistryMissingUID {
+		writePackRegistryNotFound(w)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// packRegistryValidateHandler rejects the PackRegistryUnreachable endpoint, the way Palette rejects a registry it
+// cannot reach, and accepts everything else.
+func packRegistryValidateHandler(w http.ResponseWriter, r *http.Request) {
+	var spec models.V1PackRegistrySpec
+	_ = json.NewDecoder(r.Body).Decode(&spec)
+	if spec.Endpoint != nil && *spec.Endpoint == PackRegistryUnreachable {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"code":"InvalidRegistry","message":"unable to reach the pack registry"}`))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func packRegistrySyncStatusHandler(w http.ResponseWriter, r *http.Request) {
+	status := &models.V1RegistrySyncStatus{IsSyncSupported: true, Status: "Success"}
+	if mux.Vars(r)["uid"] == PackRegistrySyncFailUID {
+		status = &models.V1RegistrySyncStatus{IsSyncSupported: true, Status: "Failed", Message: "index.yaml not found"}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(status)
 }
 
 func RegistriesRoutes() []Route {
@@ -467,6 +561,42 @@ func RegistriesRoutes() []Route {
 				StatusCode: 204,
 				Payload:    nil,
 			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/registries/pack",
+			Response: ResponseData{
+				StatusCode: http.StatusCreated,
+				Payload:    map[string]string{"uid": PackRegistryUID},
+			},
+		},
+		{
+			Method:  "POST",
+			Path:    "/v1/registries/pack/validate",
+			Handler: packRegistryValidateHandler,
+		},
+		{
+			Method:  "GET",
+			Path:    "/v1/registries/pack/{uid}/sync/status",
+			Handler: packRegistrySyncStatusHandler,
+		},
+		{
+			Method:  "GET",
+			Path:    "/v1/registries/pack/{uid}",
+			Handler: packRegistryGetHandler,
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/registries/pack/{uid}",
+			Response: ResponseData{
+				StatusCode: http.StatusNoContent,
+				Payload:    nil,
+			},
+		},
+		{
+			Method:  "DELETE",
+			Path:    "/v1/registries/pack/{uid}",
+			Handler: packRegistryDeleteHandler,
 		},
 		{
 			Method: "GET",
