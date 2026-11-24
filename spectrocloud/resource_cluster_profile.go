@@ -1036,8 +1036,13 @@ func toClusterProfileUpdateWithResolution(d *schema.ResourceData, cluster *model
 		},
 	}
 	packs := make([]*models.V1PackManifestUpdateEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePackUpdateWithResolution(pack, cluster.Spec.Published.Packs, c); e != nil {
+	uidConfigured := packUIDsConfigured(d)
+	for i, pack := range d.Get("pack").([]interface{}) {
+		var configured *bool
+		if uidConfigured != nil && i < len(uidConfigured) {
+			configured = &uidConfigured[i]
+		}
+		if p, e := toClusterProfilePackUpdateWithResolution(pack, cluster.Spec.Published.Packs, c, configured); e != nil {
 			return nil, e
 		} else {
 			packs = append(packs, p)
@@ -1069,7 +1074,48 @@ func toClusterProfilePatch(d *schema.ResourceData) (*models.V1ProfileMetaEntity,
 	return metadata, nil
 }
 
-func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.V1PackRef, c *client.V1Client) (*models.V1PackManifestUpdateEntity, error) {
+// packUIDsConfigured reports, for each pack in the configuration, whether it sets pack.uid. pack.uid is Optional and
+// Computed, so when the configuration leaves it out, d.Get returns the UID Read stored in state, which can belong to
+// a previous tag, or to another pack when packs were added or reordered. It returns nil when the raw configuration
+// is not available.
+func packUIDsConfigured(d *schema.ResourceData) []bool {
+	raw := d.GetRawConfig()
+	if raw.IsNull() || !raw.IsKnown() {
+		return nil
+	}
+	packs := raw.GetAttr("pack")
+	if !packs.IsKnown() {
+		return nil
+	}
+	configured := make([]bool, 0)
+	if packs.IsNull() {
+		return configured
+	}
+	for it := packs.ElementIterator(); it.Next(); {
+		_, pack := it.Element()
+		// An unknown uid (set from another resource) counts as configured.
+		configured = append(configured, !pack.IsNull() && !pack.GetAttr("uid").IsNull())
+	}
+	return configured
+}
+
+// findPackRef returns the profile's current pack with this name, and with this registry when both sides have one.
+func findPackRef(packs []*models.V1PackRef, name, registryUID string) *models.V1PackRef {
+	for _, ref := range packs {
+		if ref == nil || ref.Name == nil || *ref.Name != name {
+			continue
+		}
+		if registryUID != "" && ref.RegistryUID != "" && ref.RegistryUID != registryUID {
+			continue
+		}
+		return ref
+	}
+	return nil
+}
+
+// toClusterProfilePackUpdateWithResolution builds a pack for a cluster profile update. uidConfigured says whether the
+// configuration sets pack.uid; nil means it is not known (no raw configuration).
+func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.V1PackRef, c *client.V1Client, uidConfigured *bool) (*models.V1PackManifestUpdateEntity, error) {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
@@ -1080,6 +1126,10 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
 	}
+	pRegistryName := ""
+	if p["registry_name"] != nil {
+		pRegistryName = p["registry_name"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	// Validate pack UID or resolution fields
@@ -1087,8 +1137,32 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 		return nil, err
 	}
 
+	// Resolve registry_name to a registry UID, as create does.
+	if pRegistryName != "" && pRegistryUID == "" {
+		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName, p["type"].(string))
+		if err != nil {
+			return nil, fmt.Errorf("pack %s: %w", pName, err)
+		}
+		pRegistryUID = resolvedUID
+	}
+
 	switch pType {
 	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
+		// A uid the configuration does not set comes from state and may belong to the pack's previous tag (or to
+		// another pack after a reorder). Use the profile's current UID only when this pack's name, registry and tag
+		// are unchanged; otherwise resolve it below for the tag being sent.
+		ref := findPackRef(packs, pName, pRegistryUID)
+		switch {
+		case uidConfigured == nil:
+			if ref != nil && ref.Tag != pTag {
+				pUID = ""
+			}
+		case !*uidConfigured:
+			pUID = ""
+			if ref != nil && ref.Tag == pTag {
+				pUID = ref.PackUID
+			}
+		}
 		if pUID == "" {
 			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
 			if found && isSyncSupported {
