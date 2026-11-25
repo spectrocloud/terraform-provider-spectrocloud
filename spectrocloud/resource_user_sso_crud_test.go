@@ -39,7 +39,7 @@ func TestResourceUserCreate(t *testing.T) {
 }
 
 func TestResourceUserRead(t *testing.T) {
-	// Read goes through GetUserSummaryByEmail (POST /users/summary) →
+	// Read goes through GetUserSummaryByEmail (POST /v2/users/summary) →
 	// flattenUser → four role-flatten helpers, each hitting a different
 	// endpoint. All are mocked.
 	d := prepareUserResourceData(t)

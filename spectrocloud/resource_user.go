@@ -447,7 +447,7 @@ func deleteUserResourceRoles(c *client.V1Client, userUID string) error {
 	return nil
 }
 
-func flattenUser(user *models.V1UserSummary, d *schema.ResourceData, c *client.V1Client) error {
+func flattenUser(user *models.V2UserSummary, d *schema.ResourceData, c *client.V1Client) error {
 	if user != nil {
 		if err := d.Set("first_name", user.Spec.FirstName); err != nil {
 			return err
