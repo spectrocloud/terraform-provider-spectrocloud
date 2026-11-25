@@ -13,7 +13,7 @@ You can learn more about Private Cloud Gateways IP Pools by revewing the [Create
 
 ## Limits
 
-Starting with Palette 4.10.c, Palette rejects an IP pool on create or update, with an HTTP 400 `InvalidParamValue` error, when:
+Palette rejects an IP pool on create or update, with an HTTP 400 `InvalidParamValue` error, when:
 
 - The pool has more than 65,536 addresses. A `subnet` pool can be at most a `/16`, and a `range` pool can span at most 65,536 addresses from `ip_start_range` to `ip_end_range`.
 - The pool uses IPv6 addresses. IP pools support IPv4 only.
