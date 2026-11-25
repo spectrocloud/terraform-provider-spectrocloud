@@ -20,6 +20,25 @@ resource "spectrocloud_cloudaccount_azure" "azure-1" {
 }
 ```
 
+### Managed identity
+
+To authenticate with a user-assigned managed identity attached to a private cloud gateway, set `identity_type = "UserAssignedMSI"` and use the managed identity's client ID as `azure_client_id`.
+
+```terraform
+resource "spectrocloud_cloudaccount_azure" "azure_msi" {
+  name                     = "azure-msi"
+  identity_type            = "UserAssignedMSI"
+  azure_tenant_id          = var.azure_tenant_id
+  azure_client_id          = var.azure_msi_client_id
+  private_cloud_gateway_id = var.private_cloud_gateway_id
+}
+```
+
+-> **Note:**
+
+- Do not set `azure_client_secret` for a `UserAssignedMSI` account. Palette rejects a managed identity account that has a client secret.
+- A managed identity can be used only by cloud accounts in one project of the tenant. Palette rejects a cloud account that uses a managed identity already registered in another project. Private cloud gateways are shared by every project in the tenant, so use one managed identity per private cloud gateway.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -49,13 +68,13 @@ terraform import spectrocloud_cloudaccount_azure.{cloud_account_uid}/{cloud_acco
 
 ### Optional
 
-- `azure_client_secret` (String, Sensitive) Azure secret for authentication. Required when `identity_type` is `ServicePrincipal` (the default); not used when `identity_type` is `UserAssignedMSI`.
+- `azure_client_secret` (String, Sensitive) Azure secret for authentication. Required when `identity_type` is `ServicePrincipal` (the default). Do not set it when `identity_type` is `UserAssignedMSI`: Palette rejects a managed identity account that has a client secret.
 - `cloud` (String) The Azure partition in which the cloud account is located. 
 Can be 'AzurePublicCloud' for standard Azure regions or 'AzureUSGovernmentCloud' for Azure GovCloud (US) regions or 'AzureUSSecretCloud' for Azure Secret Cloud regions.
 Default is 'AzurePublicCloud'.
 - `context` (String) The context of the Azure configuration. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `disable_properties_request` (Boolean) Disable properties request. This is a boolean value that indicates whether to disable properties request or not. If not specified, the default value is `false`.
-- `identity_type` (String) The type of identity Palette uses to authenticate to Azure. `ServicePrincipal` (default) authenticates with `azure_client_id`/`azure_client_secret`. `UserAssignedMSI` authenticates using a user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs; `azure_client_secret` is not used in this mode. Changing this value forces a new resource - converting an existing cloud account between identity types is not supported.
+- `identity_type` (String) The type of identity Palette uses to authenticate to Azure. `ServicePrincipal` (default) authenticates with `azure_client_id`/`azure_client_secret`. `UserAssignedMSI` authenticates using a user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs; do not set `azure_client_secret` in this mode. A managed identity can be used only by cloud accounts in one project of the tenant. Changing this value forces a new resource - converting an existing cloud account between identity types is not supported.
 - `private_cloud_gateway_id` (String) ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.
 - `tenant_name` (String) The name of the tenant. This is the name of the tenant that is used to connect to the Azure cloud.
 - `tls_cert` (String) TLS certificate for authentication. This field is only allowed when cloud is set to 'AzureUSSecretCloud'.

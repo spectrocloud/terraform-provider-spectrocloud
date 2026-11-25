@@ -14,6 +14,10 @@ azure_client_secret = "{Enter Azure Client Secret}"
 # azure_secret_client_secret = "{Enter Azure US Secret Cloud Client Secret}"
 # azure_secret_tls_cert      = "{Enter TLS Certificate for Azure US Secret Cloud}"
 
+# Managed identity (optional - only if using identity_type = "UserAssignedMSI")
+# azure_msi_client_id      = "{Enter the managed identity's Client ID}"
+# private_cloud_gateway_id = "{Enter the Private Cloud Gateway ID}"
+
 # Spectro Cloud credentials
 sc_host         = "{Enter Spectro Cloud API Host}" #e.g: api.spectrocloud.com (for SaaS)
 sc_api_key      = "{Enter Spectro Cloud API Key}"
