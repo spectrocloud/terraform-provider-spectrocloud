@@ -11,6 +11,15 @@ description: |-
 
 You can learn more about Private Cloud Gateways IP Pools by revewing the [Create and Manage IPAM Node Pools](https://docs.spectrocloud.com/clusters/pcg/manage-pcg/create-manage-node-pool/) guide.
 
+## Limits
+
+Palette rejects an IP pool on create or update, with an HTTP 400 `InvalidParamValue` error, when:
+
+- The pool has more than 65,536 addresses. A `subnet` pool can be at most a `/16`, and a `range` pool can span at most 65,536 addresses from `ip_start_range` to `ip_end_range`.
+- The pool uses IPv6 addresses. IP pools support IPv4 only.
+
+Terraform reports these errors at apply time, not during `terraform plan`.
+
 ## Example Usage
 
 An example of creating an IP Pool for a Private Cloud Gateway using a range of IP addresses and restricting the IP Pool to a single cluster.
