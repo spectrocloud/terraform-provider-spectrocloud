@@ -62,7 +62,8 @@ func resourceAppliance() *schema.Resource {
 			"pairing_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The pairing key used for appliance pairing.",
+				Description: "The pairing key used for appliance pairing. Palette no longer uses this field and plans to remove it in Palette 4.11.a.",
+				Deprecated:  "This field is deprecated in Palette and will be removed in a future release. Do not set it.",
 			},
 			"remote_shell": {
 				Type:         schema.TypeString,

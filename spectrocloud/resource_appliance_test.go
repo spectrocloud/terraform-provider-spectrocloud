@@ -34,6 +34,21 @@ func TestToApplianceEntity(t *testing.T) {
 	assert.Equal(t, expectedEntity, result)
 }
 
+func TestToApplianceEntityPairingKeyUnset(t *testing.T) {
+	d := resourceAppliance().TestResourceData()
+	d.Set("uid", "testID")
+
+	result := toApplianceEntity(d)
+	assert.Equal(t, strfmt.Password(""), result.Spec.HostPairingKey)
+}
+
+func TestAppliancePairingKeyDeprecated(t *testing.T) {
+	s := resourceAppliance().Schema["pairing_key"]
+	assert.NotEmpty(t, s.Deprecated)
+	assert.True(t, s.Optional)
+	assert.Contains(t, s.Description, "4.11.a")
+}
+
 func TestToApplianceEntityArchType(t *testing.T) {
 	d := resourceAppliance().TestResourceData()
 	d.Set("uid", "testID")
