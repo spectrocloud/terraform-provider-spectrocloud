@@ -8,7 +8,7 @@ import (
 
 // UserRolesRoutes fills in the endpoints needed by resource_user Read
 // beyond what mockUsers.go already provides. resourceUserRead calls:
-//   - GetUserSummaryByEmail   → POST /v1/users/summary
+//   - GetUserSummaryByEmail   → POST /v2/users/summary
 //   - GetUserProjectRole      → GET  /v1/users/{uid}/projects
 //   - GetUserTenantRole       → GET  /v1/users/{uid}/roles
 //   - GetUserWorkspaceRole    → GET  /v1/workspaces/users/{userUid}/roles
@@ -22,17 +22,17 @@ func UserRolesRoutes() []Route {
 		// GetUserSummaryByEmail
 		{
 			Method: "POST",
-			Path:   "/v1/users/summary",
+			Path:   "/v2/users/summary",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
-				Payload: &models.V1UsersSummaryList{
-					Items: []*models.V1UserSummary{
+				Payload: &models.V2UsersSummaryList{
+					Items: []*models.V2UserSummary{
 						{
 							Metadata: &models.V1ObjectMeta{
 								Name: summaryName,
 								UID:  summaryUID,
 							},
-							Spec: &models.V1UserSpecSummary{
+							Spec: &models.V2UserSpecSummary{
 								FirstName: "test",
 								LastName:  "spectro",
 								EmailID:   "test@spectrocloud.com",

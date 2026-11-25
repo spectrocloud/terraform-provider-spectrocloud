@@ -700,17 +700,6 @@ func ClusterRoutes() []Route {
 			Handler: overviewHandler,
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/assets/kubeconfig",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &v1.V1SpectroClustersUIDKubeConfigOK{
-					ContentDisposition: "test-content",
-					Payload:            &buffer,
-				},
-			},
-		},
-		{
 			// UID-dispatched so tests can exercise the
 			// cluster.adminKubeconfigDownload 403 tolerance (PLT-2355)
 			// via the "cluster-uid-admin-kubeconfig-forbidden" sentinel,
