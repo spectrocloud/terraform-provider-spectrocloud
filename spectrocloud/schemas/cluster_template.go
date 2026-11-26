@@ -11,6 +11,8 @@ func ClusterTemplateSchema() *schema.Schema {
 			"is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named " +
 			"template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile " +
 			"set is applied by the template's batch reconciler at the next maintenance window, not synchronously. " +
+			"The plan fails if Palette reports that the template cannot be attached to the cluster (for example, an " +
+			"unsupported Kubernetes version upgrade), and a rejected attach leaves `cluster_profile` unchanged in state. " +
 			"This is currently one-way: there is no supported way to detach a cluster from a template and revert to " +
 			"`cluster_profile`, so removing `cluster_template` after it has been set is rejected.",
 		Elem: &schema.Resource{
