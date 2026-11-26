@@ -271,3 +271,33 @@ func TestResourceMachinePoolEksHash_DedicateNodePoolForSystemPods(t *testing.T) 
 		assert.NotPanics(t, func() { resourceMachinePoolEksHash(m) })
 	})
 }
+
+// PLT-2563: override_scaling must be part of the EKS machine pool hash, or adding,
+// changing or removing it shows "No changes" and the update never reaches Palette.
+func TestResourceMachinePoolEksHash_OverrideScaling(t *testing.T) {
+	pool := func(overrideScaling []interface{}) map[string]interface{} {
+		m := map[string]interface{}{
+			"name":            "worker-basic",
+			"count":           2,
+			"disk_size_gb":    60,
+			"instance_type":   "m5.large",
+			"az_subnets":      map[string]interface{}{},
+			"update_strategy": "OverrideScaling",
+		}
+		if overrideScaling != nil {
+			m["override_scaling"] = overrideScaling
+		}
+		return m
+	}
+	scaling := func(maxSurge, maxUnavailable string) []interface{} {
+		return []interface{}{map[string]interface{}{"max_surge": maxSurge, "max_unavailable": maxUnavailable}}
+	}
+
+	base := resourceMachinePoolEksHash(pool(scaling("2", "1")))
+	assert.NotEqual(t, resourceMachinePoolEksHash(pool(nil)), base, "adding or removing override_scaling must change the hash")
+	assert.NotEqual(t, resourceMachinePoolEksHash(pool(scaling("3", "1"))), base, "changing max_surge must change the hash")
+	assert.NotEqual(t, resourceMachinePoolEksHash(pool(scaling("2", "0"))), base, "changing max_unavailable must change the hash")
+
+	// Pools without override_scaling keep the same hash as before, so existing state shows no new diff.
+	assert.Equal(t, resourceMachinePoolEksHash(pool(nil)), resourceMachinePoolEksHash(pool([]interface{}{})))
+}

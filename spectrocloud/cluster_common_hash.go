@@ -427,6 +427,17 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
 		buf.WriteString(fmt.Sprintf("%t-", val))
 	}
+	// Hash override_scaling
+	if overrideScaling, ok := nodePool["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		if scalingConfig, ok := overrideScaling[0].(map[string]interface{}); ok {
+			if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+				buf.WriteString(fmt.Sprintf("max_surge:%s-", maxSurge))
+			}
+			if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+				buf.WriteString(fmt.Sprintf("max_unavailable:%s-", maxUnavailable))
+			}
+		}
+	}
 
 	return int(hash(buf.String()))
 }
