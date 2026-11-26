@@ -337,6 +337,22 @@ func resourceClusterEdgeNative() *schema.Resource {
 											Type: schema.TypeString,
 										},
 									},
+									"vlan_id": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Description: "VLAN ID (1 to 4094) for the edge host network interface. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` when it joins the cluster. " +
+											"When set, `nic_name` (the physical parent NIC), `static_ip` (the IPv4 address on the VLAN) and `subnet_mask` are required. " +
+											"The VLAN applies only when the host joins the cluster: changing it for a host already in the cluster has no effect on that host.",
+									},
+									"secondary_ips": {
+										Type:        schema.TypeSet,
+										Optional:    true,
+										Set:         schema.HashString,
+										Description: "Additional IPv4 addresses on the VLAN sub-interface, in CIDR form (for example `10.3.12.165/27`). Requires `vlan_id`.",
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
 									"two_node_role": {
 										Type:         schema.TypeString,
 										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
@@ -586,6 +602,12 @@ func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interfa
 		"default_gateway": defaultGateway,
 		"subnet_mask":     subnetMask,
 		"dns_servers":     dnsServers,
+	}
+	if host.Nic != nil && host.Nic.VlanID != 0 {
+		rawHost["vlan_id"] = int(host.Nic.VlanID)
+	}
+	if host.Nic != nil && len(host.Nic.SecondaryIps) > 0 {
+		rawHost["secondary_ips"] = host.Nic.SecondaryIps
 	}
 	if host.TwoNodeCandidatePriority != "" {
 		rawHost["two_node_role"] = host.TwoNodeCandidatePriority
@@ -1020,6 +1042,12 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		}
 		if v, ok := host.(map[string]interface{})["subnet_mask"]; ok {
 			edgeHost.Nic.Subnet = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["vlan_id"].(int); ok && v != 0 {
+			edgeHost.Nic.VlanID = int32(v)
+		}
+		if v, ok := host.(map[string]interface{})["secondary_ips"].(*schema.Set); ok && v.Len() > 0 {
+			edgeHost.Nic.SecondaryIps = convertToStringSlice(v.List())
 		}
 
 		edgeHost.Taints = toClusterTaints(host.(map[string]interface{}))

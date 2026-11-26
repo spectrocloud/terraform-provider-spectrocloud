@@ -77,6 +77,23 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
 !> Creating a cluster without `cloud_config.overlay_cidr_range` set deploys it in DHCP mode without overlay networking. Terraform prints a warning on creation in this case, because DHCP-assigned IP changes can cause cluster instability; the cluster is still created. This warning only appears on creation, not on subsequent updates.
 
+### Edge host on a VLAN
+
+To put an edge host's address on a VLAN, set `vlan_id` with `nic_name` (the physical parent NIC), `static_ip` and `subnet_mask`. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` and configures the address on it. Use `secondary_ips` to add more IPv4 addresses, in CIDR form, on the same sub-interface.
+
+```terraform
+    edge_host {
+      host_uid      = spectrocloud_appliance.appliance1.uid
+      nic_name      = "ens192"
+      vlan_id       = 200
+      static_ip     = "10.3.12.164"
+      subnet_mask   = "255.255.255.224"
+      secondary_ips = ["10.3.12.165/27", "10.3.12.166/27"]
+    }
+```
+
+~> The VLAN settings apply only when the host joins the cluster. Changing `vlan_id` or `secondary_ips` for a host that is already in the cluster does not change that host's network configuration.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
