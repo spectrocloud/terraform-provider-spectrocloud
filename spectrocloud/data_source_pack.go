@@ -99,10 +99,10 @@ func dataSourcePack() *schema.Resource {
 						"pack_source": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Specify the source of the pack. Allowed values are `spectrocloud` and `community`. If not specified, all options will be set by default.",
+							Description: "Specify the source of the pack. Allowed values are `spectrocloud` (Verified packs), `community` and `partner` (packs maintained by Spectro Cloud partners). If not specified, all options will be set by default.",
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
-								ValidateFunc: validation.StringInSlice([]string{"spectrocloud", "community"}, false),
+								ValidateFunc: validation.StringInSlice([]string{"spectrocloud", "community", "partner"}, false),
 							},
 						},
 					},
@@ -152,6 +152,11 @@ func dataSourcePack() *schema.Resource {
 			"values": {
 				Type:        schema.TypeString,
 				Description: "The YAML values of the pack returned as string.",
+				Computed:    true,
+			},
+			"source": {
+				Type:        schema.TypeString,
+				Description: "The source of the pack version returned: `spectrocloud` (Verified), `community` or `partner` (maintained by a Spectro Cloud partner). Empty if Palette does not report a source for the pack.",
 				Computed:    true,
 			},
 		},
@@ -392,8 +397,21 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	err = d.Set("source", packSource(pack.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
+}
+
+// packSource returns the pack version's source (spectrocloud, community or partner), which Palette reports as the
+// "source" annotation on the pack.
+func packSource(spec *models.V1PackSummarySpec) string {
+	if spec == nil {
+		return ""
+	}
+	return spec.Annotations["source"]
 }
 
 func setLatestPackVersionToFilters(packName string, registryUID string, c *client.V1Client) string {
