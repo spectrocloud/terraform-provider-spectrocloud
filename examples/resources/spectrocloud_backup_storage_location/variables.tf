@@ -21,3 +21,9 @@ variable "sc_project_name" {
 #
 #variable "arn" {}
 #variable "external_id" {}
+
+variable "aws_external_id" {
+  description = "The tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials"
+  type        = string
+  sensitive   = true
+}

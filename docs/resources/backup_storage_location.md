@@ -131,7 +131,7 @@ Optional:
 
 - `access_key` (String, Sensitive) The access key for S3 authentication (credential), required if 'credential_type' is set to 'secret'.
 - `arn` (String) The Amazon Resource Name (ARN) of the IAM role to assume for accessing S3 when using 'sts' credentials.
-- `external_id` (String) An external ID used for cross-account access to the S3 storage when using 'sts' credentials.
+- `external_id` (String) An external ID used for cross-account access to the S3 storage when using 'sts' credentials. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.
 - `s3_force_path_style` (Boolean) A boolean flag indicating whether to enforce the path-style URL for accessing S3.
 - `s3_url` (String) The S3 URL endpoint.
 - `secret_key` (String, Sensitive) The secret key for S3 authentication, required if 'credential_type' is set to 'secret'.

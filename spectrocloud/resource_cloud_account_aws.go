@@ -73,7 +73,7 @@ func resourceCloudAccountAws() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "An optional external ID that can be used for cross-account access in AWS. Used for STS credential type.",
+				Description: "The external ID for STS role assumption. Required when `type` is `sts`. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.",
 			},
 			"role_arn": {
 				Type:        schema.TypeString,
@@ -161,12 +161,12 @@ func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	account, err := toAwsAccount(d)
 	if err != nil {
-		return diag.FromErr(err)
+		return updateFailedKeepPriorState(d, err)
 	}
 
 	err = c.UpdateCloudAccountAws(account)
 	if err != nil {
-		return diag.FromErr(err)
+		return updateFailedKeepPriorState(d, err)
 	}
 
 	resourceCloudAccountAwsRead(ctx, d, m)

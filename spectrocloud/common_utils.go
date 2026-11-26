@@ -53,3 +53,12 @@ func handleReadError(d *schema.ResourceData, err error, diags diag.Diagnostics) 
 	log.Printf("[DEBUG] Received error: %#v", err)
 	return diag.FromErr(err)
 }
+
+// updateFailedKeepPriorState returns err from a failed Update without saving the planned values. When Update returns
+// an error, the SDK otherwise writes the planned configuration to state. Refresh corrects the attributes Read sets
+// from Palette, but not those Palette never returns or returns masked (secrets, STS external IDs), so the next plan
+// would show no changes even though Palette rejected the update.
+func updateFailedKeepPriorState(d *schema.ResourceData, err error) diag.Diagnostics {
+	d.Partial(true)
+	return diag.FromErr(err)
+}

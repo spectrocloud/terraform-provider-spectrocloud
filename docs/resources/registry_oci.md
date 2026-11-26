@@ -20,7 +20,7 @@ resource "spectrocloud_registry_oci" "r1" {
   credentials {
     credential_type = "sts"
     arn             = "arn:aws:iam::123456:role/stage-demo-ecr"
-    external_id     = "sofiwhgowbrgiornM="
+    external_id     = var.aws_external_id # the tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials
   }
 }
 ```
@@ -85,7 +85,7 @@ Optional:
 
 - `access_key` (String, Sensitive) The access key for accessing the registry (credential). Required if 'credential_type' is set to 'secret'.
 - `arn` (String) The Amazon Resource Name (ARN) used for AWS-based authentication. Required if 'credential_type' is 'sts'.
-- `external_id` (String) The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'.
+- `external_id` (String) The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.
 - `password` (String, Sensitive) The password for basic authentication. Required if 'credential_type' is 'basic'.
 - `secret_key` (String, Sensitive) The secret key for accessing the registry. Required if 'credential_type' is set to 'secret'.
 - `tls_config` (Block List, Max: 1) TLS configuration for the registry. (see [below for nested schema](#nestedblock--credentials--tls_config))

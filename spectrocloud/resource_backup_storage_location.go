@@ -127,7 +127,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 						"external_id": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "An external ID used for cross-account access to the S3 storage when using 'sts' credentials.",
+							Description: "An external ID used for cross-account access to the S3 storage when using 'sts' credentials. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.",
 						},
 					},
 				},

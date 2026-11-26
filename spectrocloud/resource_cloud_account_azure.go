@@ -227,15 +227,6 @@ func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData
 	return diags
 }
 
-// updateFailedKeepPriorState returns err from a failed Update without saving the planned values. When Update returns
-// an error, the SDK otherwise writes the planned configuration to state. Refresh corrects the attributes Read sets, but
-// not azure_client_secret, which Palette never returns, so the next plan would show no changes even though Palette
-// rejected the update.
-func updateFailedKeepPriorState(d *schema.ResourceData, err error) diag.Diagnostics {
-	d.Partial(true)
-	return diag.FromErr(err)
-}
-
 func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)

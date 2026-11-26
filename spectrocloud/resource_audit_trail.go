@@ -101,7 +101,7 @@ func resourceAuditTrail() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Sensitive:   true,
-							Description: "External ID for STS role assumption. Used with `credential_type` `sts`.",
+							Description: "External ID for STS role assumption. Used with `credential_type` `sts`. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.",
 						},
 						"partition": {
 							Type:         schema.TypeString,
@@ -303,35 +303,35 @@ func resourceAuditTrailUpdate(ctx context.Context, d *schema.ResourceData, m int
 	c := getV1ClientWithResourceContext(m, tenantString)
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return updateFailedKeepPriorState(d, err)
 	}
 
 	auditType := d.Get("type").(string)
 	switch auditType {
 	case auditTrailTypeCloudWatch:
 		if err := validateCloudWatchAuditTrail(d, c); err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 		config, err := toCloudWatchDataSinkConfig(d, d.Id())
 		if err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 		if err := c.UpdateCloudWatchAuditTrail(tenantUID, config); err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 	case auditTrailTypeSplunk:
 		if err := validateSplunkAuditTrail(d, c, tenantUID); err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 		updateEntity, err := toSplunkSinkEntity(d)
 		if err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 		if err := c.UpdateSplunkAuditTrail(tenantUID, d.Id(), updateEntity); err != nil {
-			return diag.FromErr(err)
+			return updateFailedKeepPriorState(d, err)
 		}
 	default:
-		return diag.Errorf("unsupported audit trail type: %s", auditType)
+		return updateFailedKeepPriorState(d, fmt.Errorf("unsupported audit trail type: %s", auditType))
 	}
 
 	return resourceAuditTrailRead(ctx, d, m)

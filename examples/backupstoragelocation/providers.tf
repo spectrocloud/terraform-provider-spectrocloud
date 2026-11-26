@@ -26,3 +26,9 @@ provider "spectrocloud" {
   api_key      = var.sc_api_key
   project_name = var.sc_project_name
 }
+
+variable "aws_external_id" {
+  description = "The tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials"
+  type        = string
+  sensitive   = true
+}
