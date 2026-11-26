@@ -134,6 +134,10 @@ resource "spectrocloud_cluster_aws" "cluster" {
 }
 ```
 
+### ARM (Graviton) machine pools
+
+To run a cluster on ARM (Graviton) instances, set an ARM `instance_type`, such as `m7g.large`, in every `machine_pool`. Palette determines each pool's architecture from its instance type and selects the matching image. All machine pools in a cluster must use the same architecture: Palette rejects a cluster that mixes ARM and x86 instance types.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
