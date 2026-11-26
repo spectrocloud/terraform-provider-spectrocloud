@@ -187,7 +187,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 						"external_id": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'.",
+							Description: "The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.",
 						},
 						"username": {
 							Type:        schema.TypeString,

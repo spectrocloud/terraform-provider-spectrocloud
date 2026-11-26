@@ -11,3 +11,9 @@ variable "sc_project_name" {
   description = "Spectro Cloud Project (e.g: Default)"
   default     = "Default"
 }
+
+variable "aws_external_id" {
+  description = "The tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials"
+  type        = string
+  sensitive   = true
+}

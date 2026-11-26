@@ -6,7 +6,7 @@ resource "spectrocloud_registry_oci" "r1" {
   credentials {
     credential_type = "sts"
     arn             = "arn:aws:iam::123456:role/stage-demo-ecr"
-    external_id     = "sofiwhgowbrgiornM="
+    external_id     = var.aws_external_id # the tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials
   }
 }
 # 

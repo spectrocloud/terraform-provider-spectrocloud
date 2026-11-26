@@ -28,7 +28,7 @@ variable "aws_sts_role_arn" {
 }
 
 variable "aws_external_id" {
-  description = "External ID for STS role assumption"
+  description = "The tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials"
   type        = string
   sensitive   = true
   default     = ""

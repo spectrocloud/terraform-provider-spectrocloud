@@ -116,7 +116,7 @@ Optional:
 - `access_key` (String, Sensitive) AWS access key. Required when `credential_type` is `secret`.
 - `arn` (String) IAM role ARN. Required when `credential_type` is `sts`.
 - `credential_type` (String) AWS credential type. Allowed values are `secret` or `sts`. Default is `secret`.
-- `external_id` (String, Sensitive) External ID for STS role assumption. Used with `credential_type` `sts`.
+- `external_id` (String, Sensitive) External ID for STS role assumption. Used with `credential_type` `sts`. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.
 - `partition` (String) AWS partition. Allowed values are `aws` or `aws-us-gov`. Default is `aws`.
 - `secret_key` (String, Sensitive) AWS secret key. Required when `credential_type` is `secret`.
 - `stream` (String) Optional CloudWatch log stream name.

@@ -31,10 +31,12 @@ resource "spectrocloud_cloudaccount_aws" "aws_sts" {
   name        = "aws-account-sts"
   type        = "sts"
   arn         = "arn:aws:iam::123456789012:role/SpectroCloudRole"
-  external_id = "externalId123"
+  external_id = var.aws_external_id # the tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials
   partition   = "aws"
 }
 ```
+
+-> **Note:** `external_id` must be your tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value, including for existing accounts when they are used.
 
 ### EKS Pod Identity
 

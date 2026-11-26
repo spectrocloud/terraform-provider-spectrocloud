@@ -21,7 +21,7 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
   s3 {
     credential_type     = "sts"
     arn                 = "arn_role"
-    external_id         = "external_id"
+    external_id         = var.aws_external_id # the tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials
     s3_force_path_style = false
     #s3_url             = "http://10.90.78.23"
   }

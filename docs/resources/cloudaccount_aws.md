@@ -31,10 +31,12 @@ resource "spectrocloud_cloudaccount_aws" "aws_sts" {
   name        = "aws-account-sts"
   type        = "sts"
   arn         = "arn:aws:iam::123456789012:role/SpectroCloudRole"
-  external_id = "externalId123"
+  external_id = var.aws_external_id # the tenant's STS external ID, shown in Palette when adding an AWS account with STS credentials
   partition   = "aws"
 }
 ```
+
+-> **Note:** `external_id` must be your tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value, including for existing accounts when they are used.
 
 ### EKS Pod Identity
 
@@ -82,7 +84,7 @@ terraform import spectrocloud_cloudaccount_aws.{cloud_account_uid}/{cloud_accoun
 - `aws_secret_key` (String, Sensitive) The AWS secret key used in conjunction with the access key for authentication.
 - `aws_secured_access_key` (String, Sensitive) The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled. **Note:** This field is mutually exclusive with `aws_access_key`.
 - `context` (String) The context of the AWS configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `external_id` (String, Sensitive) An optional external ID that can be used for cross-account access in AWS. Used for STS credential type.
+- `external_id` (String, Sensitive) The external ID for STS role assumption. Required when `type` is `sts`. Must be the tenant's own STS external ID, which Palette shows when you add an AWS account with STS credentials. Palette rejects any other value.
 - `partition` (String) The AWS partition in which the cloud account is located. 
 Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.
 Default is 'aws'.
