@@ -47,3 +47,15 @@ resource "spectrocloud_cloudaccount_azure" "azure_secret" {
 
   tenant_name = "Secret Cloud Tenant"
 }
+
+# Example 4: Azure account that uses a user-assigned managed identity attached to a private cloud gateway
+resource "spectrocloud_cloudaccount_azure" "azure_msi" {
+  name                     = "azure-msi-account"
+  identity_type            = "UserAssignedMSI"
+  azure_tenant_id          = var.azure_tenant_id
+  azure_client_id          = var.azure_msi_client_id # client ID of the managed identity
+  private_cloud_gateway_id = var.private_cloud_gateway_id
+
+  # Do not set azure_client_secret: Palette rejects a managed identity account that has one.
+  # A managed identity can be used by cloud accounts in only one project of the tenant.
+}

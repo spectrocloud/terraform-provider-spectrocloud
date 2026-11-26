@@ -77,6 +77,23 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
 !> Creating a cluster without `cloud_config.overlay_cidr_range` set deploys it in DHCP mode without overlay networking. Terraform prints a warning on creation in this case, because DHCP-assigned IP changes can cause cluster instability; the cluster is still created. This warning only appears on creation, not on subsequent updates.
 
+### Edge host on a VLAN
+
+To put an edge host's address on a VLAN, set `vlan_id` with `nic_name` (the physical parent NIC), `static_ip` and `subnet_mask`. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` and configures the address on it. Use `secondary_ips` to add more IPv4 addresses, in CIDR form, on the same sub-interface.
+
+```terraform
+    edge_host {
+      host_uid      = spectrocloud_appliance.appliance1.uid
+      nic_name      = "ens192"
+      vlan_id       = 200
+      static_ip     = "10.3.12.164"
+      subnet_mask   = "255.255.255.224"
+      secondary_ips = ["10.3.12.165/27", "10.3.12.166/27"]
+    }
+```
+
+~> The VLAN settings apply only when the host joins the cluster. Changing `vlan_id` or `secondary_ips` for a host that is already in the cluster does not change that host's network configuration.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -116,7 +133,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
+- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. The plan fails if Palette reports that the template cannot be attached to the cluster (for example, an unsupported Kubernetes version upgrade), and a rejected attach leaves `cluster_profile` unchanged in state. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `context` (String) The context of the Edge cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
@@ -196,10 +213,12 @@ Optional:
 - `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
 - `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
+- `secondary_ips` (Set of String) Additional IPv4 addresses on the VLAN sub-interface, in CIDR form (for example `10.3.12.165/27`). Requires `vlan_id`.
 - `static_ip` (String) Static IP address assigned to the edge host.
 - `subnet_mask` (String) Subnet mask for the edge host network interface.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--edge_host--taints))
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
+- `vlan_id` (Number) VLAN ID (1 to 4094) for the edge host network interface. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` when it joins the cluster. When set, `nic_name` (the physical parent NIC), `static_ip` (the IPv4 address on the VLAN) and `subnet_mask` are required. The VLAN applies only when the host joins the cluster: changing it for a host already in the cluster has no effect on that host.
 
 <a id="nestedblock--machine_pool--edge_host--taints"></a>
 ### Nested Schema for `machine_pool.edge_host.taints`

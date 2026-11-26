@@ -246,6 +246,13 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 			"detaching a cluster from a cluster template has no backend API yet")), true
 	case attach:
 		if err := attachClusterToTemplate(c, d); err != nil {
+			// The attach was rejected (e.g. K8sUpgradeNotSupported), so the cluster still uses its
+			// profiles. Restore the prior values so state doesn't record the attach and the next
+			// plan proposes it again (PLT-2514).
+			oldProfile, _ := d.GetChange("cluster_profile")
+			oldTemplate, _ := d.GetChange("cluster_template")
+			_ = d.Set("cluster_profile", oldProfile)
+			_ = d.Set("cluster_template", oldTemplate)
 			return diag.FromErr(err), true
 		}
 		templateID := ""

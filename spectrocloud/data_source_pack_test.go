@@ -188,3 +188,33 @@ func TestSetLatestPackVersionToFilters(t *testing.T) {
 	assert.Equal(t, "", setLatestPackVersionToFilters("mypack", "", c))
 	assert.Equal(t, "", setLatestPackVersionToFilters("mypack", "reg-uid-1", c))
 }
+
+// PLT-2544: Partner packs. Palette filters by source "partner" and reports the pack tier as the "source" annotation.
+func TestDataSourcePackPackSourceAcceptsPartner(t *testing.T) {
+	filters := dataSourcePack().Schema["advance_filters"].Elem.(*schema.Resource)
+	validate := filters.Schema["pack_source"].Elem.(*schema.Schema).ValidateFunc
+
+	for _, v := range []string{"spectrocloud", "community", "partner"} {
+		_, errs := validate(v, "pack_source")
+		assert.Empty(t, errs, v)
+	}
+	_, errs := validate("verified", "pack_source")
+	assert.NotEmpty(t, errs, "values outside the allowed list are still rejected")
+}
+
+func TestDataSourcePackReadSetsSource(t *testing.T) {
+	d := dataSourcePack().TestResourceData()
+	_ = d.Set("name", "k8")
+	_ = d.Set("version", "1.0")
+	_ = d.Set("registry_uid", "test-reg-uid")
+	diags := dataSourcePackRead(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "partner", d.Get("source"), "source comes from the pack's source annotation")
+}
+
+func TestPackSource(t *testing.T) {
+	assert.Equal(t, "partner", packSource(&models.V1PackSummarySpec{Annotations: map[string]string{"source": "partner", "contributor": "OpenObserve"}}))
+	assert.Equal(t, "community", packSource(&models.V1PackSummarySpec{Annotations: map[string]string{"source": "community"}}))
+	assert.Equal(t, "", packSource(&models.V1PackSummarySpec{}), "no annotations")
+	assert.Equal(t, "", packSource(nil))
+}

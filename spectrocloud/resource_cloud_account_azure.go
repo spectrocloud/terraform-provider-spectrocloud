@@ -60,7 +60,7 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Azure secret for authentication. Required when `identity_type` is `ServicePrincipal` (the default); not used when `identity_type` is `UserAssignedMSI`.",
+				Description: "Azure secret for authentication. Required when `identity_type` is `ServicePrincipal` (the default). Do not set it when `identity_type` is `UserAssignedMSI`: Palette rejects a managed identity account that has a client secret.",
 			},
 			"identity_type": {
 				Type:         schema.TypeString,
@@ -69,7 +69,8 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Default:      "ServicePrincipal",
 				ValidateFunc: validation.StringInSlice([]string{"ServicePrincipal", "UserAssignedMSI"}, false),
 				Description: "The type of identity Palette uses to authenticate to Azure. `ServicePrincipal` (default) authenticates with `azure_client_id`/`azure_client_secret`. " +
-					"`UserAssignedMSI` authenticates using a user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs; `azure_client_secret` is not used in this mode. " +
+					"`UserAssignedMSI` authenticates using a user-assigned managed identity attached to the private cloud gateway or self-hosted Palette VMs; do not set `azure_client_secret` in this mode. " +
+					"A managed identity can be used only by cloud accounts in one project of the tenant. " +
 					"Changing this value forces a new resource - converting an existing cloud account between identity types is not supported.",
 			},
 			"management_identity_resource_id": {
@@ -211,19 +212,28 @@ func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Validate tls_cert is only used with AzureUSSecretCloud
 	if err := validateTlsCertConfiguration(d); err != nil {
-		return diag.FromErr(err)
+		return updateFailedKeepPriorState(d, err)
 	}
 
 	account := toAzureAccount(d)
 
 	err := c.UpdateCloudAccountAzure(account)
 	if err != nil {
-		return diag.FromErr(err)
+		return updateFailedKeepPriorState(d, err)
 	}
 
 	resourceCloudAccountAzureRead(ctx, d, m)
 
 	return diags
+}
+
+// updateFailedKeepPriorState returns err from a failed Update without saving the planned values. When Update returns
+// an error, the SDK otherwise writes the planned configuration to state. Refresh corrects the attributes Read sets, but
+// not azure_client_secret, which Palette never returns, so the next plan would show no changes even though Palette
+// rejected the update.
+func updateFailedKeepPriorState(d *schema.ResourceData, err error) diag.Diagnostics {
+	d.Partial(true)
+	return diag.FromErr(err)
 }
 
 func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -265,9 +275,8 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 		},
 	}
 
-	// azure_client_secret is only meaningful for identity_type=ServicePrincipal
-	// (PLT-2489); leave it nil (omitted from the request) for UserAssignedMSI
-	// rather than sending an empty string.
+	// The secret is sent only when set, never as an empty string. A UserAssignedMSI account must leave
+	// azure_client_secret unset: Palette rejects a managed identity account that has one (PLT-2558).
 	if clientSecret := d.Get("azure_client_secret").(string); clientSecret != "" {
 		account.Spec.ClientSecret = types.Ptr(strfmt.Password(clientSecret).String())
 	}

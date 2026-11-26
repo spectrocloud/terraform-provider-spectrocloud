@@ -427,6 +427,17 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	if val, ok := nodePool["dedicate_node_pool_for_system_pods"].(bool); ok {
 		buf.WriteString(fmt.Sprintf("%t-", val))
 	}
+	// Hash override_scaling
+	if overrideScaling, ok := nodePool["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		if scalingConfig, ok := overrideScaling[0].(map[string]interface{}); ok {
+			if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+				buf.WriteString(fmt.Sprintf("max_surge:%s-", maxSurge))
+			}
+			if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+				buf.WriteString(fmt.Sprintf("max_unavailable:%s-", maxUnavailable))
+			}
+		}
+	}
 
 	return int(hash(buf.String()))
 }
@@ -1057,6 +1068,26 @@ func resourceEdgeHostHash(v interface{}) int {
 
 	if twoNodeRole, ok := host["two_node_role"]; ok && twoNodeRole != nil && twoNodeRole.(string) != "" {
 		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+	}
+
+	if vlanID, ok := host["vlan_id"].(int); ok && vlanID != 0 {
+		buf.WriteString(fmt.Sprintf("vlan_id:%d-", vlanID))
+	}
+
+	if secondaryIPs, ok := host["secondary_ips"]; ok && secondaryIPs != nil {
+		var ips []string
+		switch v := secondaryIPs.(type) {
+		case *schema.Set:
+			ips = convertToStringSlice(v.List())
+		case []string:
+			ips = append(ips, v...)
+		case []interface{}:
+			ips = convertToStringSlice(v)
+		}
+		if len(ips) > 0 {
+			sort.Strings(ips)
+			buf.WriteString(fmt.Sprintf("secondary_ips:%s-", strings.Join(ips, ",")))
+		}
 	}
 
 	if _, ok := host["taints"]; ok {

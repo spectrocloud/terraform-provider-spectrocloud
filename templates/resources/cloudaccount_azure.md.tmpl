@@ -20,6 +20,25 @@ resource "spectrocloud_cloudaccount_azure" "azure-1" {
 }
 ```
 
+### Managed identity
+
+To authenticate with a user-assigned managed identity attached to a private cloud gateway, set `identity_type = "UserAssignedMSI"` and use the managed identity's client ID as `azure_client_id`.
+
+```terraform
+resource "spectrocloud_cloudaccount_azure" "azure_msi" {
+  name                     = "azure-msi"
+  identity_type            = "UserAssignedMSI"
+  azure_tenant_id          = var.azure_tenant_id
+  azure_client_id          = var.azure_msi_client_id
+  private_cloud_gateway_id = var.private_cloud_gateway_id
+}
+```
+
+-> **Note:**
+
+- Do not set `azure_client_secret` for a `UserAssignedMSI` account. Palette rejects a managed identity account that has a client secret.
+- A managed identity can be used only by cloud accounts in one project of the tenant. Palette rejects a cloud account that uses a managed identity already registered in another project. Private cloud gateways are shared by every project in the tenant, so use one managed identity per private cloud gateway.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)

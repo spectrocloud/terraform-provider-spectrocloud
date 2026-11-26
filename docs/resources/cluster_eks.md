@@ -96,6 +96,64 @@ resource "spectrocloud_cluster_eks" "cluster" {
   }
 }
 ```
+
+### ARM (Graviton) machine pools
+
+To run a machine pool on ARM (Graviton) instances, set an ARM `instance_type` and an ARM `ami_type`. The default `ami_type` is `AL2023_x86_64_STANDARD`, which does not match an ARM instance type.
+
+```terraform
+  machine_pool {
+    name          = "worker-arm"
+    count         = 1
+    instance_type = "m7g.large"
+    ami_type      = "AL2023_ARM_64_STANDARD"
+    disk_size_gb  = 60
+    az_subnets = {
+      "us-west-2a" = "subnet-0d4978ddbff16c"
+    }
+  }
+```
+
+### EKS access entries
+
+To grant IAM principals access to the cluster with [EKS access entries](https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html), set the authentication mode and the access entries in `cloud_config.override_cluster_api_config`.
+
+- `accessConfig.authenticationMode` is `api` (access entries only) or `api_and_config_map` (access entries and the `aws-auth` ConfigMap). If it is not set, the cluster uses only the `aws-auth` ConfigMap, and the `aws-auth` mappings in the EKS pack keep working.
+- Each item in `accessEntries` maps an IAM principal (`principalARN`) to an optional Kubernetes `username` and `kubernetesGroups`.
+- Entries of type `standard` can have one or more `accessPolicies`. Each policy is scoped to the whole cluster (`cluster`) or to specific `namespaces` (`namespace`). Namespaces support wildcards, such as `dev-*`.
+
+```terraform
+  cloud_config {
+    ssh_key_name = "default"
+    region       = "us-west-2"
+    override_cluster_api_config = <<-EOT
+      spec:
+        accessConfig:
+          authenticationMode: api_and_config_map
+        accessEntries:
+          - principalARN: arn:aws:iam::123456789012:role/platform-admins
+            type: standard
+            accessPolicies:
+              - policyARN: arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
+                accessScope:
+                  type: cluster
+          - principalARN: arn:aws:iam::123456789012:role/dev-team
+            type: standard
+            username: dev-team
+            kubernetesGroups:
+              - dev-viewers
+            accessPolicies:
+              - policyARN: arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy
+                accessScope:
+                  type: namespace
+                  namespaces:
+                    - dev-*
+    EOT
+  }
+```
+
+Adding, changing, or removing access entries and policies on an existing cluster is applied in place and does not repave the nodes. The authentication mode can only move toward access entries (from the ConfigMap to `api_and_config_map`, or from `api_and_config_map` to `api`); changing it back is rejected. Palette validates the override and rejects invalid values.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -133,7 +191,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
+- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. If the cluster was created with `cluster_profile` and this is populated in a later apply (with `cluster_profile` removed), the cluster is attached to the named template (Day 2 attach) - a single API call that binds the cluster to the template; the target profile set is applied by the template's batch reconciler at the next maintenance window, not synchronously. The plan fails if Palette reports that the template cannot be attached to the cluster (for example, an unsupported Kubernetes version upgrade), and a rejected attach leaves `cluster_profile` unchanged in state. This is currently one-way: there is no supported way to detach a cluster from a template and revert to `cluster_profile`, so removing `cluster_template` after it has been set is rejected. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `context` (String) The context of the EKS cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
@@ -197,7 +255,7 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.
+- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values include [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON`, `AL2023_x86_64_NVIDIA` and `AL2023_ARM_64_STANDARD`]. Defaults to `AL2023_x86_64_STANDARD`. The AMI architecture must match `instance_type`: use an ARM AMI type such as `AL2023_ARM_64_STANDARD` with ARM (Graviton) instance types such as `m7g.large`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
 - `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.

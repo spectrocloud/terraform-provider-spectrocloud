@@ -36,7 +36,7 @@ data "spectrocloud_pack" "filtered" {
     pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
     environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
     is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
-    pack_source = ["community"]      # Allowed: "spectrocloud", "community"
+    pack_source = ["community"]      # Allowed: "spectrocloud", "community", "partner"
   }
 
   registry_uid = "5ee9c5adc172449eeb9c30cf" # Unique registry identifier
@@ -91,6 +91,7 @@ data "spectrocloud_pack" "cni" {
 
 ### Read-Only
 
+- `source` (String) The source of the pack version returned: `spectrocloud` (Verified), `community` or `partner` (maintained by a Spectro Cloud partner). Empty if Palette does not report a source for the pack.
 - `values` (String) The YAML values of the pack returned as string.
 
 <a id="nestedblock--advance_filters"></a>
@@ -102,5 +103,5 @@ Optional:
 - `environment` (Set of String) Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas` and `edge-native`. If not specified, all options will be set by default.
 - `is_fips` (Boolean) Indicates whether the pack is FIPS-compliant. If `true`, only FIPS-compliant components will be used.
 - `pack_layer` (Set of String) Indicates the pack layer, such as `kernel`, `os`, `k8s`, `cni`, `csi`, or `addon`. If not specified, all options will be set by default.
-- `pack_source` (Set of String) Specify the source of the pack. Allowed values are `spectrocloud` and `community`. If not specified, all options will be set by default.
+- `pack_source` (Set of String) Specify the source of the pack. Allowed values are `spectrocloud` (Verified packs), `community` and `partner` (packs maintained by Spectro Cloud partners). If not specified, all options will be set by default.
 - `pack_type` (Set of String) Specify the type of pack. Allowed values are `helm`, `spectro`, `oci`, and `manifest`. If not specified, all options will be set by default.

@@ -75,3 +75,16 @@ variable "azure_secret_tls_cert" {
   default     = ""
   sensitive   = true
 }
+
+# Managed identity variables (optional)
+variable "azure_msi_client_id" {
+  description = "Client ID of the user-assigned managed identity attached to the private cloud gateway"
+  type        = string
+  default     = ""
+}
+
+variable "private_cloud_gateway_id" {
+  description = "ID of the private cloud gateway the managed identity is attached to"
+  type        = string
+  default     = ""
+}
