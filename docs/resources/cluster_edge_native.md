@@ -77,6 +77,23 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
 !> Creating a cluster without `cloud_config.overlay_cidr_range` set deploys it in DHCP mode without overlay networking. Terraform prints a warning on creation in this case, because DHCP-assigned IP changes can cause cluster instability; the cluster is still created. This warning only appears on creation, not on subsequent updates.
 
+### Edge host on a VLAN
+
+To put an edge host's address on a VLAN, set `vlan_id` with `nic_name` (the physical parent NIC), `static_ip` and `subnet_mask`. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` and configures the address on it. Use `secondary_ips` to add more IPv4 addresses, in CIDR form, on the same sub-interface.
+
+```terraform
+    edge_host {
+      host_uid      = spectrocloud_appliance.appliance1.uid
+      nic_name      = "ens192"
+      vlan_id       = 200
+      static_ip     = "10.3.12.164"
+      subnet_mask   = "255.255.255.224"
+      secondary_ips = ["10.3.12.165/27", "10.3.12.166/27"]
+    }
+```
+
+~> The VLAN settings apply only when the host joins the cluster. Changing `vlan_id` or `secondary_ips` for a host that is already in the cluster does not change that host's network configuration.
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -196,10 +213,12 @@ Optional:
 - `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
 - `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
+- `secondary_ips` (Set of String) Additional IPv4 addresses on the VLAN sub-interface, in CIDR form (for example `10.3.12.165/27`). Requires `vlan_id`.
 - `static_ip` (String) Static IP address assigned to the edge host.
 - `subnet_mask` (String) Subnet mask for the edge host network interface.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--edge_host--taints))
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
+- `vlan_id` (Number) VLAN ID (1 to 4094) for the edge host network interface. The host creates the VLAN sub-interface `<nic_name>.<vlan_id>` when it joins the cluster. When set, `nic_name` (the physical parent NIC), `static_ip` (the IPv4 address on the VLAN) and `subnet_mask` are required. The VLAN applies only when the host joins the cluster: changing it for a host already in the cluster has no effect on that host.
 
 <a id="nestedblock--machine_pool--edge_host--taints"></a>
 ### Nested Schema for `machine_pool.edge_host.taints`

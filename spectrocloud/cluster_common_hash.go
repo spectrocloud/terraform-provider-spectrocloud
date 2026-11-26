@@ -1059,6 +1059,26 @@ func resourceEdgeHostHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
 	}
 
+	if vlanID, ok := host["vlan_id"].(int); ok && vlanID != 0 {
+		buf.WriteString(fmt.Sprintf("vlan_id:%d-", vlanID))
+	}
+
+	if secondaryIPs, ok := host["secondary_ips"]; ok && secondaryIPs != nil {
+		var ips []string
+		switch v := secondaryIPs.(type) {
+		case *schema.Set:
+			ips = convertToStringSlice(v.List())
+		case []string:
+			ips = append(ips, v...)
+		case []interface{}:
+			ips = convertToStringSlice(v)
+		}
+		if len(ips) > 0 {
+			sort.Strings(ips)
+			buf.WriteString(fmt.Sprintf("secondary_ips:%s-", strings.Join(ips, ",")))
+		}
+	}
+
 	if _, ok := host["taints"]; ok {
 		buf.WriteString(HashStringMapList(host["taints"]))
 	}
