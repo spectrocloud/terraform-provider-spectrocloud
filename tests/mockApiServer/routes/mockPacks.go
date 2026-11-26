@@ -24,6 +24,8 @@ func getPackSummaryPayload() *models.V1PackSummaries {
 					UID:                   generateRandomStringUID(),
 				},
 				Spec: &models.V1PackSummarySpec{
+					// Palette reports the pack tier as the "source" annotation (PLT-2544).
+					Annotations: map[string]string{"source": "partner"},
 					CloudTypes:  []string{"aws"},
 					AddonType:   "infra",
 					Name:        "k8",

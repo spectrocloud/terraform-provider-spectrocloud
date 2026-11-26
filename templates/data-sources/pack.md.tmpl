@@ -36,7 +36,7 @@ data "spectrocloud_pack" "filtered" {
     pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
     environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
     is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
-    pack_source = ["community"]      # Allowed: "spectrocloud", "community"
+    pack_source = ["community"]      # Allowed: "spectrocloud", "community", "partner"
   }
 
   registry_uid = "5ee9c5adc172449eeb9c30cf" # Unique registry identifier
