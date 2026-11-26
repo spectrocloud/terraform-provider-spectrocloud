@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -153,12 +154,66 @@ func classifyClusterTemplateTransition(d resourceChangeGetter) (attach bool, det
 // it rejects the cluster_template -> cluster_profile "detach" transition at
 // plan time, before apply ever runs. Attach (the supported direction) is
 // intentionally allowed through here; it's handled in updateCommonFields.
-func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
-	if _, detach := classifyClusterTemplateTransition(diff); detach {
+func validateClusterTemplateAttachTransition(_ context.Context, diff *schema.ResourceDiff, m interface{}) error {
+	attach, detach := classifyClusterTemplateTransition(diff)
+	if detach {
 		return errors.New("removing cluster_template and adding cluster_profile is not supported: " +
 			"detaching a cluster from a cluster template has no backend API yet. " +
 			"The cluster must remain governed by cluster_template once attached")
 	}
+	if attach {
+		return validateClusterTemplateAttachEligibility(diff, m)
+	}
+	return nil
+}
+
+// validateClusterTemplateAttachEligibility fails the plan when Palette reports that the
+// target template cannot be attached to this cluster (for example K8sUpgradeNotSupported),
+// instead of letting the attach fail at apply (PLT-2514). It is a best-effort check: when
+// eligibility can't be determined (no client, template id not known yet, API error, or the
+// template is not in the listing) it is skipped and the attach call at apply decides.
+func validateClusterTemplateAttachEligibility(diff *schema.ResourceDiff, m interface{}) error {
+	if _, ok := m.(*ProviderMeta); !ok || diff.Id() == "" || !diff.NewValueKnown("cluster_template") {
+		return nil
+	}
+	templates, ok := diff.Get("cluster_template").([]interface{})
+	if !ok || len(templates) == 0 {
+		return nil
+	}
+	template, ok := templates[0].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	templateID, _ := template["id"].(string)
+	if templateID == "" {
+		return nil
+	}
+	resourceContext, _ := diff.Get("context").(string)
+	return checkClusterTemplateAttachEligibility(getV1ClientWithResourceContext(m, resourceContext), diff.Id(), templateID)
+}
+
+func checkClusterTemplateAttachEligibility(c *client.V1Client, clusterUID, templateID string) error {
+	summary, err := c.ListAttachableClusterTemplates(clusterUID, true)
+	if err != nil {
+		log.Printf("[WARN] could not check whether cluster_template %s can be attached to cluster %s, skipping the plan-time check: %v", templateID, clusterUID, err)
+		return nil
+	}
+	if summary != nil {
+		for _, item := range summary.Items {
+			if item == nil || item.Metadata == nil || item.Metadata.UID != templateID {
+				continue
+			}
+			if item.Status == nil || item.Status.IsEligible {
+				return nil
+			}
+			reasons := "no reason given"
+			if len(item.Status.Reasons) > 0 {
+				reasons = strings.Join(item.Status.Reasons, "; ")
+			}
+			return fmt.Errorf("cluster_template %q (%s) cannot be attached to this cluster: %s", item.Metadata.Name, templateID, reasons)
+		}
+	}
+	log.Printf("[WARN] cluster_template %s is not in the attach eligibility list for cluster %s, skipping the plan-time check", templateID, clusterUID)
 	return nil
 }
 

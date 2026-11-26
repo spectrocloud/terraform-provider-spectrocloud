@@ -16,6 +16,30 @@ import (
 // e.g. when a user changes cluster_template.id while already attached.
 const ClusterTemplateAttachRejectUID = "cluster-template-attach-reject"
 
+// ClusterTemplateIneligibleUID is listed as not eligible by POST
+// /v1/dashboard/clusterTemplates/attach, with a K8sUpgradeNotSupported reason (PLT-2514).
+const ClusterTemplateIneligibleUID = "cluster-template-ineligible"
+
+// getClusterTemplatesAttachSummaryResponse — canned payload for POST
+// /v1/dashboard/clusterTemplates/attach: one eligible and one ineligible template.
+func getClusterTemplatesAttachSummaryResponse() *models.V1ClusterTemplatesAttachSummary {
+	return &models.V1ClusterTemplatesAttachSummary{
+		Items: []*models.V1ClusterTemplateAttachItem{
+			{
+				Metadata: &models.V1ObjectMeta{UID: "test-cluster-config-template-id", Name: "test-cluster-config-template"},
+				Status:   &models.V1ClusterTemplateAttachStatus{IsEligible: true},
+			},
+			{
+				Metadata: &models.V1ObjectMeta{UID: ClusterTemplateIneligibleUID, Name: "k8s-two-minors-ahead"},
+				Status: &models.V1ClusterTemplateAttachStatus{
+					IsEligible: false,
+					Reasons:    []string{"K8sUpgradeNotSupported: upgrade from 1.34 to 1.36 is not supported"},
+				},
+			},
+		},
+	}
+}
+
 // getClusterTemplateProfileVariablesResponse — canned payload for GET
 // /v1/clusterTemplates/{uid}/profiles/{profileUid}/variables. Returns one
 // variable ("region") assigned to cluster "test-cluster-id", which is the
@@ -215,6 +239,15 @@ func ClusterConfigTemplateRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 201,
 				Payload:    getClusterConfigTemplateCreateResponse(),
+			},
+		},
+		{
+			// PLT-2514: attach eligibility listing used for the plan-time check.
+			Method: "POST",
+			Path:   "/v1/dashboard/clusterTemplates/attach",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    getClusterTemplatesAttachSummaryResponse(),
 			},
 		},
 		{
