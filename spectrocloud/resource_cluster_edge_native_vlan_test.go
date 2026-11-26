@@ -42,14 +42,15 @@ func TestToEdgeHostsSendsVlan(t *testing.T) {
 	}
 
 	vlan := hosts["vlan-host-uid"].Nic
-	assert.Equal(t, int32(200), vlan.VlanID)
+	require.NotNil(t, vlan.VlanID)
+	assert.Equal(t, int32(200), *vlan.VlanID)
 	assert.ElementsMatch(t, []string{"10.3.12.165/27", "10.3.12.166/27"}, vlan.SecondaryIps)
 	assert.Equal(t, "ens192", vlan.NicName)
 	assert.Equal(t, "10.3.12.164", vlan.IP)
 	assert.Equal(t, "255.255.255.224", vlan.Subnet)
 
 	plain := hosts["plain-host-uid"].Nic
-	assert.Zero(t, plain.VlanID, "a host without vlan_id sends no vlanId")
+	assert.Nil(t, plain.VlanID, "a host without vlan_id sends no vlanId")
 	assert.Empty(t, plain.SecondaryIps)
 }
 
@@ -60,7 +61,7 @@ func TestFlattenEdgeNativePoolHostReadsVlan(t *testing.T) {
 			NicName:      "ens192",
 			IP:           "10.3.12.164",
 			Subnet:       "255.255.255.224",
-			VlanID:       200,
+			VlanID:       types.Ptr(int32(200)),
 			SecondaryIps: []string{"10.3.12.165/27"},
 		},
 	})
@@ -85,7 +86,7 @@ func TestResourceEdgeHostHashVlan(t *testing.T) {
 			NicName:      "ens192",
 			IP:           "10.3.12.164",
 			Subnet:       "255.255.255.224",
-			VlanID:       200,
+			VlanID:       types.Ptr(int32(200)),
 			SecondaryIps: []string{"10.3.12.165/27", "10.3.12.166/27"},
 		},
 	})

@@ -603,8 +603,8 @@ func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interfa
 		"subnet_mask":     subnetMask,
 		"dns_servers":     dnsServers,
 	}
-	if host.Nic != nil && host.Nic.VlanID != 0 {
-		rawHost["vlan_id"] = int(host.Nic.VlanID)
+	if host.Nic != nil && host.Nic.VlanID != nil && *host.Nic.VlanID != 0 {
+		rawHost["vlan_id"] = int(*host.Nic.VlanID)
 	}
 	if host.Nic != nil && len(host.Nic.SecondaryIps) > 0 {
 		rawHost["secondary_ips"] = host.Nic.SecondaryIps
@@ -1044,7 +1044,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 			edgeHost.Nic.Subnet = v.(string)
 		}
 		if v, ok := host.(map[string]interface{})["vlan_id"].(int); ok && v != 0 {
-			edgeHost.Nic.VlanID = int32(v)
+			edgeHost.Nic.VlanID = types.Ptr(int32(v))
 		}
 		if v, ok := host.(map[string]interface{})["secondary_ips"].(*schema.Set); ok && v.Len() > 0 {
 			edgeHost.Nic.SecondaryIps = convertToStringSlice(v.List())
