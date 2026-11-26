@@ -344,7 +344,7 @@ func resourceClusterEks() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Default:     "AL2023_x86_64_STANDARD",
-							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.",
+							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values include [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON`, `AL2023_x86_64_NVIDIA` and `AL2023_ARM_64_STANDARD`]. Defaults to `AL2023_x86_64_STANDARD`. The AMI architecture must match `instance_type`: use an ARM AMI type such as `AL2023_ARM_64_STANDARD` with ARM (Graviton) instance types such as `m7g.large`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,

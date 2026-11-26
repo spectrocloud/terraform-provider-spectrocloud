@@ -96,6 +96,24 @@ resource "spectrocloud_cluster_eks" "cluster" {
   }
 }
 ```
+
+### ARM (Graviton) machine pools
+
+To run a machine pool on ARM (Graviton) instances, set an ARM `instance_type` and an ARM `ami_type`. The default `ami_type` is `AL2023_x86_64_STANDARD`, which does not match an ARM instance type.
+
+```terraform
+  machine_pool {
+    name          = "worker-arm"
+    count         = 1
+    instance_type = "m7g.large"
+    ami_type      = "AL2023_ARM_64_STANDARD"
+    disk_size_gb  = 60
+    az_subnets = {
+      "us-west-2a" = "subnet-0d4978ddbff16c"
+    }
+  }
+```
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -197,7 +215,7 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.
+- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values include [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON`, `AL2023_x86_64_NVIDIA` and `AL2023_ARM_64_STANDARD`]. Defaults to `AL2023_x86_64_STANDARD`. The AMI architecture must match `instance_type`: use an ARM AMI type such as `AL2023_ARM_64_STANDARD` with ARM (Graviton) instance types such as `m7g.large`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.
 - `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
 - `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
